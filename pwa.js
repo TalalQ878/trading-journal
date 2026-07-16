@@ -89,7 +89,36 @@
       ".enTabs .chip{flex:1;min-height:42px}" +
       "#enPrev{font-size:11.5px;color:var(--cyn);margin-top:8px;min-height:14px}" +
       "@media(max-width:520px){#entryModal{align-items:end;padding:0}#entryModal .modal{max-width:none;width:100%;border-radius:20px 20px 0 0;max-height:92dvh;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}}" +
-      "@media(display-mode:standalone){#dataPill{display:inline-block}}";
+      "@media(display-mode:standalone){#dataPill{display:inline-block}}" +
+
+      /* ---- iOS app chrome round (2026-07-16): tab bar, pull-to-refresh, touch polish ---- */
+      "*{-webkit-tap-highlight-color:transparent}" +
+      "button,.chip,.pill,.btn{touch-action:manipulation}" +
+      "div[style*='overflow-x'],div[style*='overflow:auto']{-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}" +
+      "#tabbar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(9,12,19,.94);backdrop-filter:blur(20px) saturate(1.4);-webkit-backdrop-filter:blur(20px) saturate(1.4);border-top:1px solid var(--bd);padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));justify-content:space-around}" +
+      "body.light #tabbar{background:rgba(245,247,251,.94)}" +
+      "#tabbar button{flex:1;max-width:104px;border:0;background:none;color:var(--mut);font:600 10px Inter;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 2px;border-radius:12px;cursor:pointer}" +
+      "#tabbar button .ic{font-size:19px;line-height:1.15}" +
+      "#tabbar button.on{color:#7ef0c6}" +
+      "#tabbar button:active{opacity:.65}" +
+      "#tabbar #tbAdd .ic{width:36px;height:36px;border-radius:999px;background:linear-gradient(135deg,#34d399,#22d3ee);color:#06251c;display:grid;place-items:center;font-weight:800;margin-top:-16px;box-shadow:0 6px 18px -6px rgba(52,211,153,.55)}" +
+      "#ptr{position:fixed;top:calc(4px + env(safe-area-inset-top,0px));left:50%;z-index:60;transform:translate(-50%,-70px);background:#0d1320;border:1px solid var(--bd);border-radius:999px;padding:9px 16px;font:700 12px Inter;color:var(--cyn);box-shadow:0 10px 30px -10px rgba(0,0,0,.6);transition:transform .25s;pointer-events:none;white-space:nowrap}" +
+      "body.light #ptr{background:#fff}" +
+      "@media(max-width:640px){" +
+        "html{-webkit-text-size-adjust:100%}" +
+        "body{padding-bottom:calc(88px + env(safe-area-inset-bottom,0px))}" +
+        "#tabbar{display:flex}" +
+        "#pgChips,#entryBtn,#reloadBtn{display:none}" +
+        ".chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;max-width:100%}" +
+        ".chips::-webkit-scrollbar{display:none}" +
+        ".chip{padding:11px 13px;font-size:13px;white-space:nowrap}" +
+        ".pill{padding:8px 13px;font-size:12px;display:inline-flex;align-items:center}" +
+        "select,input[type=date],input[type=text],input[type=number]{font-size:16px;min-height:42px}" +
+        ".enGrid input,.enGrid select{font-size:16px;min-height:44px}" +
+        ".enRow input{font-size:16px;width:110px}" +
+        ".enRow .b{padding:9px 12px}" +
+        ".btn{min-height:48px}" +
+      "}";
     document.head.appendChild(st);
 
     /* ----- header ＋ Add button ----- */
@@ -350,6 +379,65 @@
         };
       });
     }
+
+    /* ----- mobile bottom tab bar (≤640px; desktop unchanged) ----- */
+    var pgc = $("tabJ") && $("tabJ").closest(".chips"); if (pgc) pgc.id = "pgChips";
+    var tb = document.createElement("nav"); tb.id = "tabbar";
+    tb.innerHTML =
+      '<button data-tb="J"><span class="ic">▦</span>Journal</button>' +
+      '<button data-tb="M"><span class="ic">∿</span>Market</button>' +
+      '<button id="tbAdd"><span class="ic">＋</span>Add</button>' +
+      '<button data-tb="F"><span class="ic">▲</span>Perf</button>' +
+      '<button id="tbRe"><span class="ic">⟳</span>Refresh</button>';
+    document.body.appendChild(tb);
+    function tbSync() {
+      ["J", "M", "F"].forEach(function (k) {
+        var c = $("tab" + k), b = tb.querySelector('[data-tb="' + k + '"]');
+        if (c && b) b.classList.toggle("on", c.classList.contains("on"));
+      });
+    }
+    tb.querySelectorAll("[data-tb]").forEach(function (b) {
+      b.onclick = function () { var c = $("tab" + b.dataset.tb); if (c) { c.click(); window.scrollTo(0, 0); tbSync(); } };
+    });
+    ["tabJ", "tabM", "tabF"].forEach(function (id) { var c = $(id); if (c) c.addEventListener("click", function () { setTimeout(tbSync, 0); }); });
+    $("tbAdd").onclick = openModal;
+    $("tbRe").onclick = function () {
+      var ic = this.querySelector(".ic");
+      ic.style.transition = "transform .6s"; ic.style.transform = "rotate(360deg)";
+      setTimeout(function () { ic.style.transition = "none"; ic.style.transform = ""; }, 650);
+      var r = $("reloadBtn"); if (r) r.click(); else window.loadSheet && loadSheet();
+    };
+    tbSync();
+
+    /* ----- pull-to-refresh (phone only, page at top, no modal open) ----- */
+    var ptr = document.createElement("div"); ptr.id = "ptr"; ptr.textContent = "↓ Pull to refresh";
+    document.body.appendChild(ptr);
+    var pY = null, pArm = false;
+    function ptrOK() { return window.matchMedia("(max-width:640px)").matches && !document.querySelector(".overlay.show"); }
+    document.addEventListener("touchstart", function (e) {
+      pY = (window.scrollY <= 0 && ptrOK()) ? e.touches[0].clientY : null; pArm = false;
+    }, { passive: true });
+    document.addEventListener("touchmove", function (e) {
+      if (pY == null) return;
+      var dy = e.touches[0].clientY - pY;
+      if (dy > 0 && window.scrollY <= 0) {
+        ptr.style.transition = "none";
+        ptr.style.transform = "translate(-50%," + (Math.min(dy / 2.4, 84) - 70) + "px)";
+        pArm = dy > 130;
+        ptr.textContent = pArm ? "⟳ Release to refresh" : "↓ Pull to refresh";
+      }
+    }, { passive: true });
+    document.addEventListener("touchend", function () {
+      if (pY == null) return;
+      ptr.style.transition = "transform .25s";
+      if (pArm) {
+        ptr.textContent = "⟳ Refreshing…";
+        ptr.style.transform = "translate(-50%,14px)";
+        var r = $("reloadBtn"); if (r) r.click(); else window.loadSheet && loadSheet();
+        setTimeout(function () { ptr.style.transform = "translate(-50%,-70px)"; }, 1100);
+      } else ptr.style.transform = "translate(-50%,-70px)";
+      pY = null; pArm = false;
+    }, { passive: true });
 
     /* ----- service worker + auto-refresh ----- */
     if ("serviceWorker" in navigator && location.protocol === "https:") {
