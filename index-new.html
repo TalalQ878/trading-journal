@@ -626,7 +626,7 @@ body.light{--bg:#f3f5f9;--card:#ffffff;--card2:#eef1f6;--bd:rgba(15,23,42,.09);-
   <div class="card c5">
     <div class="head"><h3>FOMO gauge — breadth &amp; sentiment</h3><span class="rt">$NCFD · Signals tab</span></div>
     <div class="kv" style="margin-bottom:2px">FOMO — % of Nasdaq stocks above 5-day average · now <b style="color:var(--tx)" id="gFomoNow">—</b></div>
-    <div class="chartbox"><svg id="fomoArc" viewBox="0 0 340 180" style="height:180px;max-width:440px;margin:0 auto"></svg></div>
+    <div class="chartbox"><svg id="fomoArc" viewBox="0 0 340 206" style="height:206px;width:100%;max-width:430px;margin:0 auto;display:block"></svg></div>
     <div id="fomoHist" style="margin:2px 0 8px"></div>
     <div class="rowline"><span>Nasdaq net new highs/lows — trend (3d+)</span><span class="rt" id="brNaz">—</span></div>
     <div class="rowline"><span>NYSE net new highs/lows — trend (3d+)</span><span class="rt" id="brNyse">—</span></div>
@@ -1009,10 +1009,12 @@ function bindHover(id,key,builder){var sv=$(id);if(!sv||sv.__hovWired)return;sv.
   tip.style.top=Math.max(8,ev.clientY-14-th)+"px";
  }
  function hide(){var tip=$("tip");if(tip)tip.style.display="none";var ln=sv.querySelector(".hovLine");if(ln)ln.style.display="none";}
- sv.addEventListener("pointermove",mv);
- sv.addEventListener("pointerdown",mv);
- sv.addEventListener("pointerleave",hide);
- sv.addEventListener("pointercancel",hide);
+ var touching=false;
+ sv.addEventListener("pointermove",function(e){if(e.pointerType==="touch")touching=true;mv(e);});
+ sv.addEventListener("pointerdown",function(e){if(e.pointerType==="touch")touching=true;mv(e);});
+ sv.addEventListener("pointerleave",function(e){if(!touching)hide();});
+ sv.addEventListener("pointercancel",function(){touching=false;hide();});
+ if(!window.__tipDocBound){window.__tipDocBound=1;document.addEventListener("pointerdown",function(e){if(!e.target.closest(".chartbox")){var t=$("tip");if(t)t.style.display="none";document.querySelectorAll(".hovLine").forEach(function(l){l.style.display="none";});}},true);}
  sv.__demo=function(f){var r=sv.getBoundingClientRect();mv({clientX:r.left+r.width*f,clientY:r.top+r.height*.45});};
 }
 window.bindHover=bindHover;
@@ -2382,7 +2384,7 @@ window.mDaily=mDaily;
 /* ---------- FOMO semicircle gauge + optional 30-day history (Signals) ---------- */
 function renderFomoGauge(f){
  var sv=$("fomoArc");if(!sv)return;
- var cx=170,cy=122,R=100,R2=74;
+ var cx=170,cy=148,R=118,R2=86;
  function pt(v,r){var a=Math.PI*(1-v/100);return[cx+r*Math.cos(a),cy-r*Math.sin(a)];}
  function arc(v0,v1,color,op){var p0=pt(v0,R),p1=pt(v1,R),q1=pt(v1,R2),q0=pt(v0,R2),lg=(v1-v0)>50?1:0;
   return '<path d="M'+p0[0].toFixed(1)+' '+p0[1].toFixed(1)+' A'+R+' '+R+' 0 '+lg+' 1 '+p1[0].toFixed(1)+' '+p1[1].toFixed(1)+' L'+q1[0].toFixed(1)+' '+q1[1].toFixed(1)+' A'+R2+' '+R2+' 0 '+lg+' 0 '+q0[0].toFixed(1)+' '+q0[1].toFixed(1)+' Z" fill="'+color+'" opacity="'+op+'"/>';}
@@ -2390,18 +2392,19 @@ function renderFomoGauge(f){
  [15,85].forEach(function(v){var a=pt(v,R+3),b=pt(v,R2-3);
   s+='<line x1="'+a[0].toFixed(1)+'" y1="'+a[1].toFixed(1)+'" x2="'+b[0].toFixed(1)+'" y2="'+b[1].toFixed(1)+'" stroke="#0c0e11" stroke-width="2"/>';
   var t2=pt(v,R+11);s+='<text x="'+t2[0].toFixed(1)+'" y="'+t2[1].toFixed(1)+'" font-size="8.5" text-anchor="middle" fill="'+(v===15?"#0ca30c":"#e14b4b")+'">'+v+'</text>';});
- s+='<text x="4" y="'+(cy+11)+'" font-size="8.5" fill="#1fb51f">EXTREME FEAR 0–15 — buy zone</text>';
- s+='<text x="336" y="'+(cy+11)+'" font-size="8.5" text-anchor="end" fill="#f06a6a">EXTREME FOMO 85–100 — trim zone</text>';
- s+='<text x="170" y="12" font-size="8.5" text-anchor="middle" fill="#7d8590">NORMAL 15–85</text>';
+ s+='<line x1="'+(cx-R)+'" x2="'+(cx+R)+'" y1="'+cy+'" y2="'+cy+'" stroke="#20252d" stroke-width="1"/>';
+ s+='<text x="6" y="'+(cy+16)+'" font-size="8.5" fill="#1fb51f">EXTREME FEAR 0–15 — buy zone</text>';
+ s+='<text x="334" y="'+(cy+16)+'" font-size="8.5" text-anchor="end" fill="#f06a6a">EXTREME FOMO 85–100 — trim zone</text>';
+ s+='<text x="170" y="'+(cy-R-9)+'" font-size="8.5" text-anchor="middle" fill="#7d8590">NORMAL 15–85</text>';
  if(f!=null&&isFinite(f)){
   var fc=Math.max(0,Math.min(100,f));
   var tipP=pt(fc,R-6),tail=pt(fc,18);
   s+='<line x1="'+tail[0].toFixed(1)+'" y1="'+tail[1].toFixed(1)+'" x2="'+tipP[0].toFixed(1)+'" y2="'+tipP[1].toFixed(1)+'" stroke="#eef1f4" stroke-width="2.6" stroke-linecap="round"/>';
   s+='<circle cx="'+cx+'" cy="'+cy+'" r="4.6" fill="#eef1f4"/>';
   var wz=f>85?["FOMO — trim zone, don’t chase","#f06a6a"]:f<15?["FEAR — buy zone, leaders only","#1fb51f"]:["NEUTRAL — no extreme either way","#fab219"];
-  s+='<text x="'+cx+'" y="'+(cy+38)+'" font-size="24" font-weight="800" text-anchor="middle" fill="#eef1f4" class="num">'+f.toFixed(1)+'</text>';
+  s+='<text x="'+cx+'" y="'+(cy+36)+'" font-size="24" font-weight="800" text-anchor="middle" fill="#eef1f4" class="num">'+f.toFixed(1)+'</text>';
   s+='<text x="'+cx+'" y="'+(cy+52)+'" font-size="9.5" font-weight="700" text-anchor="middle" fill="'+wz[1]+'">'+wz[0]+'</text>';
- } else s+='<text x="'+cx+'" y="'+(cy+38)+'" font-size="10" text-anchor="middle" fill="#7d8590">set a FOMO value in the Signals tab</text>';
+ } else s+='<text x="'+cx+'" y="'+(cy+36)+'" font-size="10" text-anchor="middle" fill="#7d8590">set a FOMO value in the Signals tab</text>';
  sv.innerHTML=s;
  if($("gFomoNow"))$("gFomoNow").textContent=(f!=null&&isFinite(f))?f.toFixed(1):"—";
  var hh=$("fomoHist");
