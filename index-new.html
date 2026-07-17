@@ -502,7 +502,7 @@ body.light{--bg:#f3f5f9;--card:#ffffff;--card2:#eef1f6;--bd:rgba(15,23,42,.09);-
   <div class="card c4">
     <div class="head"><h3>Market-implied odds</h3><span class="rt">fed-funds futures · re-prices with the Macro tab</span></div>
     <div id="fcOdds"></div>
-    <div class="kv">Green = easing priced · yellow = hold. The odds move on data, not speeches.</div>
+    <div class="kv">Yellow = hold · red = hike priced · green = easing priced. The odds move on data, not speeches.</div>
     <div class="kv" id="realStance" style="margin-top:6px"></div>
   </div>
 </div>
@@ -2024,8 +2024,9 @@ var FED_SAMPLE={
  next_fomc_days:{v:"13",sub:"",st:"m"},
  blackout:{v:"Jul 18",sub:"",st:"w"},
  ff_target:{v:"3.50–3.75%",sub:"",st:"m"},
- odds_hold:{v:"92.5",sub:"",st:"w"},
- odds_cut:{v:"7.5",sub:"",st:"g"},
+ odds_hold:{v:"89",sub:"",st:"w"},
+ odds_hike:{v:"11",sub:"",st:"r"},
+ odds_cut:{v:"0",sub:"",st:"g"},
  base_case:{v:"HOLD on July 29",sub:"",st:"w"},
  core_pce_yoy:{v:"3.4",sub:"May y/y · accelerating from 3.3",st:"r"},
  core_pce_mom:{v:"+0.3",sub:"",st:"r"},
@@ -2074,7 +2075,7 @@ function fedPage(){
  var s="";
  s+="<b>Next FOMC: "+nf.v+(nd.v!=="—"?" — in "+nd.v+" days":"")+"</b>"+(nf.sub?" ("+nf.sub+")":"")+". ";
  if(ff.v!=="—")s+="Target range <b>"+ff.v+"</b>";
- if(oh.v!=="—")s+=(ff.v!=="—"?", ":"")+"futures put <b>~"+oh.v+"% on hold</b>"+(oc.v!=="—"?" · "+oc.v+"% on a cut":"")+". ";
+ if(oh.v!=="—"){var _hk=MV("odds_hike");s+=(ff.v!=="—"?", ":"")+"futures put <b>~"+oh.v+"% on hold</b>"+(_hk.v!=="—"&&parseFloat(_hk.v)>0?" — and the tail is a <b>hike ("+_hk.v+"%)</b>, not a cut":(oc.v!=="—"&&parseFloat(oc.v)>0?" · "+oc.v+"% on a cut":""))+". Expect a hawkish hold — possible hike dissent; Warsh submitted no June dot (a communication change, not a formula change). ";}
  else if(ff.v!=="—")s+=". ";
  if(pceY.v!=="—")s+="The committee's own gauge — core PCE — runs <b>"+pceY.v+"%</b> y/y"+(pce3.v!=="—"?" (3-mo annualized ≈"+pce3.v+"%"+(pce6.v!=="—"?" · 6-mo ≈"+pce6.v+"%":"")+")":"")+(pceM.v!=="—"?" · "+pceM.v+"% m/m":"")+". ";
  if(cpiC.v!=="—")s+="CPI, the earlier monthly read, says <b>core "+cpiC.v+"%</b>"+(cpiH.v!=="—"?" · headline "+cpiH.v+"%":"")+(cpiM.v!=="—"?" · "+cpiM.v+"% m/m":"")+" — the open question is how these components map into the next core-PCE estimate (the official June PCE prints only after the meeting). ";
@@ -2088,17 +2089,21 @@ function fedPage(){
  if(fx){var o="";
   o+='<div class="f"><span class="dot w"></span><span><b>Blackout '+(bo.v!=="—"?"starts "+bo.v:"window applies before every meeting")+'</b> — no Fed speakers until the decision; the tape trades on data alone.'+(bo.smp?" "+SMPB:"")+'</span></div>';
   o+='<div class="f"><span class="dot g"></span><span><b>For your system:</b> follow the exposure model into the meeting — don\'t front-run the decision; obey the tier the model prints same-day.</span></div>';
+  o+='<div class="f"><span class="dot w"></span><span><b>Methodology watch:</b> BEA\'s Sep 30 annual revision may rewrite core-PCE history by a few tenths — treat it as statistics, not fresh disinflation.</span></div>';
   var vp=window._vixPct;
   o+='<div class="f"><span class="dot r"></span><span><b>Risk scenario:</b> a hawkish surprise into '+(vp!=null?(vp<=20?"a complacent VIX ("+vp+"th %ile)":"the current VIX ("+vp+"th %ile)"):"a quiet VIX")+' = air-pocket risk. If it hits, expect a FOMO washout toward the &lt;15 fear zone — that\'s a buy zone, in leaders only.</span></div>';
   fx.innerHTML=o;}
  if($("fcSrcNote"))$("fcSrcNote").innerHTML=live?("Macro tab connected — "+Object.keys(MAC).length+" keys loaded · missing keys show “—”."):('Add the <b>Macro</b> tab + Apps Script snippet to go live — values marked '+SMPB+' are placeholders from the approved design.');
  var od=$("fcOdds");
- if(od){var oH=oh.v!=="—"?parseFloat(oh.v):null,oC=oc.v!=="—"?parseFloat(oc.v):null;
+ if(od){var oH=oh.v!=="—"?parseFloat(oh.v):null,oC=oc.v!=="—"?parseFloat(oc.v):null,oK=MV("odds_hike"),oHk=oK.v!=="—"?parseFloat(oK.v):null;
   var hh="";
-  if(oH!=null&&isFinite(oH)){var cc2=(oC!=null&&isFinite(oC))?oC:Math.max(0,100-oH);
-   hh+='<div class="oddrow"><div class="t"><span><b>'+(nf.v!=="—"?nf.v.split(",")[0]:"Next meeting")+'</b>'+(ff.v!=="—"?" · range "+ff.v:"")+'</span><span class="kv">hold vs cut'+(oh.smp?" · sample":"")+'</span></div>'
-    +'<div class="oddbar"><div style="width:'+Math.min(96,Math.max(4,oH))+'%;background:var(--warn)">HOLD '+oH+'%</div><div style="width:'+Math.min(96,Math.max(4,cc2))+'%;background:var(--good);color:#04160f">'+cc2+'%</div></div></div>';}
-  else hh+='<div class="kv" style="margin-bottom:10px">odds_hold / odds_cut not set in the Macro tab — showing “—”.</div>';
+  if(oH!=null&&isFinite(oH)){
+   var hk=(oHk!=null&&isFinite(oHk))?oHk:0;
+   var cc2=(oC!=null&&isFinite(oC))?oC:Math.max(0,100-oH-hk);
+   var seg=function(w,bg,fg,txt){return w<=0?'':'<div style="width:'+Math.min(96,Math.max(3.5,w))+'%;background:'+bg+';color:'+fg+'">'+txt+'</div>';};
+   hh+='<div class="oddrow"><div class="t"><span><b>'+(nf.v!=="—"?nf.v.split(",")[0]:"Next meeting")+'</b>'+(ff.v!=="—"?" · range "+ff.v:"")+'</span><span class="kv">'+(hk>0&&hk>=cc2?"tail risk is a hike, not a cut":"hold vs move")+(oh.smp?" · sample":"")+'</span></div>'
+    +'<div class="oddbar">'+seg(oH,'var(--warn)','#04160f','HOLD '+oH+'%')+seg(hk,'var(--crit)','#fff','HIKE '+hk+'%')+seg(cc2,'var(--good)','#04160f',(cc2>=4?'CUT ':'')+cc2+'%')+'</div></div>';}
+  else hh+='<div class="kv" style="margin-bottom:10px">odds_hold / odds_hike / odds_cut not set in the Macro tab — showing “—”.</div>';
   if(!live){
    hh+='<div class="oddrow"><div class="t"><span><b>Sep 16</b> · dot-plot meeting</span><span class="kv">sample until wired</span></div><div class="oddbar"><div style="width:55%;background:var(--good);color:#04160f">CUT 55%</div><div style="width:40%;background:var(--warn)">HOLD 40%</div><div style="width:5%;background:#383835"></div></div></div>';
    hh+='<div class="oddrow"><div class="t"><span><b>Dec 9</b> · year-end</span><span class="kv">sample until wired</span></div><div class="oddbar"><div style="width:42%;background:var(--good);color:#04160f">−50bp 42%</div><div style="width:38%;background:#199e70;color:#04160f">−25bp 38%</div><div style="width:20%;background:var(--warn)">HOLD 20%</div></div></div>';}
@@ -2117,15 +2122,15 @@ function fedPage(){
   var vw=function(mv,words){return mv.v==="—"?"—":(words[mv.st]||words.m||"—");};
   var tile=function(l,mv,valTxt,word,mline,how){return '<div class="fed"><div class="l">'+l+'</div><div class="v '+stCl(mv.v==="—"?"m":mv.st)+'">'+(mv.v==="—"?"—":(valTxt!==""?valTxt+" · ":"")+word)+(mv.smp?" "+SMPB:"")+'</div><div class="m num">'+mline+'</div><div class="how"><b>How they read it:</b> '+how+'</div></div>';};
   fg.innerHTML=
-   tile("Core PCE · the target gauge",pceY,pceY.v!=="—"?pceY.v+"%":"",vw(pceY,{r:"TOO HOT",w:"STICKY",g:"ON TARGET",m:"—"}),
+   tile("Core PCE · the Fed's guide (official target = total PCE)",pceY,pceY.v!=="—"?pceY.v+"%":"",vw(pceY,{r:"TOO HOT",w:"STICKY",g:"ON TARGET",m:"—"}),
     (pceY.sub||"y/y")+(pceM.v!=="—"?" · "+pceM.v+"% m/m":""),
-    "not the single y/y print — the <b>3-mo &amp; 6-mo annualized</b> momentum ("+(pce3.v!=="—"?"≈"+pce3.v+"%":"—")+" / "+(pce6.v!=="—"?"≈"+pce6.v+"%":"—")+"), plus trimmed-mean and services-ex-housing (“supercore”) to strip the noise.")
+    "not the single y/y print — the <b>3-mo &amp; 6-mo annualized</b> momentum ("+(pce3.v!=="—"?"≈"+pce3.v+"%":"—")+" / "+(pce6.v!=="—"?"≈"+pce6.v+"%":"—")+"), plus trimmed-mean and services-ex-housing to strip the noise. The formal 2% objective is <b>total PCE over time</b> — core is the best guide, not the target itself. <b>Official through May · June is a nowcast until Jul 30.</b>")
    +tile("CPI · the early monthly read",cpiC,"",vw(cpiC,{g:"COOLING",w:"MIXED",r:"HOT",m:"—"}),
     (cpiC.v!=="—"?"core "+cpiC.v+"%":"—")+(cpiH.v!=="—"?" · headline "+cpiH.v+"%":"")+(cpiM.v!=="—"?" · "+cpiM.v+"% m/m":""),
     "CPI arrives ~2 weeks before PCE, so it feeds the <b>PCE nowcast</b> (Cleveland Fed). The CPI–PCE gap is a <b>mapping</b> question — weights, shelter, healthcare — not a hawk/dove score; what matters is how these components alter the next core-PCE estimate.")
    +tile("Jobs · payrolls &amp; unemployment",pj,"",vw(pj,{w:"STALLING",g:"SOLID",r:"BREAKING",m:"—"}),
     (pj.v!=="—"?pj.v+" last":"—")+(p3.v!=="—"?" · 3-mo avg "+p3.v:"")+(un.v!=="—"?" · U-3 "+un.v+"%":""),
-    "the <b>3-month average</b> (revisions are huge — though one shock print can still move them), breadth of hiring, claims and hours. <b>Sahm rule:</b> 3-mo avg unemployment ≥ +0.50pp above its 12-mo low — a recession signal, not a fixed 4.5% trigger; no mechanical threshold forces cuts.")
+    "the <b>3-month average</b> (revisions are huge — though one shock print can still move them), breadth of hiring, claims and hours. <b>Sahm rule:</b> 3-mo avg unemployment ≥ +0.50pp above its 12-mo low — a recession signal, not a fixed 4.5% trigger; no mechanical threshold forces cuts. Judge payrolls against the <b>breakeven pace</b> — with labor-force growth slowed, breakeven may be near zero, so a soft print isn't automatic weakness.")
    +tile("Wages",ahe,ahe.v!=="—"?ahe.v+"%":"",vw(ahe,{w:"EASING",g:"CONSISTENT WITH 2%",r:"TOO HOT",m:"—"}),
     "AHE y/y"+(eci.v!=="—"?" · ECI "+eci.v+"% — preferred":" · ECI — (quarterly, preferred)"),
     "the quarterly <b>ECI is the preferred gauge</b> (controls for job mix); monthly AHE is noisy. The real test is <b>wages minus productivity</b> (unit labor costs): near 2% compatible · 2–3% warm · persistently &gt;3% inflationary — dashboard bands, not official thresholds.")
@@ -2133,8 +2138,8 @@ function fedPage(){
     (fci.sub||"FCI-G")+" — your JNK÷IEI read: "+(window._credW||"—"),
     "the Fed's own <b>FCI-G index</b> (positive = growth headwind, negative = tailwind) + credit spreads + the SLOOS bank-lending survey. Cuts both ways: easy conditions = less urgency to cut, but they can also undo the Fed's restraint and keep inflation hot.")
    +tile("Inflation expectations",iex,iex.v!=="—"?iex.v+"%":"",vw(iex,{g:"ANCHORED",w:"DRIFTING",r:"UNANCHORED",m:"—"}),
-    iex.sub||"5y5y forwards · surveys",
-    "market <b>5y5y forwards</b> (level + 20-day trend) + Michigan &amp; NY Fed surveys (3-mo smoothed). A gasoline-driven 1-yr spike matters far less than persistent drift at 3-yr+; the ladder is <b>anchored → questioned → drifting → unanchored</b> — and consumer surveys normally sit above 2%, so anchored ≠ exactly 2%.");
+    iex.sub||"5y5y inflation compensation · surveys",
+    "market <b>5y5y “inflation compensation”</b> (includes risk premium — not a pure expectation; level + 20-day trend) + Michigan &amp; NY Fed surveys (3-mo smoothed). A gasoline-driven 1-yr spike matters far less than persistent drift at 3-yr+; the ladder is <b>anchored → questioned → drifting → unanchored</b> — and consumer surveys normally sit above 2%, so anchored ≠ exactly 2%.");
  }
  var m2c=$("m2Chart");
  if(m2c){
