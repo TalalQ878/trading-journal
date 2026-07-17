@@ -532,6 +532,10 @@ body.light{--bg:#f3f5f9;--card:#ffffff;--card2:#eef1f6;--bd:rgba(15,23,42,.09);-
       <div class="f"><span class="dot g"></span><span>Hawkish dip → watch the 4% tripwire + FOMO &lt;15; leaders holding their lows are the buy list.</span></div>
       <div class="f"><span class="dot r"></span><span>Either way — obey the exposure tier the model prints same-day, not the narrative.</span></div>
     </div>
+    <div class="head" style="margin-top:10px"><h3>Scenario table — what each outcome requires</h3><span class="rt">conditions, not a score</span></div>
+    <div class="rowlt"><span class="k"><b class="vwarn">HOLD</b> <small>the base case</small></span><span class="v" style="white-space:normal;text-align:right;font-size:11.5px;color:var(--ink2)">inflation still high but monthly momentum improving · labor stable</span></div>
+    <div class="rowlt"><span class="k"><b class="vcrit">HIKE</b> <small>the tail</small></span><span class="v" style="white-space:normal;text-align:right;font-size:11.5px;color:var(--ink2)">core-PCE estimate re-accelerates · breadth worsens · expectations drift</span></div>
+    <div class="rowlt"><span class="k"><b class="vgood">CUT</b> <small>not active</small></span><span class="v" style="white-space:normal;text-align:right;font-size:11.5px;color:var(--ink2)">broad labor deterioration or credit stress — never one weak payroll print</span></div>
   </div>
 </div>
 </div>
@@ -2034,7 +2038,7 @@ var FED_SAMPLE={
  core_pce_6m:{v:"3.1",sub:"",st:"w"},
  cpi_core_yoy:{v:"2.6",sub:"Jun · was 2.9",st:"g"},
  cpi_head_yoy:{v:"3.5",sub:"was 4.2",st:"g"},
- cpi_mom:{v:"−0.4",sub:"",st:"g"},
+ cpi_mom:{v:"headline −0.4 · core 0.0",sub:"",st:"g"},
  payrolls_last:{v:"+57k",sub:"Jun · exp +135k",st:"w"},
  payrolls_3mo:{v:"≈115k",sub:"",st:"w"},
  unemp:{v:"4.2",sub:"",st:"w"},
@@ -2044,7 +2048,7 @@ var FED_SAMPLE={
  infl_exp_5y5y:{v:"≈2.2",sub:"5y5y forwards · Michigan cooling",st:"g"},
  m2_yoy:{v:"4.7",sub:"",st:"g"},
  m2_series:{v:"3.2,3.3,3.5,3.4,3.6,3.7,3.8,3.7,3.9,4.0,3.9,4.1,4.2,4.4,4.5,4.6,4.7,4.7",sub:"",st:"g"},
- m2_velocity_note:{v:"money velocity is back to Q4-2019 levels — the pandemic excess has been unwound",sub:"",st:"m"},
+ m2_velocity_note:{v:"money velocity sits slightly below Q4-2019 — the pandemic excess largely unwound",sub:"",st:"m"},
  catalyst_1:{v:"Jul 16 — PPI + Retail Sales",sub:"watch",st:"w"},
  catalyst_2:{v:"Jul 17 — Jobless claims",sub:"",st:"m"},
  catalyst_3:{v:"Jul 18 — Fed blackout begins",sub:"",st:"m"},
@@ -2114,8 +2118,10 @@ function fedPage(){
   if(mm)mmid=(parseFloat(mm[1])+parseFloat(mm[2]))/2;
   var pcv=parseFloat(pceY.v);
   if(mmid!=null&&isFinite(pcv)){var rr=mmid-pcv;
-   var wrd=rr>=1.5?"RESTRICTIVE":rr>=0.5?"MODERATELY RESTRICTIVE":rr>=-0.25?"NEAR NEUTRAL":"ACCOMMODATIVE";
-   rs.innerHTML="Real stance: midpoint "+mmid.toFixed(2)+"% − core PCE "+pcv.toFixed(1)+"% ≈ <b>"+rr.toFixed(1)+"%</b> vs a neutral-range of estimates → <b>"+wrd+"</b> — a range, not one precise r-star.";
+   var exv=parseFloat(MV("infl_exp_5y5y").v),ea=isFinite(exv)?mmid-exv:null;
+   var base=ea!=null?ea:rr;
+   var wrd=base>=1.5?"RESTRICTIVE":base>=0.5?"MODERATELY RESTRICTIVE":base>=-0.25?"NEAR NEUTRAL":"ACCOMMODATIVE";
+   rs.innerHTML="Real stance — <b>ex-ante</b> (midpoint − expected inflation"+(ea!=null?" ≈ <b>"+ea.toFixed(1)+"%</b>":": add infl_exp_5y5y")+") is what compares to neutral → <b>"+wrd+"</b>. Ex-post (− realized core PCE) ≈ "+rr.toFixed(1)+"% shown for context. Neutral is a range, never one precise r-star.";
   } else rs.innerHTML="";}
  var fg=$("fedGrid");
  if(fg){
@@ -2126,17 +2132,17 @@ function fedPage(){
     (pceY.sub||"y/y")+(pceM.v!=="—"?" · "+pceM.v+"% m/m":""),
     "not the single y/y print — the <b>3-mo &amp; 6-mo annualized</b> momentum ("+(pce3.v!=="—"?"≈"+pce3.v+"%":"—")+" / "+(pce6.v!=="—"?"≈"+pce6.v+"%":"—")+"), plus trimmed-mean and services-ex-housing to strip the noise. The formal 2% objective is <b>total PCE over time</b> — core is the best guide, not the target itself. <b>Official through May · June is a nowcast until Jul 30.</b>")
    +tile("CPI · the early monthly read",cpiC,"",vw(cpiC,{g:"COOLING",w:"MIXED",r:"HOT",m:"—"}),
-    (cpiC.v!=="—"?"core "+cpiC.v+"%":"—")+(cpiH.v!=="—"?" · headline "+cpiH.v+"%":"")+(cpiM.v!=="—"?" · "+cpiM.v+"% m/m":""),
-    "CPI arrives ~2 weeks before PCE, so it feeds the <b>PCE nowcast</b> (Cleveland Fed). The CPI–PCE gap is a <b>mapping</b> question — weights, shelter, healthcare — not a hawk/dove score; what matters is how these components alter the next core-PCE estimate.")
+    (cpiC.v!=="—"?"core "+cpiC.v+"%":"—")+(cpiH.v!=="—"?" · headline "+cpiH.v+"%":"")+(cpiM.v!=="—"?" · m/m: "+cpiM.v+"%":""),
+    "CPI arrives ~2 weeks before PCE, so it feeds the <b>PCE nowcast</b> (Cleveland Fed's — a public proxy; the FOMC votes on its own confidential staff forecast). The CPI–PCE gap is a <b>mapping</b> question — weights, shelter, healthcare — not a hawk/dove score; what matters is how these components alter the next core-PCE estimate.")
    +tile("Jobs · payrolls &amp; unemployment",pj,"",vw(pj,{w:"STALLING",g:"SOLID",r:"BREAKING",m:"—"}),
     (pj.v!=="—"?pj.v+" last":"—")+(p3.v!=="—"?" · 3-mo avg "+p3.v:"")+(un.v!=="—"?" · U-3 "+un.v+"%":""),
-    "the <b>3-month average</b> (revisions are huge — though one shock print can still move them), breadth of hiring, claims and hours. <b>Sahm rule:</b> 3-mo avg unemployment ≥ +0.50pp above its 12-mo low — a recession signal, not a fixed 4.5% trigger; no mechanical threshold forces cuts. Judge payrolls against the <b>breakeven pace</b> — with labor-force growth slowed, breakeven may be near zero, so a soft print isn't automatic weakness.")
+    "the <b>3-month average</b> (revisions are huge — though one shock print can still move them), breadth of hiring, claims and hours. <b>Sahm rule:</b> 3-mo avg unemployment ≥ +0.50pp above the <b>lowest 3-mo average</b> of the past 12 months — a recession signal, not a fixed 4.5% trigger; no mechanical threshold forces cuts. Judge payrolls against the <b>breakeven pace</b> — with labor-force growth slowed, breakeven may be near zero, so a soft print isn't automatic weakness.")
    +tile("Wages",ahe,ahe.v!=="—"?ahe.v+"%":"",vw(ahe,{w:"EASING",g:"CONSISTENT WITH 2%",r:"TOO HOT",m:"—"}),
     "AHE y/y"+(eci.v!=="—"?" · ECI "+eci.v+"% — preferred":" · ECI — (quarterly, preferred)"),
-    "the quarterly <b>ECI is the preferred gauge</b> (controls for job mix); monthly AHE is noisy. The real test is <b>wages minus productivity</b> (unit labor costs): near 2% compatible · 2–3% warm · persistently &gt;3% inflationary — dashboard bands, not official thresholds.")
+    "the quarterly <b>ECI is the preferred gauge</b> (controls for job mix); monthly AHE is noisy. The real test is <b>wages minus productivity</b> (an ECI-productivity proxy — official ULC is the ULCNFB series, which the Macro tab pulls): near 2% compatible · 2–3% warm · persistently &gt;3% inflationary — dashboard bands, not official thresholds.")
    +tile("Financial conditions",fci,"",vw(fci,{w:"EASY",g:"SUPPORTIVE",r:"TIGHT",m:"—"}),
     (fci.sub||"FCI-G")+" — your JNK÷IEI read: "+(window._credW||"—"),
-    "the Fed's own <b>FCI-G index</b> (positive = growth headwind, negative = tailwind) + credit spreads + the SLOOS bank-lending survey. Cuts both ways: easy conditions = less urgency to cut, but they can also undo the Fed's restraint and keep inflation hot.")
+    "<b>Board staff FCI-G</b> (a research index, not a policy target; positive = growth headwind, negative = tailwind) + credit spreads + the SLOOS bank-lending survey. Cuts both ways: easy conditions = less urgency to cut, but they can also undo the Fed's restraint and keep inflation hot.")
    +tile("Inflation expectations",iex,iex.v!=="—"?iex.v+"%":"",vw(iex,{g:"ANCHORED",w:"DRIFTING",r:"UNANCHORED",m:"—"}),
     iex.sub||"5y5y inflation compensation · surveys",
     "market <b>5y5y “inflation compensation”</b> (includes risk premium — not a pure expectation; level + 20-day trend) + Michigan &amp; NY Fed surveys (3-mo smoothed). A gasoline-driven 1-yr spike matters far less than persistent drift at 3-yr+; the ladder is <b>anchored → questioned → drifting → unanchored</b> — and consumer surveys normally sit above 2%, so anchored ≠ exactly 2%.");
@@ -2152,7 +2158,7 @@ function fedPage(){
   var st2=$("m2Story");
   if(st2){var so="";
    if(yv!=null&&isFinite(yv)){
-    so+="Money supply gets its own page now. M2 is up <b>"+yv.toFixed(1)+"% vs a year ago</b>"+(yv>=3&&yv<=7?" — back to <b>pre-pandemic growth rates</b>":yv>7?" — <b>above the pre-pandemic band</b>":" — <b>below the pre-pandemic band</b>")+", versus the double-digit surge of 2020–21 (the inflation fuel) and the negative growth of 2022–23 (the squeeze). ";
+    so+="The July MPR revisits money aggregates — a full page, new for the Fed. M2 is up <b>"+yv.toFixed(1)+"%</b> (Jan–May average, y/y)"+(yv>=3&&yv<=7?" — back to <b>pre-pandemic growth rates</b>":yv>7?" — <b>above the pre-pandemic band</b>":" — <b>below the pre-pandemic band</b>")+", versus the double-digit surge of 2020–21 (the inflation fuel) and the negative growth of 2022–23 (the squeeze). ";
     if(m2v.v!=="—")so+="<i>"+m2v.v+"</i>. ";
     so+="<b>How the Fed actually uses it: a cross-check, not a trigger</b> — money growth alone can't separate real growth, inflation, portfolio shifts or velocity. <b>Hawkish only with confirmation:</b> M2 accelerating <i>and</i> velocity stable/rising <i>and</i> bank credit expanding <i>and</i> inflation breadth/expectations rising. <b>Dovish only with confirmation:</b> real M2 contracting <i>and</i> credit weakening <i>and</i> spending/labor deteriorating.";
    } else so="Add <b>m2_yoy</b> and <b>m2_series</b> (comma-separated monthly y/y values, oldest first) to the Macro tab to light this card up.";
