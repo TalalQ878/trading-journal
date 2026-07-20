@@ -4,7 +4,7 @@
    which keeps its own localStorage fallback for offline viewing).
    Google Fonts: cached after first use so typography works offline. */
 "use strict";
-const VERSION = "tj-v3"; /* v2: iOS app chrome — bottom tab bar, pull-to-refresh, touch polish */
+const VERSION = "tj-v4"; /* v4: lot ladder + FIFO/AVG toggle, ADD GATE, +Add "Unknown action" fix (pwa.js side field) */
 const SHELL = [
   "./",
   "./index.html",

@@ -44,7 +44,7 @@
   /* ---------- writes ---------- */
   async function postAPI(action, payload) {
     if (!S.api) throw new Error("Not connected — tap ⚙ and connect the live API first.");
-    var body = JSON.stringify(Object.assign({ key: S.key || "", action: action }, payload));
+    var body = JSON.stringify(Object.assign({ key: S.key || "" }, payload, { action: action }));
     var r = await fetch(S.api, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: body, redirect: "follow" });
     if (!r.ok) throw new Error("HTTP " + r.status);
     var j = await r.json().catch(function () { return { error: "Bad server response" }; });
@@ -287,7 +287,7 @@
       msg();
       var p = {
         date: $("enDate").value, ticker: ($("enTicker").value || "").trim().toUpperCase(),
-        action: $("enAction").value, shares: parseFloat($("enShares").value), price: parseFloat($("enPrice").value),
+        side: $("enAction").value, shares: parseFloat($("enShares").value), price: parseFloat($("enPrice").value),
         stop: $("enStop").value === "" ? "" : parseFloat($("enStop").value),
         pivot: $("enPivot").value === "" ? "" : parseFloat($("enPivot").value),
         setup: $("enSetup").value || "", lot: "", notes: $("enNote").value || ""
@@ -296,18 +296,18 @@
       if (!p.ticker) return msg("Ticker is required.");
       if (!(p.shares > 0)) return msg("Shares must be a positive number.");
       if (!(p.price > 0)) return msg("Price must be a positive number.");
-      var sig = [p.date, p.ticker, p.action, p.shares, p.price].join("|");
+      var sig = [p.date, p.ticker, p.side, p.shares, p.price].join("|");
       if (sig === lastSig && Date.now() - lastSigT < 30000 && !dupOk) {
         dupOk = true;
         return msg("Looks identical to the trade you just saved. Tap Save again if it's really a second fill.");
       }
-      if (p.action === "Buy" && p.stop === "") msg("", "Tip: buys without a stop show as unstopped in SCAR / Playbook. Saving anyway…");
+      if (p.side === "Buy" && p.stop === "") msg("", "Tip: buys without a stop show as unstopped in SCAR / Playbook. Saving anyway…");
       var lbl = btn.textContent;
       busy(btn, true, lbl);
       try {
         await postAPI("addTrade", p);
         lastSig = sig; lastSigT = Date.now(); dupOk = false;
-        msg("", p.action + " " + p.shares + " " + p.ticker + " @ " + p.price + " saved ✓" + (keep ? " — next one:" : ""));
+        msg("", p.side + " " + p.shares + " " + p.ticker + " @ " + p.price + " saved ✓" + (keep ? " — next one:" : ""));
         $("enShares").value = ""; $("enPrice").value = ""; $("enNote").value = "";
         if (!keep) { $("enTicker").value = ""; $("enStop").value = ""; $("enPivot").value = ""; $("enSetup").value = ""; }
         $("enPrev").textContent = "";
@@ -335,7 +335,7 @@
     };
 
     /* ----- fix rows (delete / edit stop) ----- */
-    function rowMatch(t) { return { date: iso(t.d), ticker: t.sym, action: t.act, shares: t.sh, price: t.px }; }
+    function rowMatch(t) { return { date: iso(t.d), ticker: t.sym, side: t.act, shares: t.sh, price: t.px }; }
     function renderRows() {
       var rows = (typeof TX!=="undefined"&&TX||[]).slice(-15).reverse();
       var el = $("enRows");
