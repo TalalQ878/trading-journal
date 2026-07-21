@@ -4,7 +4,7 @@
    which keeps its own localStorage fallback for offline viewing).
    Google Fonts: cached after first use so typography works offline. */
 "use strict";
-const VERSION = "tj-v4b"; /* v4: lot ladder + FIFO/AVG toggle, ADD GATE, +Add "Unknown action" fix (pwa.js side field) */
+const VERSION = "tj-v5"; /* v5: v4 goes live on the main link — lot ladder, ADD GATE, donut FOMO gauge, +Add fix */
 const SHELL = [
   "./",
   "./index.html",
