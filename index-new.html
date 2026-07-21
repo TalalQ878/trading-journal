@@ -408,7 +408,7 @@ tr.lothead td:first-child{padding-left:26px}
     </select>
   </div>
   <div class="ctl">CURVE
-    <select id="curve"><option value="EQ">Equity</option><option value="REAL">Realized %</option><option value="REALD">Realized $</option></select>
+    <select id="curve"><option value="EQ">Equity</option><option value="REAL">Realized</option></select>
   </div>
   <div class="ctl" style="display:none">BENCHMARK <select id="bench"></select></div>
   <button class="chip" id="connOpen" style="border:1px solid var(--edge)">Data connection…</button>
@@ -474,7 +474,7 @@ tr.lothead td:first-child{padding-left:26px}
 <div class="grid">
   <div class="card c8">
     <div class="head">
-      <div class="chips" style="padding:2px"><button class="chip on" id="evEQ">Equity</button><button class="chip" id="evDD">Drawdown</button><button class="chip" id="tgEQ">MAs</button><button class="chip" id="tgSPY">SPY</button><button class="chip" id="tgQQQ">QQQ</button></div>
+      <div class="chips" style="padding:2px"><button class="chip on" id="evEQ">Equity</button><button class="chip" id="evDD">Drawdown</button><button class="chip" id="tgEQ">MAs</button><button class="chip" id="tgSPY">SPY</button><button class="chip" id="tgQQQ">QQQ</button><button class="chip" id="tgLive" title="mark-to-market tail — live quotes vs last daily close">LIVE</button></div>
       <h3 style="margin-left:4px">Equity curve — FOMO + net H/L attached</h3>
       <span class="rt">vs <span id="benchName">…</span> · <span id="rsState"></span><span class="num" id="ddStats"></span> <span id="eqLegend"></span></span>
     </div>
@@ -751,6 +751,14 @@ tr.lothead td:first-child{padding-left:26px}
   </div>
 </div>
 
+<div class="lyr">LAYER 5 · SCENARIOS</div>
+<div class="grid">
+  <div class="c12">
+    <div class="head" style="margin-bottom:8px"><h3>Scenario table — what each outcome requires</h3><span class="rt">conditions, not a score</span></div>
+    <div class="scen3" id="fcScen"></div>
+  </div>
+</div>
+
 <div class="lyr">LAYER 2 · CORE REACTION FUNCTION</div>
 <div class="grid"><div class="c12"><div class="fedgrid" id="fedGridA"></div></div></div>
 
@@ -780,14 +788,6 @@ tr.lothead td:first-child{padding-left:26px}
     </div>
   </div>
 </div>
-
-<div class="lyr">LAYER 5 · SCENARIOS</div>
-<div class="grid">
-  <div class="c12">
-    <div class="head" style="margin-bottom:8px"><h3>Scenario table — what each outcome requires</h3><span class="rt">conditions, not a score</span></div>
-    <div class="scen3" id="fcScen"></div>
-  </div>
-</div>
 </div>
 
 <!-- ============================ EXPOSURE MODAL ============================ -->
@@ -813,7 +813,7 @@ tr.lothead td:first-child{padding-left:26px}
 "use strict";
 const $=id=>document.getElementById(id);
 const LS="talalTJ3";
-let S=Object.assign({tf:"YTD",gmode:"%",alTab:"TH",bench:"QQQ",maT:"EMA",maF:10,maS:21,lots:"FIFO",curve:"EQ",rs:"ON",ev:"EQ",tgEQ:"ON",tgSPY:"OFF",tgQQQ:"ON",theme:"dark",page:"J",id:"11d1lD0YtMcD9yJ8au8w5TxfTmlu3XIQd8wCMdaK0gms",src:"sheet"},JSON.parse(localStorage.getItem(LS)||"{}"));
+let S=Object.assign({tf:"YTD",gmode:"%",alTab:"TH",bench:"QQQ",maT:"EMA",maF:10,maS:21,lots:"FIFO",curve:"EQ",rs:"ON",ev:"EQ",tgEQ:"ON",tgSPY:"OFF",tgQQQ:"ON",liveTail:"ON",theme:"dark",page:"J",id:"11d1lD0YtMcD9yJ8au8w5TxfTmlu3XIQd8wCMdaK0gms",src:"sheet"},JSON.parse(localStorage.getItem(LS)||"{}"));
 const save=()=>localStorage.setItem(LS,JSON.stringify(S));
 // ---------- data holders ----------
 let TX=[],DAILY=[],PRICES={},LIVE={},SIG={},LDRS=[],TRADES=[],POS=[],EQD=[],EQ=[],EQX=[],EQABS=false;
@@ -892,12 +892,26 @@ function loadSheetData(tx,dy,pr,lv,sn,ld,yl,mc,er){
    const arr=[];for(let r=1;r<Yl.length;r++){const d=dt(Yl[r][c]),v=num(Yl[r][c+1]);if(d&&v!=null)arr.push([d,v]);}
    if(arr.length>3){PRICES[lb]=arr.sort((a,b)=>a[0]-b[0]);window._yieldKeys.push(lb);}}}catch(e2){}}
  LIVE={};Lv.slice(1).forEach(r=>{const s=String(r[0]||"").trim().toUpperCase(),p=num(r[1]);if(s&&p!=null)LIVE[s]=p;});
- SIG={};if(sn){parseCSV(sn).slice(1).forEach(r=>{const k=String(r[0]||"").toLowerCase(),v2=String(r[1]||"").trim();if(k.includes("nasdaq"))SIG.naz=v2;else if(k.includes("nyse"))SIG.nyse=v2;else if(k.includes("leader"))SIG.lead=v2;else if(k.includes("follow"))SIG.ftd=v2;else if(k.includes("vix"))SIG.vix=v2;else if(k.includes("one"))SIG.one=v2;
+ SIG={};window._hlDaily={};if(sn){const SN=parseCSV(sn);SN.slice(1).forEach(r=>{const k=String(r[0]||"").toLowerCase(),v2=String(r[1]||"").trim();if(k.includes("nasdaq"))SIG.naz=v2;else if(k.includes("nyse"))SIG.nyse=v2;else if(k.includes("leader"))SIG.lead=v2;else if(k.includes("follow"))SIG.ftd=v2;else if(k.includes("vix"))SIG.vix=v2;else if(k.includes("one"))SIG.one=v2;
   else if(k.includes("fomo")){ // optional history: a "fomo history" row (or comma list in the value) = daily values, oldest first
    const hist=v2.indexOf(",")>-1?v2.split(",").map(x=>num(x)).filter(x=>x!=null):null;
    if(k.includes("hist")){if(hist&&hist.length>=2){SIG.fomoHist=hist;if(SIG.fomo==null)SIG.fomo=String(hist[hist.length-1]);}}
    else if(hist&&hist.length>=2){SIG.fomoHist=hist;SIG.fomo=String(hist[hist.length-1]);}
-   else SIG.fomo=v2;}});}
+   else SIG.fomo=v2;}});
+  { // side table (cols F+): Date · NasdaqHighs · NasdaqLows · NYSEHighs · NYSELows (+ optional Fomo) — a dated daily breadth history
+   const sNm=h=>String(h||"").toLowerCase().replace(/[\s%]+/g,""),sCi={};(SN[0]||[]).forEach((h,i)=>{const k3=sNm(h);if(k3&&sCi[k3]==null)sCi[k3]=i;});
+   SIG.hlHist=[];
+   if(sCi.date!=null&&(sCi.nasdaqhighs!=null||sCi.nysehighs!=null||sCi.fomo!=null)){
+    const fH=[],gC=(r,k3)=>sCi[k3]!=null?num(r[sCi[k3]]):null;
+    SN.slice(1).forEach(r=>{const d3=dt(r[sCi.date]);if(!d3)return; // rows with a date but blank counts skip those fields
+     const nzh=gC(r,"nasdaqhighs"),nzl=gC(r,"nasdaqlows"),nyh=gC(r,"nysehighs"),nyl=gC(r,"nyselows");
+     const nz3=(nzh!=null&&nzl!=null)?nzh-nzl:null,ny3=(nyh!=null&&nyl!=null)?nyh-nyl:null;
+     if(nz3!=null||ny3!=null)SIG.hlHist.push({d:d3,nz:nz3,ny:ny3});
+     const fv3=gC(r,"fomo");if(fv3!=null)fH.push({d:d3,v:fv3});});
+    SIG.hlHist.sort((a,b)=>a.d-b.d);
+    SIG.hlHist.forEach(h3=>{window._hlDaily[h3.d.getFullYear()+"-"+h3.d.getMonth()+"-"+h3.d.getDate()]={nz:h3.nz,ny:h3.ny};});
+    if(fH.length){fH.sort((a,b)=>a.d-b.d);SIG.fomoHistD=fH;SIG.fomoHist=fH.map(x=>x.v); // dated column wins over a legacy comma-list; absent column leaves it alone
+     if(SIG.fomo==null||SIG.fomo==="")SIG.fomo=String(fH[fH.length-1].v);}}}}
  LDRS=[];if(ld){parseCSV(ld).slice(1).forEach(r=>{const s2=String(r[0]||"").trim().toUpperCase(),p1=num(r[1]),p0=num(r[2]);if(s2&&p1!=null&&p0!=null)LDRS.push({sym:s2,up:p1>p0});});}
  MAC={};if(mc){try{parseCSV(mc).slice(1).forEach(r=>{const k=String(r[0]||"").trim().toLowerCase();if(k)MAC[k]={v:String(r[1]==null?"":r[1]).trim(),sub:String(r[2]==null?"":r[2]).trim(),st:String(r[3]==null?"":r[3]).trim().toLowerCase(),asof:String(r[4]==null?"":r[4]).trim()};});}catch(_m){MAC={};}}
  ERN={};if(er){try{parseCSV(er).slice(1).forEach(r=>{const s5=String(r[0]||"").trim().toUpperCase(),d5=dt(r[1]);if(s5&&d5)ERN[s5]=d5;});}catch(_er){ERN={};}} // optional Earnings tab: Ticker,Date — absent = render nothing
@@ -1066,19 +1080,32 @@ function win(){const last=EQD[EQD.length-1]||new Date();let from=new Date(last.g
  let i0=EQD.findIndex(d=>d>=from);if(i0<0)i0=0;
  let i1=EQD.length-1;while(i1>0&&EQD[i1]>to)i1--;if(i1-i0<2)i0=Math.max(0,i1-2);
  return[i0,i1,from,to];}
-/* ---------- FOMO + net H/L panes attached under the main chart (real latest values only — never a fabricated series) ---------- */
-function eqPanes(pl,pr,w){
+/* ---------- FOMO + net H/L panes attached under the main chart — real dated series from the Signals side table, latest-value fallback ---------- */
+function eqPanes(pl,pr,w,X,i0,i1){
  const x0=pl,x1=w-pr;let s="";
  const fT=332,fB=404,fy=v=>fB-(fB-fT)*(v/100);
+ const dk4=d=>d.getFullYear()+"-"+d.getMonth()+"-"+d.getDate();
+ let fPts=null,hlPts=null,hlMax=10; // day-matched points inside the plotted window — gaps skipped, only actual points connect
+ if(X&&i1!=null&&typeof SIG!=="undefined"&&SIG){
+  if(SIG.fomoHistD&&SIG.fomoHistD.length){const m4={};SIG.fomoHistD.forEach(p=>{m4[dk4(p.d)]=p.v;});
+   const a4=[];for(let i=i0;i<=i1;i++){const v=m4[dk4(EQD[i])];if(v!=null)a4.push([X(i-i0),Math.max(0,Math.min(100,v)),v]);}
+   if(a4.length>=2)fPts=a4;}
+  if(SIG.hlHist&&SIG.hlHist.length){const m5={};SIG.hlHist.forEach(p=>{m5[dk4(p.d)]=p;});
+   const b4=[];for(let i=i0;i<=i1;i++){const p=m5[dk4(EQD[i])];if(p)b4.push([X(i-i0),p]);}
+   if(b4.length){hlPts=b4;b4.forEach(q=>{hlMax=Math.max(hlMax,Math.abs(q[1].nz||0),Math.abs(q[1].ny||0));});}}}
  s+=`<text x="${x0}" y="${fT-7}" font-size="10" letter-spacing=".08em" fill="#7d8590">FOMO — % NASDAQ ABOVE 5-DAY ($NCFD)</text>`;
- s+=`<text x="${x1}" y="${fT-7}" font-size="8.5" text-anchor="end" fill="#5b636e">${(typeof SIG!=="undefined"&&SIG&&SIG.fomoHist)?"latest value here — 30-day history on the Market Conditions page":"latest value only — add a FOMO history column to Signals for the line"}</text>`;
+ s+=`<text x="${x1}" y="${fT-7}" font-size="8.5" text-anchor="end" fill="#5b636e">${fPts?"daily line — Fomo column in the Signals side table":"log a Fomo column in the Signals side table for the line"}</text>`;
  s+=`<rect x="${x0}" y="${fy(100)}" width="${x1-x0}" height="${fy(85)-fy(100)}" fill="rgba(225,75,75,.10)"/>`;
  s+=`<rect x="${x0}" y="${fy(15)}" width="${x1-x0}" height="${fy(0)-fy(15)}" fill="rgba(12,163,12,.10)"/>`;
  s+=`<line x1="${x0}" x2="${x1}" y1="${fy(85)}" y2="${fy(85)}" stroke="#e14b4b" stroke-width="1" stroke-dasharray="2 3"/>`;
  s+=`<line x1="${x0}" x2="${x1}" y1="${fy(15)}" y2="${fy(15)}" stroke="#0ca30c" stroke-width="1" stroke-dasharray="2 3"/>`;
  s+=`<text x="${x1+6}" y="${fy(85)+3}" font-size="9" fill="#e14b4b">85</text><text x="${x1+6}" y="${fy(15)+3}" font-size="9" fill="#0ca30c">15</text>`;
  const f=(typeof SIG!=="undefined"&&SIG&&SIG.fomo!=null&&SIG.fomo!=="")?num(SIG.fomo):null;
- if(f!=null){const fc=Math.max(0,Math.min(100,f));
+ if(fPts){const lastF=fPts[fPts.length-1];
+  s+=`<polyline fill="none" stroke="#fab219" stroke-width="1.6" points="${fPts.map(p=>p[0].toFixed(1)+","+fy(p[1]).toFixed(1)).join(" ")}"/>`;
+  s+=`<circle cx="${lastF[0].toFixed(1)}" cy="${fy(lastF[1]).toFixed(1)}" r="3" fill="#fab219"/>`;
+  s+=`<text x="${x1+6}" y="${(fy(lastF[1])+4).toFixed(1)}" font-size="11" font-weight="700" fill="#fab219">${(+lastF[2]).toFixed(1)}</text>`;
+ } else if(f!=null){const fc=Math.max(0,Math.min(100,f));
   s+=`<line x1="${x0}" x2="${x1}" y1="${fy(fc)}" y2="${fy(fc)}" stroke="#9085e9" stroke-width="1.6" opacity=".8"/>`;
   s+=`<circle cx="${x1}" cy="${fy(fc)}" r="3.4" fill="#9085e9"/><text x="${x1+6}" y="${fy(fc)+4}" font-size="11" font-weight="700" fill="#9085e9">${f.toFixed(1)}</text>`;
   const zone=f>85?["in the trim zone — don't chase","#f06a6a"]:f<15?["fear climax — hunt entries in leaders","#1fb51f"]:["neutral — no extreme either way","#a9b2bc"];
@@ -1086,26 +1113,37 @@ function eqPanes(pl,pr,w){
  } else s+=`<text x="${(x0+x1)/2}" y="${(fT+fB)/2+3}" font-size="10" text-anchor="middle" fill="#7d8590">set a FOMO value in the Signals tab</text>`;
  const nT=428,nB=462,mid=(nT+nB)/2;
  s+=`<text x="${x0}" y="${nT-7}" font-size="10" letter-spacing=".08em" fill="#7d8590">NET NEW HIGHS − LOWS — TREND (NASDAQ · NYSE)</text>`;
- s+=`<text x="${x1}" y="${nT-7}" font-size="8.5" text-anchor="end" fill="#5b636e">net H/L series: add columns to Signals tab</text>`;
+ s+=`<text x="${x1}" y="${nT-7}" font-size="8.5" text-anchor="end" fill="#5b636e">${hlPts?"daily net bars — Nasdaq solid · NYSE faded":"log daily counts in Signals: Date · NasdaqHighs · NasdaqLows · NYSEHighs · NYSELows"}</text>`;
  s+=`<line x1="${x0}" x2="${x1}" y1="${mid}" y2="${mid}" stroke="#39404a" stroke-width="1"/>`;
  const twd=v=>/^u/i.test(v||"")?["HIGHS PERSIST","#1fb51f"]:/^d/i.test(v||"")?["LOWS PERSIST","#f06a6a"]:v?[String(v).toUpperCase(),"#fab219"]:["—","#7d8590"];
  const nz=twd(SIG&&SIG.naz),ny=twd(SIG&&SIG.nyse);
- s+=`<text x="${x0+4}" y="${mid-6}" font-size="10.5" font-weight="700" fill="${nz[1]}">NASDAQ: ${nz[0]}</text>`;
- s+=`<text x="${x0+4}" y="${mid+14}" font-size="10.5" font-weight="700" fill="${ny[1]}">NYSE: ${ny[0]}</text>`;
- const one=((SIG&&SIG.one)||"").trim();
- if(one)s+=`<text x="${x0+(x1-x0)*.42}" y="${mid+4}" font-size="10" fill="#a9b2bc">one-day net H/L: ${one.toUpperCase()}</text>`;
+ if(hlPts){
+  s+=`<text x="${x0+4}" y="${mid-6}" font-size="9" font-weight="700" fill="${nz[1]}">NASDAQ: ${nz[0]}</text>`;
+  s+=`<text x="${x0+4}" y="${mid+14}" font-size="9" font-weight="700" fill="${ny[1]}">NYSE: ${ny[0]}</text>`;
+  const bx0=x0+118,nD=(i1-i0+1)||1,bw=Math.max(2,Math.min(8,(x1-x0-118)/nD*0.3));
+  const bh=v=>Math.min(15,Math.abs(v)/hlMax*15);
+  hlPts.forEach(q=>{const xc=q[0];if(xc<bx0)return;
+   const bar=(v,off,op)=>{if(v==null)return;const h=bh(v);if(h<=0)return;
+    s+=`<rect x="${(xc+off-bw/2).toFixed(1)}" y="${(v>0?mid-h:mid).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" fill="${v>0?"#1fb51f":"#f06a6a"}" opacity="${op}"/>`;};
+   bar(q[1].nz,-bw/2,1);bar(q[1].ny,bw/2,.55);});
+ }else{
+  s+=`<text x="${x0+4}" y="${mid-6}" font-size="10.5" font-weight="700" fill="${nz[1]}">NASDAQ: ${nz[0]}</text>`;
+  s+=`<text x="${x0+4}" y="${mid+14}" font-size="10.5" font-weight="700" fill="${ny[1]}">NYSE: ${ny[0]}</text>`;
+  const one=((SIG&&SIG.one)||"").trim();
+  if(one)s+=`<text x="${x0+(x1-x0)*.42}" y="${mid+4}" font-size="10" fill="#a9b2bc">one-day net H/L: ${one.toUpperCase()}</text>`;}
  return s;
 }
 function render(){
  if(EQX.length<3){$("errBox").textContent="Not enough data yet — log a few days of equity (Daily tab) or a few closed trades.";$("errBox").classList.add("show");return;}
  const[i0,i1,from,to]=win(),n=i1-i0+1;
+ const effCurve=(S.curve==="REAL"&&S.gmode==="$")?"REALD":S.curve; // one Realized chip — its unit follows the global $/% toggle
  const E=EQX.slice(i0,i1+1),E0=E.map(v=>100*v/E[0]);
  const BA=benchAt(S.bench),B0=BA.slice(i0,i1+1),B=B0.map(v=>100*v/B0[0]);
  const SP0=benchAt("SPY").slice(i0,i1+1),BSPY=SP0.map(v=>100*v/SP0[0]);
  const QQ0=benchAt("QQQ").slice(i0,i1+1),BQQQ=QQ0.map(v=>100*v/QQ0[0]);
  const F=ma(EQX,S.maF).slice(i0,i1+1).map(v=>100*v/E[0]),Sl=ma(EQX,S.maS).slice(i0,i1+1).map(v=>100*v/E[0]);
- let INV=null;
- if(EQABS&&TX.length&&S.curve==="EQ"){let k2=0;const op={},ip=[];
+ let INV=null,INVD=null;
+ if(EQABS&&TX.length&&effCurve==="EQ"){let k2=0;const op={},ip=[],ipD=[];
   for(let i2=0;i2<EQD.length;i2++){
    while(k2<TX.length&&TX[k2].d<=EQD[i2]){const t3=TX[k2];
     const o=op[t3.sym]=op[t3.sym]||[];
@@ -1113,16 +1151,16 @@ function render(){
     else{let left=t3.sh;for(const L2 of o){if(left<=0)break;const kk=Math.min(L2.sh,left);L2.sh-=kk;left-=kk;}}
     k2++;}
    let cst=0;for(const s3 in op)for(const L2 of op[s3])cst+=L2.sh*L2.px*L2.m;
-   ip.push(100*cst/EQ[i2]);}
-  INV=ip.slice(i0,i1+1);}
+   ip.push(100*cst/EQ[i2]);ipD.push(cst);}
+  INV=ip.slice(i0,i1+1);INVD=ipD.slice(i0,i1+1);}
  const T=TRADES.filter(t=>!t.open&&t.pct!=null&&t.dout>=from&&t.dout<=to);
  const CR=TRADES.filter(t=>!t.open&&!t.recon&&t.size0!=null&&t.dout>=from&&t.dout<=to).sort((a,b)=>a.dout-b.dout);
  let cum=0,ci=0;const R0=E0.map((_,i)=>{while(ci<CR.length&&CR[ci].dout<=EQD[i0+i]){cum+=CR[ci].pct*CR[ci].size0/100;ci++;}return 100+cum;});
- let R0d=null;if(S.curve==="REALD"){let cd=0,cj=0;R0d=E0.map((_,i)=>{while(cj<CR.length&&CR[cj].dout<=EQD[i0+i]){cd+=CR[cj].dol||0;cj++;}return cd;});}
- const REAL=S.curve!=="EQ",sel=S.curve==="REALD"?R0d:REAL?R0:E0;
- const D0=(S.gmode==="$"&&EQABS&&S.curve==="EQ")?EQ[i0]:null;
- const tot=S.curve==="REALD"?sel[n-1]:sel[n-1]-100;
- $("hYtd").textContent=S.tf+" "+(S.curve==="REALD"?fmtD(tot,true):D0!=null?fmtD(tot/100*D0,true):sg(tot)+"%");
+ let R0d=null;if(effCurve==="REALD"){let cd=0,cj=0;R0d=E0.map((_,i)=>{while(cj<CR.length&&CR[cj].dout<=EQD[i0+i]){cd+=CR[cj].dol||0;cj++;}return cd;});}
+ const REAL=effCurve!=="EQ",sel=effCurve==="REALD"?R0d:REAL?R0:E0;
+ const D0=(S.gmode==="$"&&EQABS&&effCurve==="EQ")?EQ[i0]:null;
+ const tot=effCurve==="REALD"?sel[n-1]:sel[n-1]-100;
+ $("hYtd").textContent=S.tf+" "+(effCurve==="REALD"?fmtD(tot,true):D0!=null?fmtD(tot/100*D0,true):sg(tot)+"%");
  const Wn=T.filter(t=>t.w),L=T.filter(t=>!t.w);
  const avg=(a,fn)=>a.length?a.reduce((x,t)=>x+fn(t),0)/a.length:0;
  const aw=avg(Wn,t=>t.pct),al=avg(L,t=>t.pct);
@@ -1166,7 +1204,7 @@ function render(){
  const mdd=Math.min(...dd);let cur=0,lgs=0;dd.forEach(v=>{cur=v<0?cur+1:0;lgs=Math.max(lgs,cur);});
  const axY=492;const tk=Math.max(1,Math.round(n/8));let tx=`<line x1="${pl}" x2="${w-pr}" y1="474" y2="474" stroke="#20252d"/>`;
  for(let i=0;i<n;i+=tk)tx+=`<text x="${X(i)}" y="${axY}" font-size="9.5" text-anchor="middle">${EQD[i0+i].toLocaleDateString("en",{month:"short",day:"numeric"})}</text>`;
- const panes=eqPanes(pl,pr,w);
+ const panes=eqPanes(pl,pr,w,X,i0,i1);
  const prev=EQABS?"":`<span class="g-amb">TRADE-BASED PREVIEW — add Daily equity for your real curve · </span>`;
  $("benchName").textContent=S.bench;
  if(S.ev==="DD"){
@@ -1191,19 +1229,26 @@ function render(){
   $("ddStats").textContent="";
   $("rsState").innerHTML="";
   const shEQ=S.tgEQ==="ON"&&!REAL,shSPY=S.tgSPY==="ON",shQQQ=S.tgQQQ==="ON";
-  const all=[...sel,...(shEQ?[...F,...Sl]:[]),...(shSPY?BSPY:[]),...(shQQQ?BQQQ:[])];
+  // live mark-to-market tail: open positions repriced from last daily close to the live quote (same fields portfolio() prices with)
+  let liveIdx=null,liveEq$=null;
+  if(effCurve==="EQ"&&EQABS&&S.liveTail!=="OFF"&&typeof POS!=="undefined"&&POS.length){
+   let ld=0,got=0;
+   POS.forEach(p=>{const lp=LIVE[p.sym],ph=PRICES[p.sym];
+    if(lp!=null&&ph&&ph.length){ld+=p.sh*(lp-ph[ph.length-1][1])*(p.mlt||1);got++;}});
+   if(got){liveEq$=EQ[i1]+ld;liveIdx=E0[n-1]*liveEq$/EQ[i1];}}
+  const all=[...sel,...(liveIdx!=null?[liveIdx]:[]),...(shEQ?[...F,...Sl]:[]),...(shSPY?BSPY:[]),...(shQQQ?BQQQ:[])];
   const lo=Math.min(...all)-.5,hi=Math.max(...all)+.5;
   const Y=v=>pt+chh-(v-lo)/(hi-lo)*chh,pts=s=>s.map((v,i)=>[X(i),Y(v)]);
   const invMx=INV?Math.max(100,...INV):100,Yi=v=>pt+chh-(Math.min(v,invMx)/invMx)*(chh*.24);
-  const fmtY=v=>S.curve==="REALD"?fmtD(v,false):D0!=null?fmtD(v/100*D0,false):sg(v-100)+"%";
+  const fmtY=v=>effCurve==="REALD"?fmtD(v,false):D0!=null?fmtD(v/100*D0,false):sg(v-100)+"%";
   let g="";for(let k=0;k<5;k++){const v=lo+(hi-lo)*k/4;
    g+=`<line x1="${pl}" x2="${w-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="rgba(255,255,255,.05)"/><text x="${w-pr+8}" y="${Y(v)+3}" font-size="10" text-anchor="start">${fmtY(v)}</text>`;}
   const tags=[[Y(sel[n-1]),"#2dd4a0",fmtY(sel[n-1])]];
   if(shSPY)tags.push([Y(BSPY[n-1]),"#d55181",sg(BSPY[n-1]-100)+"%"]);
   if(shQQQ)tags.push([Y(BQQQ[n-1]),"#3987e5",sg(BQQQ[n-1]-100)+"%"]);
-  if(INV)tags.push([Yi(INV[n-1]),"#22d3ee","INV "+INV[n-1].toFixed(0)+"%"]);
+  if(INV)tags.push(D0!=null?[Yi(INV[n-1]),"#22d3ee","INV "+fmtD(INVD[n-1],false),w-2]:[Yi(INV[n-1]),"#22d3ee","INV "+INV[n-1].toFixed(0)+"%"]); // band value follows the global $/% toggle (geometry stays ratio-scaled); the longer $ tag end-anchors at the right edge (now-tag pattern) so it can't clip
   tags.sort((a,b)=>a[0]-b[0]);for(let k=1;k<tags.length;k++)if(tags[k][0]-tags[k-1][0]<12)tags[k][0]=tags[k-1][0]+12;
-  const tagSvg=tags.map(t2=>`<text x="${w-pr+8}" y="${t2[0]+3}" font-size="10" font-weight="700" fill="${t2[1]}" text-anchor="start" style="paint-order:stroke" stroke="#0a0e16" stroke-width="3">${t2[2]}</text>`).join("");
+  const tagSvg=tags.map(t2=>`<text x="${t2[3]!=null?t2[3]:w-pr+8}" y="${t2[0]+3}" font-size="10" font-weight="700" fill="${t2[1]}" text-anchor="${t2[3]!=null?"end":"start"}" style="paint-order:stroke" stroke="#0a0e16" stroke-width="3">${t2[2]}</text>`).join("");
   $("svgEq").innerHTML=`<defs><linearGradient id="gr" x1="0" y1="0" x2="0" y2="1">
    <stop offset="0" stop-color="rgba(45,212,160,.22)"/><stop offset="1" stop-color="rgba(45,212,160,0)"/></linearGradient></defs>${g}
    ${INV?`<path d="${P(INV.map((v,i)=>[X(i),Yi(v)]))}L${X(n-1)} ${pt+chh}L${pl} ${pt+chh}Z" fill="rgba(34,211,238,.16)"/>`:""}
@@ -1213,12 +1258,16 @@ function render(){
    ${shEQ?`<path d="${P(pts(F))}" fill="none" stroke="#fab219" stroke-width="1.4" opacity=".95"/>
    <path d="${P(pts(Sl))}" fill="none" stroke="#60a5fa" stroke-width="1.4" opacity=".95"/>`:""}
    <path d="${P(pts(sel))}" fill="none" stroke="#2dd4a0" stroke-width="2.4"${REAL?' stroke-dasharray="6 4"':""}/>
-   <circle cx="${X(n-1)}" cy="${Y(sel[n-1])}" r="4" fill="#2dd4a0"/>${tagSvg}`+panes+tx;
-  $("eqLegend").innerHTML=prev+`<span class="g-cyn">${REAL?"‒ ‒ Realized "+(S.curve==="REALD"?"$":"%"):"— Equity"+(D0!=null?" $":"")}</span>`
+   <circle cx="${X(n-1)}" cy="${Y(sel[n-1])}" r="4" fill="#2dd4a0"/>${liveIdx!=null?(()=>{const lx=X(n-1)+Math.min(20,Math.max(8,cw/n));
+   const tagY=(Y(sel[n-1])-Y(liveIdx)>=-1)?Y(liveIdx)-8:Y(liveIdx)+15; // above the dot when flat/up, below when down — clear of the main tag row
+   return `<line x1="${X(n-1)}" y1="${Y(sel[n-1])}" x2="${lx}" y2="${Y(liveIdx)}" stroke="#2dd4a0" stroke-width="1.6" stroke-dasharray="3 3" opacity=".85"/>
+   <circle class="ltDot" cx="${lx}" cy="${Y(liveIdx)}" r="4" fill="#0c0e11" stroke="#2dd4a0" stroke-width="2"/>
+   <text x="${w-2}" y="${tagY}" font-size="10" font-weight="700" fill="#2dd4a0" text-anchor="end" style="paint-order:stroke" stroke="#0a0e16" stroke-width="3">now ${D0!=null?fmtD(liveEq$,true):sg(liveIdx-100)+"%"}</text>`;})():""}${tagSvg}`+panes+tx;
+  $("eqLegend").innerHTML=prev+`<span class="g-cyn">${REAL?"‒ ‒ Realized "+(effCurve==="REALD"?"$":"%"):"— Equity"+(D0!=null?" $":"")}</span>`
    +(shEQ?` <span class="g-amb">— ${S.maF}-${S.maT}</span> <span style="color:#60a5fa">— ${S.maS}-${S.maT}</span>`:"")
    +(shSPY?` <span style="color:#d55181">— SPY</span>`:"")+(shQQQ?` <span style="color:#3987e5">— QQQ</span>`:"")
-   +(INV?` <span style="color:#22d3ee;opacity:.85">▓ Invested %</span>`:"");
-  window._hv={pl,cw,n,dates:EQD.slice(i0,i1+1),E0:sel,F:shEQ?F:null,Sl:shEQ?Sl:null,BSPY:shSPY?BSPY:null,BQQQ:shQQQ?BQQQ:null,inv:INV,REAL,mainD:S.curve==="REALD",d0:D0,mainName:S.curve==="REALD"?"Realized $":REAL?"Realized %":"Equity",bench:S.bench,fN:S.maF+"-"+S.maT,sN:S.maS+"-"+S.maT,view:"EQ",y0:6,y1:470};
+   +(INV?` <span style="color:#22d3ee;opacity:.85">▓ Invested ${D0!=null?"$":"%"}</span>`:"");
+  window._hv={pl,cw,n,dates:EQD.slice(i0,i1+1),E0:sel,F:shEQ?F:null,Sl:shEQ?Sl:null,BSPY:shSPY?BSPY:null,BQQQ:shQQQ?BQQQ:null,inv:INV,invD:INVD,REAL,mainD:effCurve==="REALD",d0:D0,mainName:effCurve==="REALD"?"Realized $":REAL?"Realized %":"Equity",bench:S.bench,fN:S.maF+"-"+S.maT,sN:S.maS+"-"+S.maT,view:"EQ",y0:6,y1:470};
  }
  // ---- sizing throttle (now a strip inside Portfolio Status) ----
  const a10=E0[n-1]>F[n-1],a21=E0[n-1]>Sl[n-1],tc=$("thrCard");
@@ -1353,9 +1402,12 @@ function marketModel(){
  tile("frFoV","frFoS",fomo==null?"—":fomo.toFixed(0)+(fomo>85?" FOMO":fomo<15?" FEAR":" NEUTRAL"),fomo==null?"vmut":fomo>85?"vcrit":fomo<15?"vgood":"vwarn",fomo==null?"set FOMO in the Signals tab":fomo>85?"trim zone — don't chase":fomo<15?"buy zone — leaders only":"no extreme either way");
  // ---- breadth & sentiment card ----
  const wrd=v2=>/^u/i.test(v2||"")?["POSITIVE — net highs persist","g-grn"]:/^d/i.test(v2||"")?["NEGATIVE — net lows persist","g-red"]:v2?[String(v2).toUpperCase(),"g-amb"]:["—","g-mut"];
- {const a=wrd(SIG.naz);setR("brNaz",a[0],a[1]);}
- {const a=wrd(SIG.nyse);setR("brNyse",a[0],a[1]);}
- setR("brOne",one?one.toUpperCase():"—",one?(/^h/i.test(one)?"g-grn":/^l/i.test(one)?"g-red":"g-amb"):"g-mut");
+ const hlL=(SIG.hlHist&&SIG.hlHist.length)?SIG.hlHist[SIG.hlHist.length-1]:null; // latest dated counts from the Signals side table
+ const sgN=v2=>(v2>=0?"+":"−")+Math.abs(Math.round(v2));
+ {const a=wrd(SIG.naz);setR("brNaz",a[0]+(hlL&&hlL.nz!=null?" · 1d "+sgN(hlL.nz):""),a[1]);}
+ {const a=wrd(SIG.nyse);setR("brNyse",a[0]+(hlL&&hlL.ny!=null?" · 1d "+sgN(hlL.ny):""),a[1]);}
+ if(hlL&&hlL.nz!=null&&hlL.ny!=null)setR("brOne","NAZ "+sgN(hlL.nz)+" · NYSE "+sgN(hlL.ny),hlL.nz>0&&hlL.ny>0?"g-grn":hlL.nz<0&&hlL.ny<0?"g-red":"g-amb");
+ else setR("brOne",one?one.toUpperCase():"—",one?(/^h/i.test(one)?"g-grn":/^l/i.test(one)?"g-red":"g-amb"):"g-mut");
  setR("brUD",ud==null?"—":ud.toFixed(2),ud==null?"g-mut":ud>1?"g-grn":"g-amb");
  renderTripwire();
  // ---- net score → tier ----
@@ -1943,6 +1995,7 @@ $("curve").onchange=e=>{S.curve=e.target.value;save();render();};
 ["EQ","DD"].forEach(v=>{const b=$("ev"+v);if(b)b.onclick=()=>{S.ev=v;save();
  $("evEQ").classList.toggle("on",v==="EQ");$("evDD").classList.toggle("on",v==="DD");render();};});
 ["tgEQ","tgSPY","tgQQQ"].forEach(k=>{const b=$(k);if(b)b.onclick=()=>{S[k]=S[k]==="ON"?"OFF":"ON";save();b.classList.toggle("on",S[k]==="ON");render();};});
+{const b=$("tgLive");if(b)b.onclick=()=>{S.liveTail=S.liveTail==="OFF"?"ON":"OFF";save();b.classList.toggle("on",S.liveTail!=="OFF");render();};}
 var PGS={J:"pageJournal",F:"pagePerformance",M:"pageMarket",F2:"pageForecast"};
 Object.keys(PGS).forEach(function(pg){var b=$("tab"+pg);if(!b)return;b.onclick=function(){
  S.page=pg;save();
@@ -2201,8 +2254,10 @@ function performancePage(){
    :["THIN EDGE — protect capital","w"];
   var chip=$("fpChip");if(chip){chip.textContent=ch[0];chip.className="chiplet "+ch[1];}
   var s="";
-  s+=totalDol>=0?"You are sitting on <b>"+money(totalDol)+" of house money</b> above starting capital":"You are <b>"+money(totalDol)+"</b> versus starting capital — every dollar risked now is principal";
-  if(pf!=null)s+=pf>=1.5?", and the engine runs with margin: profit factor <b>"+f2(pf)+"</b>.":", but the engine leaks: profit factor <b>"+f2(pf)+"</b> means each $1 lost is "+(pf>=1?"barely covered":"not covered")+".";else s+=".";
+  var pbGain=S.gmode==="$"?money(totalDol):(sysRet!=null?pctS(sysRet):null); // % mode: the % form of the cushion (realized ÷ starting capital); clause figure dropped when unavailable
+  s+=totalDol>=0?(pbGain!=null?"You are sitting on <b>"+pbGain+" of house money</b> above starting capital":"You are sitting on <b>house money</b> above starting capital")
+   :(pbGain!=null?"You are <b>"+pbGain+"</b> versus starting capital — every dollar risked now is principal":"You are <b>below starting capital</b> — every dollar risked now is principal");
+  if(pf!=null)s+=pf>=1.5?", and the engine runs with margin: profit factor <b>"+f2(pf)+"</b>.":", but the engine leaks: profit factor <b>"+f2(pf)+"</b> means each "+(S.gmode==="$"?"$1":"unit")+" lost is "+(pf>=1?"barely covered":"not covered")+".";else s+=".";
   if(ddDur!=null&&ddDur>0)s+=" The account has spent up to <b>"+ddDur+" days below its peak</b>"+((startCap!=null&&sysMaxPct<0)?" with a max hole of <b>"+(sysMaxPct*100).toFixed(1)+"%</b>":"")+". ";else s+=" ";
   if(stopC!=null)s+=lossBad?"The cause is not win rate alone — it's that the average loss (<b>−"+f1(avgLpc)+"%</b>) is "+(avgLpc>=stopC*1.8?"nearly double":"more than")+" what your winners can pay for (<b>"+f1(stopC)+"%</b>). ":"The average loss (<b>−"+f1(avgLpc)+"%</b>) fits inside the <b>"+f1(stopC)+"%</b> your winners can pay for — stop discipline is holding. ";
   if(sortYou!=null&&qqS!=null)s+="Risk-adjusted, "+(sortYou>=qqS?"you out-earned the index per unit of pain (Sortino <b>"+f2(sortYou)+"</b> vs QQQ's "+f2(qqS)+"). ":"the market paid better than the effort (Sortino <b>"+f2(sortYou)+"</b> vs QQQ's <b>"+f2(qqS)+"</b>). ");
@@ -2406,13 +2461,16 @@ function performancePage(){
  if($("fMaeNote"))$("fMaeNote").innerHTML="Avg drawdown is <b>time-averaged</b> — from daily NAV closes (how far below its running peak the account sits on an average day). It's also the denominator of the RRR. A true per-trade MAE/MFE needs each ticker’s price path during the trade, which the fills-only log doesn’t store.";
 }
 window.performancePage=performancePage;
-(function boot(){$("maType").value=S.maT;$("maF").value=S.maF;$("maS").value=S.maS;$("lots").value=S.lots;$("curve").value=S.curve||"EQ";
+(function boot(){$("maType").value=S.maT;$("maF").value=S.maF;$("maS").value=S.maS;$("lots").value=S.lots;
+ if(S.curve==="REALD")S.curve="REAL"; // legacy stored value — one Realized chip now; unit follows the $/% toggle
+ $("curve").value=S.curve||"EQ";
  if(!/^(J|M|F|F2)$/.test(S.page||""))S.page="J";
  if(S.gmode!=="$"&&S.gmode!=="%")S.gmode="%";
  document.querySelectorAll("#tf .chip").forEach(x=>x.classList.toggle("on",x.dataset.tf===S.tf));
  $("customBox").classList.toggle("show",S.tf==="CUSTOM");
  if($("evEQ")){$("evEQ").classList.toggle("on",S.ev!=="DD");$("evDD").classList.toggle("on",S.ev==="DD");}
  if($("tgEQ")){$("tgEQ").classList.toggle("on",S.tgEQ==="ON");$("tgSPY").classList.toggle("on",S.tgSPY==="ON");$("tgQQQ").classList.toggle("on",S.tgQQQ==="ON");}
+ if($("tgLive"))$("tgLive").classList.toggle("on",S.liveTail!=="OFF");
  modeUI();
  document.body.classList.toggle("light",S.theme==="light");if($("themeBtn"))$("themeBtn").textContent=S.theme==="light"?"☾ Dark":"☀ Light";
  if(S.id){if($("sheetUrl"))$("sheetUrl").value=S.id==="api"?"":"https://docs.google.com/spreadsheets/d/"+S.id;loadSheet();}
@@ -2486,7 +2544,7 @@ function mDaily(){
  var S2=(PRICES.SPY||[]),V2=(PRICES.VIX||[]);
  if(S2.length<60||V2.length<60){el.innerHTML="<div style='font-size:12px;color:var(--dim)'>Add SPY and VIX columns to the Prices tab</div>";return;}
  var n=Math.min(S2.length,V2.length,180),sp=S2.slice(-n),vxv=V2.slice(-n).map(function(x){return x[1];}),spv=sp.map(function(x){return x[1];});
- var tier=window._mmTier,credD=window._credDaily||{};
+ var tier=window._mmTier,credD=window._credDaily||{},hlD=window._hlDaily||{};
  var H=(SIG&&SIG.fomoHist)||null;
  var fomoNow=(SIG&&SIG.fomo!=null&&SIG.fomo!=="")?num(SIG.fomo):null;
  var dk=function(d){return d.getFullYear()+"-"+d.getMonth()+"-"+d.getDate();};
@@ -2501,6 +2559,8 @@ function mDaily(){
   var trendC=tu?["ABOVE 50D","vgood"]:["BELOW 50D","vcrit"];
   var volC=p2<=15?["COMPLACENT","vwarn"]:p2>=85?["FEAR EXTREME","vgood"]:p2>=65?["ELEVATED","vwarn"]:["NORMAL","vgood"];
   var cw=credD[dk(d)];var credC=cw?cw:["—","vmut"];
+  var hb=hlD[dk(d)]; // per-day breadth from the Signals side table: both nets up POSITIVE · both down NEGATIVE · mixed/one-sided MIXED
+  var brC=!hb?["—","vmut"]:(hb.nz!=null&&hb.ny!=null&&hb.nz>0&&hb.ny>0)?["POSITIVE","vgood"]:(hb.nz!=null&&hb.ny!=null&&hb.nz<0&&hb.ny<0)?["NEGATIVE","vcrit"]:["MIXED","vwarn"];
   var fv=null;
   if(H){var back=n-1-i;if(back<H.length)fv=H[H.length-1-back];}
   else if(i===n-1)fv=fomoNow;
@@ -2511,9 +2571,9 @@ function mDaily(){
   var tip2=("S&P "+sg(ch)+"% · VIX "+vxv[i].toFixed(1)+" ("+p2+"th %ile) · "+sg2[0]+" — "+vd).replace(/"/g,"&quot;");
   rows+='<tr title="'+tip2+'"><td class="num">'+d.toLocaleDateString("en",{month:"short",day:"numeric"})+'</td>'
    +'<td class="'+c5[1]+'" title="S&amp;P 5-session change: '+(ch5==null?'—':sg(ch5)+'%')+'">'+c5[0]+'</td>'
-   +cell(trendC)+cell(volC)+cell(["—","vmut"])+cell(credC)+cell(foC)+cell(exC)
+   +cell(trendC)+cell(volC)+cell(brC)+cell(credC)+cell(foC)+cell(exC)
    +'<td class="mean">'+vd+'</td></tr>';}
- el.innerHTML='<table class="postbl mxt" style="width:100%"><tr><th>Date</th><th title="S&amp;P 5-session change direction">5d</th><th>Trend</th><th>Volatility</th><th title="needs a per-day breadth history — the Signals tab holds latest values only">Breadth</th><th>Credit</th><th>FOMO</th><th>Exposure state</th><th class="mean">Meaning</th></tr>'+rows+'</table>'
+ el.innerHTML='<table class="postbl mxt" style="width:100%"><tr><th>Date</th><th title="S&amp;P 5-session change direction">5d</th><th>Trend</th><th>Volatility</th><th title="from the Signals side table — Date · NasdaqHighs · NasdaqLows · NYSEHighs · NYSELows">Breadth</th><th>Credit</th><th>FOMO</th><th>Exposure state</th><th class="mean">Meaning</th></tr>'+rows+'</table>'
   +'<div class="kv" style="margin-top:5px">Words derive from each day’s computed SPY/VIX/credit reads. '+(H?"":"Breadth &amp; past-day FOMO need history columns in Signals — latest values live in the tiles above. ")+'Exposure state = the model tier, computed live for today only. Hover a row for the full sentence'+(window.matchMedia&&window.matchMedia("(min-width:1400px)").matches?" (also in the Meaning column)":"")+'.</div>';
 }
 window.mDaily=mDaily;
@@ -2562,7 +2622,7 @@ function renderFomoGauge(f){
    hs+='<polyline fill="none" stroke="#fab219" stroke-width="1.4" points="'+pts+'"/>';
    hs+='<text x="'+x0+'" y="60" font-size="7.5" fill="#5b636e">oldest</text><text x="'+x1+'" y="60" font-size="7.5" text-anchor="end" fill="#5b636e">latest ('+A.length+'d)</text></svg>';
    hh.innerHTML=hs;
-  } else hh.innerHTML='<div class="kv">add a FOMO history column to Signals for the 30-day view</div>';}
+  } else hh.innerHTML='<div class="kv">log a Fomo column in the Signals side table for the 30-day view</div>';}
 }
 window.renderFomoGauge=renderFomoGauge;
 function bondsPage(){
@@ -2798,7 +2858,7 @@ function fedPage(){
     +((oH<12||hk&&hk<12||cc2&&cc2<12)?'<div class="kv num" style="margin-top:3px">'+[oH!=null?'hold '+oH+'%':null,hk?'hike '+hk+'%':null,cc2?'cut '+cc2+'%':null].filter(Boolean).join(' · ')+'</div>':'')+'</div>';}
   else hh+='<div class="kv" style="margin-bottom:10px">odds_hold / odds_hike / odds_cut not set in the Macro tab — showing “—”.</div>';
   if(!live){
-   hh+='<div class="oddrow"><div class="t"><span><b>Sep 16</b> · dot-plot meeting</span><span class="kv">sample until wired</span></div><div class="oddbar"><div style="width:55%;background:var(--good);color:#04160f">CUT 55%</div><div style="width:40%;background:var(--warn)">HOLD 40%</div><div style="width:5%;background:#383835"></div></div></div>';
+   hh+='<div class="oddrow"><div class="t"><span><b>Sep 16</b> · dot-plot meeting <i style="color:var(--dim);font-style:normal">— comms review may scrap the dots by year-end</i></span><span class="kv">sample until wired</span></div><div class="oddbar"><div style="width:55%;background:var(--good);color:#04160f">CUT 55%</div><div style="width:40%;background:var(--warn)">HOLD 40%</div><div style="width:5%;background:#383835"></div></div></div>';
    hh+='<div class="oddrow"><div class="t"><span><b>Dec 9</b> · year-end</span><span class="kv">sample until wired</span></div><div class="oddbar"><div style="width:42%;background:var(--good);color:#04160f">−50bp 42%</div><div style="width:38%;background:#199e70;color:#04160f">−25bp 38%</div><div style="width:20%;background:var(--warn)">HOLD 20%</div></div></div>';}
   od.innerHTML=hh;}
  // catalysts clock — vertical timeline built from the same optional keys (blackout / FOMC / decision / after-meeting PCE)
@@ -2976,7 +3036,7 @@ window.addEventListener("load",function(){setTimeout(function(){
    if(H.F)rows.push([H.fN,sg(H.F[i]-100)+"%","#fab219"],[H.sN,sg(H.Sl[i]-100)+"%","#60a5fa"]);
    if(H.BSPY)rows.push(["SPY",sg(H.BSPY[i]-100)+"%","#d55181"]);
    if(H.BQQQ)rows.push(["QQQ",sg(H.BQQQ[i]-100)+"%","#3987e5"]);
-   if(H.inv)rows.push(["Invested %",H.inv[i].toFixed(0)+"%","#22d3ee"]);}
+   if(H.inv)rows.push(H.d0!=null&&H.invD?["Invested $",fmtD(H.invD[i],false),"#22d3ee"]:["Invested %",H.inv[i].toFixed(0)+"%","#22d3ee"]);}
   return rows;}
  bindHover("svgEq","_hv",eqRows);
  bindHover("svgMkt","_hvM");
