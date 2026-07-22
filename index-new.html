@@ -351,6 +351,11 @@ tr.lothead td:first-child{padding-left:26px}
 .badge.stale{background:var(--critBg);color:var(--critT);cursor:help}
 .badge.eflag{background:var(--warnBg);color:var(--warn);cursor:help}
 .badge.newest{background:#1c2027;color:var(--dim);font-weight:600}
+/* ---- v4.5: quick-sell chip (Holdings rows + lot-ladder header) — opens the +Add modal prefilled ---- */
+.chiplet.sellq{background:rgba(251,113,133,.10);color:#ff8fa0;border:1px solid rgba(251,113,133,.32);cursor:pointer;margin-left:7px;padding:1px 8px;font-size:10px;letter-spacing:.04em;text-transform:none;vertical-align:middle;line-height:1.6}
+.chiplet.sellq:hover{background:rgba(251,113,133,.22);color:#ffb3bf}
+body.light .chiplet.sellq{background:rgba(225,75,75,.08);color:#c2344c;border-color:rgba(225,75,75,.35)}
+@media(max-width:640px){.chiplet.sellq{min-height:32px;min-width:46px;justify-content:center;padding:0 11px;font-size:11px}}
 .mxt .mean{display:none}
 @media(min-width:1400px){.mxt td.mean,.mxt th.mean{display:table-cell;text-align:left;font-weight:400;color:var(--dim);white-space:normal;max-width:300px;font-size:10.5px}}
 </style></head><body><div class="wrap">
@@ -1995,8 +2000,9 @@ function renderHold(){var hEl=document.getElementById("holdList");if(!hEl)return
   else if(r.lots.length>1)stopCell='<span class="num linkish" onclick="holdExp(\''+r.tk+'\')" title="multiple lots with their own stops — expand the ladder">'+r.lots.length+' lots ▾</span>';
   else if(r.stop!=null)stopCell='<span class="num">'+(r.lots.length===1?r.lots[0].stop:r.stop).toFixed(2)+'</span>';
   else stopCell='<span class="badge nostop">none — set stop</span>';
+  var sellChip=' <span class="chiplet sellq" role="button" title="sell '+r.sym+' — opens the trade form prefilled with the remaining shares at the live price; review, then Save (nothing auto-submits)" onclick="qsell(\''+r.tk+'\')">Sell</span>'; // v4.5 quick sell
   html+='<tr'+(r.missStop?' class="alert"':'')+'>'
-   +'<td>'+caret+'<b>'+r.sym+'</b>'+(r.opt?' <span style="font-size:9px;color:var(--vio)">OPT</span>':'')+chips(r)+'</td>'
+   +'<td>'+caret+'<b>'+r.sym+'</b>'+(r.opt?' <span style="font-size:9px;color:var(--vio)">OPT</span>':'')+chips(r)+sellChip+'</td>'
    +'<td style="text-align:left"><span class="badge theme">'+r.th+'</span></td>'
    +'<td style="text-align:left" class="num">'+fd(r.din)+'</td>'
    +'<td class="num">'+(r.days==null?"—":r.days)+'</td>'
@@ -2012,7 +2018,7 @@ function renderHold(){var hEl=document.getElementById("holdList");if(!hEl)return
   if(exp&&r.lots.length){ // ---- lot ladder — from the FIFO lots deriveAll already computed (no re-derivation) ----
    var av=(S.lotView&&S.lotView[r.tk]==="AVG");
    var tg='<span class="lotTg" title="view only — transactions untouched, switch back any time"><span '+(av?'':'class="on" ')+'onclick="lotView(\''+r.tk+'\',\'FIFO\')">FIFO ▾</span><span '+(av?'class="on" ':'')+'onclick="lotView(\''+r.tk+'\',\'AVG\')">AVG</span></span>';
-   html+='<tr class="lothead"><td colspan="13">LOT LADDER — '+(av?'blended view (display only)':'FIFO fills, oldest first')+' &nbsp;'+tg+'&nbsp; <span style="text-transform:none;letter-spacing:0">cushion = that lot\'s own P&amp;L% · dist → stop = (live − stop) ÷ live</span></td></tr>';
+   html+='<tr class="lothead"><td colspan="13">LOT LADDER — '+(av?'blended view (display only)':'FIFO fills, oldest first')+' &nbsp;'+tg+'&nbsp; <span style="text-transform:none;letter-spacing:0">cushion = that lot\'s own P&amp;L% · dist → stop = (live − stop) ÷ live</span>'+sellChip+'</td></tr>';
    var lotRow=function(lbl,ld,lsh,lpx,lstop,isNew){
     var cush=(lpx>0&&isFinite(r.px))?100*(r.px/lpx-1):null;
     var ldist=(lstop!=null&&r.px>0)?100*(r.px-lstop)/r.px:null;
@@ -2038,6 +2044,10 @@ function renderHold(){var hEl=document.getElementById("holdList");if(!hEl)return
  html+='</table><div class="fade"></div></div>'+(eqL?"":"<div style='font-size:11px;color:var(--amb);margin-top:6px'>Add Daily equity to unlock weight &amp; portfolio impact</div>");
  hEl.innerHTML=html;}
 function sortHold(k){var s=window._holdSort;if(s.key===k)s.dir=-s.dir;else{s.key=k;s.dir=(k==="sym"||k==="din"||k==="th")?1:-1;}renderHold();}
+function qsell(tk){ // v4.5 quick sell — hands the position to the pwa.js entry modal, prefilled; user reviews + taps Save
+ if(!window.openTradePrefill)return; // pwa.js absent → chip is a safe no-op
+ var p=(POS||[]).find(function(x){return x.sym===tk;});if(!p)return;
+ openTradePrefill({ticker:p.sym,side:"Sell",shares:p.sh,price:p.px});} // shares = remaining, price = live quote (falls back to last transaction px upstream)
 function portfolio(){
  $("lotMode").textContent=(S.lots==="AVG"?"average cost":"FIFO lots")+" · live · "+(S.gmode==="$"?"$":"%")+" mode";
  const eqL=EQABS?EQ[EQ.length-1]:null;

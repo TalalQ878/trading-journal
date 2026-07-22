@@ -62,6 +62,31 @@
   }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
 
+  /* ---------- v4.5: IBKR commission auto-include ----------
+     Folds the broker commission into the SAVED price (Buy up / Sell down by comm ÷ shares)
+     so sheet P&L matches the broker statement. FIXED = IBKR Fixed US-stock schedule:
+     $0.005/share, $1.00 minimum, capped at 1% of trade value. CUSTOM keeps the 1% cap.
+     Settings persist on S (commMode / commRate / commMin) via save() — same pattern as S.api. */
+  function commMode() { var m = S.commMode; return m === "OFF" || m === "CUSTOM" ? m : "FIXED"; }
+  function commFor(shares, price) {
+    var m = commMode();
+    if (m === "OFF" || !(shares > 0) || !(price > 0)) return null; // empty / invalid fields → no adjust
+    var rate = 0.005, min = 1;
+    if (m === "CUSTOM") {
+      rate = parseFloat(S.commRate); if (!(rate >= 0)) rate = 0.005;
+      min = parseFloat(S.commMin); if (!(min >= 0)) min = 1;
+    }
+    return Math.min(Math.max(rate * shares, min), 0.01 * shares * price); // max stays IBKR's 1%-of-value cap
+  }
+  function r2c(v) { return Math.round((v + 1e-9) * 100) / 100; } // half-up at 2dp; epsilon absorbs FP dust (100.004999… → 100.01)
+  function commAdj(side, shares, price) { // → {comm, eff} or null (OFF / fields empty)
+    var c = commFor(shares, price);
+    if (c == null) return null;
+    var eff = r2c(side === "Sell" ? price - c / shares : price + c / shares);
+    if (!(eff > 0)) eff = price; // never a zero/negative price — pure guard, unreachable under the 1% cap
+    return { comm: c, eff: eff };
+  }
+
   /* ---------- DOM (runs after full parse; boot() has already fired) ---------- */
   function init() {
     if (document.getElementById("entryBtn")) return;
@@ -139,7 +164,20 @@
         '<input type="text" id="apiKey" placeholder="Access key" autocomplete="off">' +
         '<div id="apiState" style="font-size:11.5px;color:var(--dim);margin:2px 0 6px"></div>' +
         '<div class="btnrow"><button class="btn pri" id="apiConnectBtn">Connect live API</button>' +
-        '<button class="btn sec" id="apiForgetBtn" style="min-width:90px;flex:0">Forget</button></div>';
+        '<button class="btn sec" id="apiForgetBtn" style="min-width:90px;flex:0">Forget</button></div>' +
+
+        /* v4.5: commission auto-include — persisted on S like the API settings above */
+        '<div style="border-top:1px solid var(--bd);margin:16px 0 10px"></div>' +
+        '<h2 style="font-size:16px">Commission (IBKR)</h2>' +
+        '<p>Folds the broker commission into every saved trade — the Buy price goes up and the Sell price comes down by commission ÷ shares, so sheet P&amp;L matches the broker statement. <b>FIXED</b> = IBKR Fixed US-stock schedule: $0.005/share, $1.00 minimum, capped at 1% of trade value.</p>' +
+        '<div class="enTabs" id="commTabs" style="max-width:360px">' +
+        '<button class="chip" data-comm="OFF">OFF</button>' +
+        '<button class="chip" data-comm="FIXED">FIXED</button>' +
+        '<button class="chip" data-comm="CUSTOM">CUSTOM</button></div>' +
+        '<div class="enGrid" id="commCust" style="display:none">' +
+        '<div><label>Per-share rate ($)</label><input type="number" id="commRate" inputmode="decimal" step="any" min="0" placeholder="0.005"></div>' +
+        '<div><label>Minimum per order ($)</label><input type="number" id="commMin" inputmode="decimal" step="any" min="0" placeholder="1.00"></div></div>' +
+        '<div id="commState" style="font-size:11.5px;color:var(--dim);margin-top:8px"></div>';
       sm.appendChild(sec);
       var stateLine = function () {
         $("apiState").textContent = S.api ? ("Connected: …" + S.api.slice(-30) + (S.key ? " · key •••" + String(S.key).slice(-4) : "")) : "Not connected.";
@@ -153,6 +191,29 @@
         $("setup").classList.remove("show"); window.loadSheet && loadSheet();
       };
       $("apiForgetBtn").onclick = function () { delete S.api; delete S.key; if (S.id === "api") S.id = ""; save(); stateLine(); };
+
+      /* v4.5: commission section wiring */
+      var commSync = function () {
+        var m = commMode();
+        sec.querySelectorAll("#commTabs .chip").forEach(function (b) { b.classList.toggle("on", b.dataset.comm === m); });
+        $("commCust").style.display = m === "CUSTOM" ? "" : "none";
+        if (m === "CUSTOM") { $("commRate").value = S.commRate != null && S.commRate !== "" ? S.commRate : 0.005; $("commMin").value = S.commMin != null && S.commMin !== "" ? S.commMin : 1; }
+        $("commState").textContent =
+          m === "OFF" ? "Off — prices save exactly as entered." :
+          m === "FIXED" ? "Saving adjusts the price by $0.005/share ($1.00 min, 1% max) — e.g. Buy 5 @ 518.79 saves as 518.99." :
+          "Saving adjusts by your per-share rate with your minimum — the 1%-of-value cap still applies.";
+      };
+      sec.querySelectorAll("#commTabs .chip").forEach(function (b) {
+        b.onclick = function () { S.commMode = b.dataset.comm; save(); commSync(); };
+      });
+      ["commRate", "commMin"].forEach(function (id) {
+        $(id).oninput = function () {
+          var v = parseFloat(this.value);
+          S[id] = isFinite(v) && v >= 0 ? v : ""; // S.commRate / S.commMin
+          save();
+        };
+      });
+      commSync();
     }
 
     /* ----- entry modal ----- */
@@ -259,14 +320,16 @@
         var lb = lastBuyOf(tk);
         if (lb) { if (!$("enStop").value && lb.stop) $("enStop").value = lb.stop; if (!$("enPivot").value && lb.pivot) $("enPivot").value = lb.pivot; if (!$("enSetup").value && lb.set) $("enSetup").value = lb.set; }
       } else $("enSubmit").textContent = "Save trade";
-      if (a === "Buy" && sh > 0 && px > 0 && st > 0 && st < px) {
-        var r = sh * (px - st);
-        out.push("RISK $" + Math.round(r).toLocaleString() + (eq ? " · " + (100 * r / eq).toFixed(2) + "% NAV" : "") + " · stop " + (100 * (px - st) / px).toFixed(1) + "% away");
+      var ca = commAdj(a, sh, px), ex = ca ? ca.eff : px; // v4.5: commission-inclusive effective price drives the risk math
+      if (a === "Buy" && sh > 0 && px > 0 && st > 0 && st < ex) {
+        var r = sh * (ex - st);
+        out.push("RISK $" + Math.round(r).toLocaleString() + (eq ? " · " + (100 * r / eq).toFixed(2) + "% NAV" : "") + " · stop " + (100 * (ex - st) / ex).toFixed(1) + "% away");
       } else if (a === "Buy" && sh > 0 && px > 0 && !$("enStop").value) out.push("No stop = unmeasured risk (shows unstopped in SCAR)");
       if (a === "Sell" && tk && net > 0) {
         var after = sh > 0 ? Math.max(0, net - Math.min(sh, net)) : net;
         out.push("HOLDING " + net + (sh > 0 ? " → " + after + " after (" + (100 * Math.min(sh, net) / net).toFixed(0) + "% reduced)" : " shares"));
       }
+      if (ca) out.push("comm $" + ca.comm.toFixed(2) + " → eff " + ca.eff.toFixed(2));
       $("enPrev").textContent = out.join("  ·  ");
     }
     function prefillSell() {
@@ -296,6 +359,8 @@
       if (!p.ticker) return msg("Ticker is required.");
       if (!(p.shares > 0)) return msg("Shares must be a positive number.");
       if (!(p.price > 0)) return msg("Price must be a positive number.");
+      var ca = commAdj(p.side, p.shares, p.price); // v4.5: save the commission-inclusive price (Buy up / Sell down, 2dp)
+      if (ca) p.price = ca.eff;
       var sig = [p.date, p.ticker, p.side, p.shares, p.price].join("|");
       if (sig === lastSig && Date.now() - lastSigT < 30000 && !dupOk) {
         dupOk = true;
@@ -318,6 +383,22 @@
     }
     $("enSubmit").onclick = function () { return submitTrade(this, false); };
     $("enSubmitA").onclick = function () { return submitTrade(this, true); };
+
+    /* ---------- v4.5: quick-sell prefill hook — Holdings rows (index.html qsell) call this.
+       Opens the Trade tab prefilled; the user reviews and taps Save — nothing auto-submits. ---------- */
+    window.openTradePrefill = function (o) {
+      o = o || {};
+      openModal(); // date=today, ticker/setup datalists refreshed
+      enTab("T");
+      $("enTicker").value = o.ticker ? String(o.ticker).trim().toUpperCase() : "";
+      $("enAction").value = o.side === "Sell" ? "Sell" : "Buy";
+      refreshTickerList(); // sell mode → datalist flips to open positions
+      $("enShares").value = o.shares != null && isFinite(o.shares) ? o.shares : "";
+      $("enPrice").value = o.price != null && isFinite(o.price) && o.price > 0 ? Math.round(o.price * 100) / 100 : "";
+      $("enStop").value = ""; $("enPivot").value = ""; $("enSetup").value = ""; $("enNote").value = "";
+      updPrev();
+      setTimeout(function () { var el = $("enShares"); try { el.focus(); el.select(); } catch (_) {} }, 60); // focus lands on shares
+    };
 
     $("dnSubmit").onclick = async function () {
       msg();
