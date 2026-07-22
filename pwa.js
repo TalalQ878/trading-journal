@@ -119,6 +119,7 @@
       ".wiRow{padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12.4px;line-height:1.5}" +
       ".wiRow:last-child{border-bottom:0}" +
       ".wiRow .num{font-variant-numeric:tabular-nums}" +
+      ".wiHead{padding:9px 0 3px;font-size:9.5px;font-weight:800;letter-spacing:.09em;color:var(--dim);text-transform:uppercase;border-bottom:1px solid rgba(255,255,255,.05)}" + /* v4.6b: portfolio-block header */
       "#wiNote{font-size:11px;color:var(--dim);margin-top:10px}" +
       "@media(max-width:520px){#entryModal{align-items:end;padding:0}#entryModal .modal{max-width:none;width:100%;border-radius:20px 20px 0 0;max-height:92dvh;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}}" +
       "@media(display-mode:standalone){#dataPill{display:inline-block}}" +
@@ -478,16 +479,7 @@
         : "comm <span class='num'>$" + comm.toFixed(2) + "</span> → eff <span class='num'>" + eff.toFixed(2) + "</span> folded into " + (side === "Buy" ? "the new avg" : "the sale proceeds")));
       if (eqL) {
         var posVal = newSh * px * mlt, wgt = 100 * posVal / eqL, trade$ = used * px * mlt;
-        var eN = Math.round(100 * inv / eqL), eA = Math.round(100 * (inv + (side === "Buy" ? trade$ : -trade$)) / eqL);
         L.push(row("wiVal", "position after: <b class='num'>" + d$(posVal) + "</b> · <b class='num'>" + wgt.toFixed(1) + "%</b> of equity"));
-        L.push(row("wiExpo", "portfolio exposure: <span class='num'>" + eN + "%</span> → <b class='num'>" + eA + "%</b> after <span style='color:var(--dim)'>(invested " + d$(inv) + " " + (side === "Buy" ? "+" : "−") + " " + d$(trade$) + " ÷ equity " + d$(eqL) + ")</span>"));
-        var MT = window._mmTier;
-        if (MT && MT.b0 != null) {
-          var bandTxt = (String(MT.lab || "").split(" — ")[0] || "model") + " " + MT.b0 + "–" + MT.b1 + "% band";
-          if (eA >= MT.b0 && eA <= MT.b1) L.push(row("wiBand", "<b class='g-grn'>→ " + eA + "% exposure — inside the " + bandTxt + " ✓</b>"));
-          else if (eA > MT.b1) L.push(row("wiBand", "<b class='g-red'>→ " + eA + "% exposure — above the " + bandTxt + " — breaks the band ✗</b>"));
-          else L.push(row("wiBand", "<b class='g-amb'>→ " + eA + "% exposure — below the " + bandTxt + " — breaks the band ✗</b>"));
-        }
       } else L.push(row("wiVal", "<span class='g-amb'>add Daily equity rows to size weight, exposure and the band check.</span>"));
       if (st > 0 && st < eff) {
         var risk$ = used * (eff - st) * mlt, rPct = eqL ? 100 * risk$ / eqL : null;
@@ -495,6 +487,54 @@
         L.push(row("wiRisk", "stop risk <b class='num " + cls + "'>" + d$(risk$) + (rPct != null ? " · " + rPct.toFixed(2) + "% NAV" : "") + "</b> <span style='color:var(--dim)'>(sizing guide 0.25–0.5% NAV)</span>"));
       } else if ($("wiStop").value !== "") {
         L.push(row("wiRisk", "<span class='g-amb'>stop must sit below the (effective) price for a risk read.</span>"));
+      }
+      /* ---- v4.6b: PORTFOLIO AFTER THIS TRADE — before → after for the decision metrics.
+         All local: POS values + per-lot stops (ADD-GATE rule — a lot with no stop is unmeasured
+         and excluded from the covered risk) + live equity eqL. Equity stays marked at eqL; a buy
+         spends cost+commission, a sell credits proceeds−commission, so cash = eqL − investedAfter
+         − comm on both sides. The simulated shares mark at the What-if price and carry the
+         What-if stop when provided; sells consume lots FIFO (same order deriveAll retires them).
+         The old standalone exposure line lives here now (same string) — no duplication. ---- */
+      if (eqL) {
+        var invA = inv + (side === "Buy" ? trade$ : -trade$);
+        var eN = Math.round(100 * inv / eqL), eA = Math.round(100 * invA / eqL);
+        L.push("<div class='wiHead' id='wiPortHead'>Portfolio after this trade</div>");
+        L.push(row("wiExpo", "portfolio exposure: <span class='num'>" + eN + "%</span> → <b class='num'>" + eA + "%</b> after <span style='color:var(--dim)'>(invested " + d$(inv) + " " + (side === "Buy" ? "+" : "−") + " " + d$(trade$) + " ÷ equity " + d$(eqL) + ")</span>"));
+        var cashN = eqL - inv, cashA = eqL - invA - comm;
+        L.push(row("wiCash", "cash remaining: <span class='num'>" + d$(cashN) + "</span> → <b class='num" + (cashA < 0 ? " g-red" : "") + "'>" + d$(cashA) + "</b>" + (cashA < 0 ? " <span class='g-red'>— more than your cash (margin)</span>" : "")));
+        var isFull = side === "Sell" && newSh <= 1e-9;
+        var cntN = POS.length, cntA = cntN + (side === "Buy" && !p ? 1 : 0) - (isFull ? 1 : 0);
+        L.push(row("wiCount", "open positions: <span class='num'>" + cntN + "</span> → <b class='num'>" + cntA + "</b><span style='color:var(--dim)'>" + (side === "Buy" && !p ? " (+" + esc(tk) + " new)" : isFull ? " (" + esc(tk) + " closed)" : "") + "</span>"));
+        var wN = null, wNs = "", wA = null, wAs = "";
+        POS.forEach(function (q) {
+          var w0 = 100 * q.val / eqL; if (wN == null || w0 > wN) { wN = w0; wNs = q.sym; }
+          var w1 = 100 * (q.sym === tk ? posVal : q.val) / eqL; if (wA == null || w1 > wA) { wA = w1; wAs = q.sym; }
+        });
+        if (!p && side === "Buy" && (wA == null || wgt > wA)) { wA = wgt; wAs = tk; }
+        if (wA != null) {
+          var wCls = wA > 35 ? "g-red" : wA > 25 ? "g-amb" : "g-grn"; // spec thresholds: amber >25% of equity, red >35%
+          L.push(row("wiLgWt", "largest position: " + (wN == null ? "—" : "<span class='num'>" + esc(wNs) + " " + wN.toFixed(1) + "%</span>") + " → <b class='num " + wCls + "'>" + (wAs === wNs ? "" : esc(wAs) + " ") + wA.toFixed(1) + "%</b>" + (wA > 25 ? " <span class='" + wCls + "'>" + (wA > 35 ? "— concentration red line" : "— concentrated") + "</span>" : "")));
+        }
+        var stV = st > 0 ? st : null, riskN = 0, riskA = 0, unA = 0; // unA = open lots with no stop AFTER the trade (the row's caveat)
+        POS.forEach(function (q) {
+          var qm = q.mlt || 1, ls = (q.lots && q.lots.length) ? q.lots : [{ sh: q.sh, stop: q.stop }];
+          ls.forEach(function (Lx) { if (Lx.stop != null) riskN += Lx.sh * (q.px - Lx.stop) * qm; });
+          if (q.sym !== tk) { ls.forEach(function (Lx) { if (Lx.stop == null) unA++; else riskA += Lx.sh * (q.px - Lx.stop) * qm; }); return; }
+          var la = ls.map(function (Lx) { return { sh: Lx.sh, stop: Lx.stop }; });
+          if (side === "Sell") { var left = used; for (var i2 = 0; i2 < la.length && left > 1e-9; i2++) { var k2 = Math.min(la[i2].sh, left); la[i2].sh -= k2; left -= k2; } }
+          else la.push({ sh: used, stop: stV });
+          la.forEach(function (Lx) { if (Lx.sh <= 1e-9) return; if (Lx.stop == null) unA++; else riskA += Lx.sh * (px - Lx.stop) * qm; });
+        });
+        if (!p && side === "Buy") { if (stV != null) riskA += used * (px - stV) * mlt; else unA++; }
+        var rN$ = Math.max(0, riskN), rA$ = Math.max(0, riskA); // stops locked above price = profits, not risk — floor at $0 like SCAR
+        L.push(row("wiAllRisk", "all-stops risk: <span class='num'>" + d$(rN$) + " · " + (100 * rN$ / eqL).toFixed(1) + "%</span> → <b class='num'>" + d$(rA$) + " · " + (100 * rA$ / eqL).toFixed(1) + "% NAV</b>" + (unA ? " <span class='g-amb'>· " + unA + " lot" + (unA > 1 ? "s" : "") + " unmeasured</span>" : "") + " <span style='color:var(--dim)'>(if every stop hits)</span>"));
+        var MT = window._mmTier;
+        if (MT && MT.b0 != null) {
+          var bandTxt = (String(MT.lab || "").split(" — ")[0] || "model") + " " + MT.b0 + "–" + MT.b1 + "% band";
+          if (eA >= MT.b0 && eA <= MT.b1) L.push(row("wiBand", "<b class='g-grn'>→ " + eA + "% exposure — inside the " + bandTxt + " ✓</b>"));
+          else if (eA > MT.b1) L.push(row("wiBand", "<b class='g-red'>→ " + eA + "% exposure — above the " + bandTxt + " — breaks the band ✗</b>"));
+          else L.push(row("wiBand", "<b class='g-amb'>→ " + eA + "% exposure — below the " + bandTxt + " — breaks the band ✗</b>"));
+        }
       }
       out.innerHTML = L.join("");
     }
