@@ -1081,17 +1081,21 @@ function win(){const last=EQD[EQD.length-1]||new Date();let from=new Date(last.g
  let i1=EQD.length-1;while(i1>0&&EQD[i1]>to)i1--;if(i1-i0<2)i0=Math.max(0,i1-2);
  return[i0,i1,from,to];}
 /* ---------- FOMO + net H/L panes attached under the main chart — real dated series from the Signals side table, latest-value fallback ---------- */
-function eqPanes(pl,pr,w,X,i0,i1){
+function eqPanes(pl,pr,w,X,i0,i1,to){
  const x0=pl,x1=w-pr;let s="";
  const fT=332,fB=404,fy=v=>fB-(fB-fT)*(v/100);
- const dk4=d=>d.getFullYear()+"-"+d.getMonth()+"-"+d.getDate();
- let fPts=null,hlPts=null,hlMax=10; // day-matched points inside the plotted window — gaps skipped, only actual points connect
- if(X&&i1!=null&&typeof SIG!=="undefined"&&SIG){
-  if(SIG.fomoHistD&&SIG.fomoHistD.length){const m4={};SIG.fomoHistD.forEach(p=>{m4[dk4(p.d)]=p.v;});
-   const a4=[];for(let i=i0;i<=i1;i++){const v=m4[dk4(EQD[i])];if(v!=null)a4.push([X(i-i0),Math.max(0,Math.min(100,v)),v]);}
+ let fPts=null,hlPts=null,hlMax=10,t0=null,tEnd=null; // time-interpolated x — every point keeps its true calendar spot, so days missing from the equity log (or after its last row) still render
+ if(X&&i1!=null&&typeof SIG!=="undefined"&&SIG&&EQD.length){
+  t0=EQD[i0].getTime();tEnd=EQD[i1].getTime();
+  const tCap=(S.tf==="CUSTOM"&&to)?to.getTime():Infinity; // an explicit CUSTOM end date still caps the panes; preset windows may run past the equity log's last day
+  if(SIG.hlHist&&SIG.hlHist.length)tEnd=Math.max(tEnd,Math.min(tCap,SIG.hlHist[SIG.hlHist.length-1].d.getTime()));
+  if(SIG.fomoHistD&&SIG.fomoHistD.length)tEnd=Math.max(tEnd,Math.min(tCap,SIG.fomoHistD[SIG.fomoHistD.length-1].d.getTime()));
+  const px=t=>x0+(t-t0)/Math.max(1,tEnd-t0)*(x1-x0);
+  if(SIG.fomoHistD&&SIG.fomoHistD.length){const m4={};SIG.fomoHistD.forEach(p=>{const t=p.d.getTime();if(t>=t0&&t<=tEnd)m4[t]=p.v;}); // points before the window start are skipped; same-day dupes keep the last value
+   const a4=Object.keys(m4).map(Number).sort((a,b)=>a-b).map(t=>[px(t),Math.max(0,Math.min(100,m4[t])),m4[t]]);
    if(a4.length>=2)fPts=a4;}
-  if(SIG.hlHist&&SIG.hlHist.length){const m5={};SIG.hlHist.forEach(p=>{m5[dk4(p.d)]=p;});
-   const b4=[];for(let i=i0;i<=i1;i++){const p=m5[dk4(EQD[i])];if(p)b4.push([X(i-i0),p]);}
+  if(SIG.hlHist&&SIG.hlHist.length){const m5={};SIG.hlHist.forEach(p=>{const t=p.d.getTime();if(t>=t0&&t<=tEnd)m5[t]=p;});
+   const b4=Object.keys(m5).map(Number).sort((a,b)=>a-b).map(t=>[px(t),m5[t]]);
    if(b4.length){hlPts=b4;b4.forEach(q=>{hlMax=Math.max(hlMax,Math.abs(q[1].nz||0),Math.abs(q[1].ny||0));});}}}
  s+=`<text x="${x0}" y="${fT-7}" font-size="10" letter-spacing=".08em" fill="#7d8590">FOMO — % NASDAQ ABOVE 5-DAY ($NCFD)</text>`;
  s+=`<text x="${x1}" y="${fT-7}" font-size="8.5" text-anchor="end" fill="#5b636e">${fPts?"daily line — Fomo column in the Signals side table":"log a Fomo column in the Signals side table for the line"}</text>`;
@@ -1120,7 +1124,7 @@ function eqPanes(pl,pr,w,X,i0,i1){
  if(hlPts){
   s+=`<text x="${x0+4}" y="${mid-6}" font-size="9" font-weight="700" fill="${nz[1]}">NASDAQ: ${nz[0]}</text>`;
   s+=`<text x="${x0+4}" y="${mid+14}" font-size="9" font-weight="700" fill="${ny[1]}">NYSE: ${ny[0]}</text>`;
-  const bx0=x0+118,nD=(i1-i0+1)||1,bw=Math.max(2,Math.min(8,(x1-x0-118)/nD*0.3));
+  const bx0=x0+118,nD=Math.max(8,Math.round((tEnd-t0)/864e5)),bw=Math.max(2,Math.min(8,0.3*(x1-x0-118)/nD)); // width follows calendar days in [t0,tEnd], not equity-log rows
   const bh=v=>Math.min(15,Math.abs(v)/hlMax*15);
   hlPts.forEach(q=>{const xc=q[0];if(xc<bx0)return;
    const bar=(v,off,op)=>{if(v==null)return;const h=bh(v);if(h<=0)return;
@@ -1143,7 +1147,7 @@ function render(){
  const QQ0=benchAt("QQQ").slice(i0,i1+1),BQQQ=QQ0.map(v=>100*v/QQ0[0]);
  const F=ma(EQX,S.maF).slice(i0,i1+1).map(v=>100*v/E[0]),Sl=ma(EQX,S.maS).slice(i0,i1+1).map(v=>100*v/E[0]);
  let INV=null,INVD=null;
- if(EQABS&&TX.length&&effCurve==="EQ"){let k2=0;const op={},ip=[],ipD=[];
+ if(EQABS&&TX.length){let k2=0;const op={},ip=[],ipD=[]; // invested band builds for Equity AND Realized — the Drawdown view (S.ev==="DD" branch below) never draws it
   for(let i2=0;i2<EQD.length;i2++){
    while(k2<TX.length&&TX[k2].d<=EQD[i2]){const t3=TX[k2];
     const o=op[t3.sym]=op[t3.sym]||[];
@@ -1204,7 +1208,7 @@ function render(){
  const mdd=Math.min(...dd);let cur=0,lgs=0;dd.forEach(v=>{cur=v<0?cur+1:0;lgs=Math.max(lgs,cur);});
  const axY=492;const tk=Math.max(1,Math.round(n/8));let tx=`<line x1="${pl}" x2="${w-pr}" y1="474" y2="474" stroke="#20252d"/>`;
  for(let i=0;i<n;i+=tk)tx+=`<text x="${X(i)}" y="${axY}" font-size="9.5" text-anchor="middle">${EQD[i0+i].toLocaleDateString("en",{month:"short",day:"numeric"})}</text>`;
- const panes=eqPanes(pl,pr,w,X,i0,i1);
+ const panes=eqPanes(pl,pr,w,X,i0,i1,to);
  const prev=EQABS?"":`<span class="g-amb">TRADE-BASED PREVIEW — add Daily equity for your real curve · </span>`;
  $("benchName").textContent=S.bench;
  if(S.ev==="DD"){
@@ -1246,7 +1250,7 @@ function render(){
   const tags=[[Y(sel[n-1]),"#2dd4a0",fmtY(sel[n-1])]];
   if(shSPY)tags.push([Y(BSPY[n-1]),"#d55181",sg(BSPY[n-1]-100)+"%"]);
   if(shQQQ)tags.push([Y(BQQQ[n-1]),"#3987e5",sg(BQQQ[n-1]-100)+"%"]);
-  if(INV)tags.push(D0!=null?[Yi(INV[n-1]),"#22d3ee","INV "+fmtD(INVD[n-1],false),w-2]:[Yi(INV[n-1]),"#22d3ee","INV "+INV[n-1].toFixed(0)+"%"]); // band value follows the global $/% toggle (geometry stays ratio-scaled); the longer $ tag end-anchors at the right edge (now-tag pattern) so it can't clip
+  if(INV)tags.push(S.gmode==="$"?[Yi(INV[n-1]),"#22d3ee","INV "+fmtD(INVD[n-1],false),w-2]:[Yi(INV[n-1]),"#22d3ee","INV "+INV[n-1].toFixed(0)+"%"]); // band value follows the global $/% toggle on every curve, not just Equity (geometry stays ratio-scaled); the longer $ tag end-anchors at the right edge (now-tag pattern) so it can't clip
   tags.sort((a,b)=>a[0]-b[0]);for(let k=1;k<tags.length;k++)if(tags[k][0]-tags[k-1][0]<12)tags[k][0]=tags[k-1][0]+12;
   const tagSvg=tags.map(t2=>`<text x="${t2[3]!=null?t2[3]:w-pr+8}" y="${t2[0]+3}" font-size="10" font-weight="700" fill="${t2[1]}" text-anchor="${t2[3]!=null?"end":"start"}" style="paint-order:stroke" stroke="#0a0e16" stroke-width="3">${t2[2]}</text>`).join("");
   $("svgEq").innerHTML=`<defs><linearGradient id="gr" x1="0" y1="0" x2="0" y2="1">
@@ -1266,8 +1270,8 @@ function render(){
   $("eqLegend").innerHTML=prev+`<span class="g-cyn">${REAL?"‒ ‒ Realized "+(effCurve==="REALD"?"$":"%"):"— Equity"+(D0!=null?" $":"")}</span>`
    +(shEQ?` <span class="g-amb">— ${S.maF}-${S.maT}</span> <span style="color:#60a5fa">— ${S.maS}-${S.maT}</span>`:"")
    +(shSPY?` <span style="color:#d55181">— SPY</span>`:"")+(shQQQ?` <span style="color:#3987e5">— QQQ</span>`:"")
-   +(INV?` <span style="color:#22d3ee;opacity:.85">▓ Invested ${D0!=null?"$":"%"}</span>`:"");
-  window._hv={pl,cw,n,dates:EQD.slice(i0,i1+1),E0:sel,F:shEQ?F:null,Sl:shEQ?Sl:null,BSPY:shSPY?BSPY:null,BQQQ:shQQQ?BQQQ:null,inv:INV,invD:INVD,REAL,mainD:effCurve==="REALD",d0:D0,mainName:effCurve==="REALD"?"Realized $":REAL?"Realized %":"Equity",bench:S.bench,fN:S.maF+"-"+S.maT,sN:S.maS+"-"+S.maT,view:"EQ",y0:6,y1:470};
+   +(INV?` <span style="color:#22d3ee;opacity:.85">▓ Invested ${S.gmode==="$"?"$":"%"}</span>`:"");
+  window._hv={pl,cw,n,dates:EQD.slice(i0,i1+1),E0:sel,F:shEQ?F:null,Sl:shEQ?Sl:null,BSPY:shSPY?BSPY:null,BQQQ:shQQQ?BQQQ:null,inv:INV,invD:INVD,invU:S.gmode==="$",REAL,mainD:effCurve==="REALD",d0:D0,mainName:effCurve==="REALD"?"Realized $":REAL?"Realized %":"Equity",bench:S.bench,fN:S.maF+"-"+S.maT,sN:S.maS+"-"+S.maT,view:"EQ",y0:6,y1:470};
  }
  // ---- sizing throttle (now a strip inside Portfolio Status) ----
  const a10=E0[n-1]>F[n-1],a21=E0[n-1]>Sl[n-1],tc=$("thrCard");
@@ -3036,7 +3040,7 @@ window.addEventListener("load",function(){setTimeout(function(){
    if(H.F)rows.push([H.fN,sg(H.F[i]-100)+"%","#fab219"],[H.sN,sg(H.Sl[i]-100)+"%","#60a5fa"]);
    if(H.BSPY)rows.push(["SPY",sg(H.BSPY[i]-100)+"%","#d55181"]);
    if(H.BQQQ)rows.push(["QQQ",sg(H.BQQQ[i]-100)+"%","#3987e5"]);
-   if(H.inv)rows.push(H.d0!=null&&H.invD?["Invested $",fmtD(H.invD[i],false),"#22d3ee"]:["Invested %",H.inv[i].toFixed(0)+"%","#22d3ee"]);}
+   if(H.inv)rows.push(H.invU&&H.invD?["Invested $",fmtD(H.invD[i],false),"#22d3ee"]:["Invested %",H.inv[i].toFixed(0)+"%","#22d3ee"]);}
   return rows;}
  bindHover("svgEq","_hv",eqRows);
  bindHover("svgMkt","_hvM");
