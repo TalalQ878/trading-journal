@@ -238,6 +238,13 @@ header>.pill,header>.hpv,header>.hdate,header>select,header>.mode,header>.ytd{fl
 .evrow b{color:var(--tx);font-weight:600}
 .pbwrap .playgrid{grid-template-columns:1fr;align-content:start}
 .playgrid .pic{width:15px;flex:none;color:var(--dim);margin-top:1px}
+/* ---- v4.3: playbook plain-english summary + collapsible full breakdown ---- */
+.pbSum{font-size:13px;line-height:1.65;color:var(--mut);max-width:730px;margin:0 0 4px}
+.pbSum b{color:var(--tx)}
+.pbSum .g-grn{color:var(--goodT)}.pbSum .g-red{color:var(--critT)}.pbSum .g-amb{color:var(--warn)}
+.pbTgl{display:flex;align-items:center;gap:5px;min-height:40px;margin:0 0 2px;cursor:pointer;user-select:none;font-size:11.5px;font-weight:700;letter-spacing:.02em;color:var(--dim)}
+.pbTgl:hover{color:var(--tx)}
+.pbTgl .expTg{width:auto;font-size:11px}
 /* ---- Journal: decision rail (Portfolio Status) ---- */
 .rail{display:grid;grid-template-columns:88px auto minmax(0,1fr) 12px;gap:0 9px;align-items:center;padding:7.5px 0;border-bottom:1px solid rgba(255,255,255,.045);font-size:12.4px}
 .rail .rv{min-width:88px}
@@ -450,7 +457,12 @@ tr.lothead td:first-child{padding-left:26px}
     <div class="pbwrap">
       <div>
         <div class="segstrip" id="pbSeg"></div>
-        <div class="playgrid" id="disc"></div>
+        <div class="pbSum" id="pbSum"></div>
+        <div class="pbTgl" id="pbTgl" onclick="pbExpTg()" title="expand — every check, formula and threshold behind the summary"><span class="expTg" id="pbCaret">▸</span><span>Full breakdown — every check, formula and threshold</span></div>
+        <div id="pbDetail" style="display:none">
+          <div class="playgrid" id="disc"></div>
+          <div class="note" id="procScore" style="display:none"></div>
+        </div>
       </div>
       <div>
         <div class="evhead"><span>Rank</span><span>Evidence — model signals by contribution</span></div>
@@ -458,7 +470,6 @@ tr.lothead td:first-child{padding-left:26px}
       </div>
     </div>
     <div class="sellrow" id="pbSell"></div>
-    <div class="note" id="procScore" style="display:none"></div>
     <svg id="edgeMap" viewBox="0 0 330 148" style="height:148px;display:none"></svg>
   </div>
 </div>
@@ -1441,6 +1452,7 @@ function marketModel(){
   if(ex==null)px2.innerHTML='<span class="dot m"></span>'+(window.pbIC?pbIC("sync"):"")+'<span><b>Exposure vs model:</b> add Daily equity rows to compare your exposure with the model band.</span>';
   else{const inB=ex>=b0&&ex<=b1;
    px2.innerHTML=`<span class="dot ${inB?"g":ex>b1?"r":"w"}"></span>`+(window.pbIC?pbIC("sync"):"")+`<span>${window._expoGuide}</span>`;}}
+ if(window.renderPbSum)renderPbSum(); // v4.3: the summary's exposure sentence follows the same band read as the pbExpo row
  // ---- v3: evidence rank list (Journal) + exposure band scale & model-inputs list (Market page) + FOMO gauge + daily matrix ----
  {const ev=$("pbEvid");
   if(ev){const rows=(window._mmRows||[]).filter(r=>r.d!=null).sort((a,b)=>Math.abs(b.d)-Math.abs(a.d));
@@ -1806,8 +1818,12 @@ function drawSmall(T,Wn,L,wr,aw,al){
   {const md=window._planMode||"HARVEST",eSt2=window._edgeState;
    const mult=md==="DEFENSE"?"0.5×":md==="EXPANSION"?"1.0×":eSt2==="HEALTHY"?"0.85×":"0.65×";
    const adds=md==="DEFENSE"?"no adds":md==="EXPANSION"?"max 2 adds, only ≥ +0.5R open":"max 1 add, only ≥ +0.75R open";
+   window._pbToday=`${mult} risk · ${adds} · ${md} ladder`; // v4.3: the summary's closing "Today:" sentence reuses this exact plan string (full coach line lives in pbDetail — no double display)
    rx+=` · TODAY: ${mult} risk · ${adds} · ${md} ladder`;}
   pe.textContent=rx;pe.style.color=rc;}
+ // ---- v4.3: plain-english summary (pbSum) — same computed reads, prose first; refreshed again by marketModel() once the exposure band lands ----
+ window._pbVals={expT,ceil:stopCeil,alA,wr,noSt:(POS||[]).filter(p=>p.stop==null).map(p=>p.sym)};
+ if(window.renderPbSum)renderPbSum();
  const hAvg=a=>a.length?a.reduce((x,t)=>x+t.hold,0)/a.length:0;
  const hw=hAvg(Wn),hl2=hAvg(L);
  $("holdMini").innerHTML=`<div class="rowline"><span>Avg hold — winners</span><span class="rt num g-grn">${hw.toFixed(0)}d</span></div>
@@ -1820,6 +1836,43 @@ window._holdSort={key:"wt",dir:-1};
 window._holdExp=window._holdExp||{};
 window.holdExp=function(sym){window._holdExp[sym]=!window._holdExp[sym];renderHold();};
 window.lotView=function(sym,v){S.lotView=S.lotView||{};if(v==="AVG")S.lotView[sym]="AVG";else delete S.lotView[sym];save();renderHold();};
+/* ---- v4.3: Edge & Risk Playbook — plain-english summary first, full breakdown behind the ▸ (same expander pattern as the lot ladder; S.pbExp persists like every other toggle) ---- */
+window.pbExpTg=function(){S.pbExp=S.pbExp==="ON"?"OFF":"ON";save();pbDetUI();};
+function pbDetUI(){var d=$("pbDetail"),c=$("pbCaret"),t=$("pbTgl"),on=S.pbExp==="ON";if(!d)return;
+ d.style.display=on?"":"none";
+ if(c)c.textContent=on?"▾":"▸";
+ if(t)t.title=(on?"collapse":"expand")+" — every check, formula and threshold behind the summary";}
+window.renderPbSum=function(){var el=$("pbSum");if(!el)return;var V=window._pbVals;if(!V){el.innerHTML="";return;}
+ var s=[];
+ // S1 — the money line, always first
+ if(V.expT>0)s.push(V.ceil!=null
+  ?`Your edge is real — about <b class="num g-grn">+${f1(V.expT)}%</b> per trade — and the whole job is protecting it: keep every loss under the <b class="num">${f1(V.ceil)}%</b> ceiling your winners can afford.`
+  :`Your edge is real — about <b class="num g-grn">+${f1(V.expT)}%</b> per trade — and the whole job is protecting it: steady size, stops honored.`);
+ else s.push(V.ceil!=null
+  ?`Right now the system is bleeding: your winners can only pay for a <b class="num">${f1(V.ceil)}%</b> average loss but yours run <b class="num g-red">${f1(V.alA)}%</b> — job #1 is cutting every loss at <b class="num g-red">${f1(V.ceil)}%</b> or tighter, nothing else matters as much.`
+  :`Right now the system is losing about <b class="num g-red">${f1(Math.abs(V.expT))}%</b> per trade — smallest size, A+ setups only, until the expectancy turns green.`);
+ // S2 — exposure vs the model band (same reads as the "Exposure vs model" row)
+ var ex=window._exp,MT=window._mmTier;
+ if(ex!=null&&MT){
+  if(ex<MT.b0)s.push(`You're <b class="num g-amb">${ex.toFixed(0)}%</b> invested against the model's <b class="num">${MT.b0}–${MT.b1}%</b> band — room for ${ex<MT.b0-15?"~1–2 A+ setups":"~1 A+ setup"}, nothing more.`);
+  else if(ex>MT.b1)s.push(`You're <b class="num g-red">${ex.toFixed(0)}%</b> invested against the model's <b class="num">${MT.b0}–${MT.b1}%</b> band — above it, so trim into strength, laggards first, until you're back inside.`);
+  else s.push(`You're <b class="num g-grn">${ex.toFixed(0)}%</b> invested, inside the model's <b class="num">${MT.b0}–${MT.b1}%</b> band — exposure is in sync, so add only on valid setups and let them decide.`);}
+ // S3 — only while any open position's risk is unmeasured
+ if(V.noSt&&V.noSt.length){var one=V.noSt.length===1;
+  s.push(`<b class="g-red">${V.noSt.join(", ")}</b> still ${one?"has":"have"} no stop${one?"":"s"} logged — set ${one?"it":"them"} today; the add gate stays shut and ${one?"its sell ladder stays":"their sell ladders stay"} locked until you do.`);}
+ // S4 — sizing verdict from the throttle + edge trend
+ var md=window._thrMode,eS2=window._edgeState;
+ if(md){var tt=window._thrTxt?window._thrTxt.charAt(0).toUpperCase()+window._thrTxt.slice(1).replace(/ · /g,", "):"Trend read",
+   ew=eS2==="RISING"?"rising":eS2==="HEALTHY"?"healthy":eS2==="COOLING"?"cooling":eS2==="FADING"?"fading":null,
+   vb=md==="DEFENSE"?`<b class="g-red">defense sizing (0–0.25R)</b> — fewer trades, wait for the line to turn`
+    :md==="CAUTION"?`<b class="g-amb">½ size (0.5R)</b> on new buys and tighten stops`
+    :eS2==="RISING"?`<b class="g-grn">full size (1.0R)</b> — pyramids OK while the model agrees`
+    :`<b class="g-grn">full size (1.0R)</b> — follow the plan, don't press beyond it`;
+  s.push(`${tt}${ew?" with the edge "+ew:""}: ${vb}.`);}
+ // S5 — closing line: the same TODAY plan the coach note computes
+ if(window._pbToday)s.push(`<b>Today:</b> ${window._pbToday}.`);
+ el.innerHTML=s.join(" ");};
+pbDetUI(); // restore the saved open/closed state at boot (default: collapsed)
 function renderHold(){var hEl=document.getElementById("holdList");if(!hEl)return;
  var eqL=(typeof DAILY!=="undefined"&&DAILY&&DAILY.length)?DAILY[DAILY.length-1].eq:null;
  var nEl=document.getElementById("holdN");
