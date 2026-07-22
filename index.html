@@ -356,6 +356,11 @@ tr.lothead td:first-child{padding-left:26px}
 .chiplet.sellq:hover{background:rgba(251,113,133,.22);color:#ffb3bf}
 body.light .chiplet.sellq{background:rgba(225,75,75,.08);color:#c2344c;border-color:rgba(225,75,75,.35)}
 @media(max-width:640px){.chiplet.sellq{min-height:32px;min-width:46px;justify-content:center;padding:0 11px;font-size:11px}}
+/* ---- v4.6: lot-ladder What-if link — same chiplet geometry as sellq, cyan (calculator, never posts) ---- */
+.chiplet.wiq{background:rgba(34,211,238,.10);color:#7fe3f2;border:1px solid rgba(34,211,238,.32);cursor:pointer;margin-left:7px;padding:1px 8px;font-size:10px;letter-spacing:.04em;text-transform:none;vertical-align:middle;line-height:1.6}
+.chiplet.wiq:hover{background:rgba(34,211,238,.22);color:#aef0fa}
+body.light .chiplet.wiq{background:rgba(14,116,144,.08);color:#0e7490;border-color:rgba(14,116,144,.35)}
+@media(max-width:640px){.chiplet.wiq{min-height:32px;min-width:46px;justify-content:center;padding:0 11px;font-size:11px}}
 .mxt .mean{display:none}
 @media(min-width:1400px){.mxt td.mean,.mxt th.mean{display:table-cell;text-align:left;font-weight:400;color:var(--dim);white-space:normal;max-width:300px;font-size:10.5px}}
 </style></head><body><div class="wrap">
@@ -490,7 +495,7 @@ body.light .chiplet.sellq{background:rgba(225,75,75,.08);color:#c2344c;border-co
 <div class="grid">
   <div class="card c8">
     <div class="head">
-      <div class="chips" style="padding:2px"><button class="chip on" id="evEQ">Equity</button><button class="chip" id="evDD">Drawdown</button><button class="chip" id="tgEQ">MAs</button><button class="chip" id="tgSPY">SPY</button><button class="chip" id="tgQQQ">QQQ</button><button class="chip" id="tgLive" title="mark-to-market tail — live quotes vs last daily close">LIVE</button><span style="align-self:center;font-size:9px;font-weight:800;letter-spacing:.07em;color:var(--dim);padding-left:6px">H/L:</span><button class="chip" id="hlxNAZ" title="net new highs−lows pane — Nasdaq only">NASDAQ</button><button class="chip" id="hlxNYSE" title="net new highs−lows pane — NYSE only">NYSE</button><button class="chip on" id="hlxBOTH" title="net new highs−lows pane — both exchanges: Nasdaq solid, NYSE faded">BOTH</button><button class="chip on" id="hlmNET" title="one bar per day: new highs minus new lows">NET</button><button class="chip" id="hlmSPLIT" title="TradingView-style: plot new highs and lows separately — highs up in green, lows down in red, raw counts, no netting">SPLIT</button></div>
+      <div class="chips" style="padding:2px"><button class="chip on" id="evEQ">Equity</button><button class="chip" id="evDD">Drawdown</button><button class="chip" id="tgEQ">MAs</button><button class="chip" id="tgSMA50" title="50-period simple moving average of the active curve — dashed regime line, display only">50-SMA</button><button class="chip" id="tgSPY">SPY</button><button class="chip" id="tgQQQ">QQQ</button><button class="chip" id="tgLive" title="mark-to-market tail — live quotes vs last daily close">LIVE</button><span style="align-self:center;font-size:9px;font-weight:800;letter-spacing:.07em;color:var(--dim);padding-left:6px">H/L:</span><button class="chip" id="hlxNAZ" title="net new highs−lows pane — Nasdaq only">NASDAQ</button><button class="chip" id="hlxNYSE" title="net new highs−lows pane — NYSE only">NYSE</button><button class="chip on" id="hlxBOTH" title="net new highs−lows pane — both exchanges: Nasdaq solid, NYSE faded">BOTH</button><button class="chip on" id="hlmNET" title="one bar per day: new highs minus new lows">NET</button><button class="chip" id="hlmSPLIT" title="TradingView-style: plot new highs and lows separately — highs up in green, lows down in red, raw counts, no netting">SPLIT</button></div>
       <h3 style="margin-left:4px">Equity curve — FOMO + net H/L attached</h3>
       <span class="rt">vs <span id="benchName">…</span> · <span id="rsState"></span><span class="num" id="ddStats"></span> <span id="eqLegend"></span></span>
     </div>
@@ -829,7 +834,7 @@ body.light .chiplet.sellq{background:rgba(225,75,75,.08);color:#c2344c;border-co
 "use strict";
 const $=id=>document.getElementById(id);
 const LS="talalTJ3";
-let S=Object.assign({tf:"YTD",gmode:"%",alTab:"TH",bench:"QQQ",maT:"EMA",maF:10,maS:21,lots:"FIFO",curve:"EQ",rs:"ON",ev:"EQ",tgEQ:"ON",tgSPY:"OFF",tgQQQ:"ON",liveTail:"ON",hlEx:"BOTH",hlMode:"NET",theme:"dark",page:"J",id:"11d1lD0YtMcD9yJ8au8w5TxfTmlu3XIQd8wCMdaK0gms",src:"sheet"},JSON.parse(localStorage.getItem(LS)||"{}"));
+let S=Object.assign({tf:"YTD",gmode:"%",alTab:"TH",bench:"QQQ",maT:"EMA",maF:10,maS:21,lots:"FIFO",curve:"EQ",rs:"ON",ev:"EQ",tgEQ:"ON",tgSPY:"OFF",tgQQQ:"ON",tgSMA50:"OFF",liveTail:"ON",hlEx:"BOTH",hlMode:"NET",theme:"dark",page:"J",id:"11d1lD0YtMcD9yJ8au8w5TxfTmlu3XIQd8wCMdaK0gms",src:"sheet"},JSON.parse(localStorage.getItem(LS)||"{}"));
 const save=()=>localStorage.setItem(LS,JSON.stringify(S));
 // ---------- data holders ----------
 let TX=[],DAILY=[],PRICES={},LIVE={},SIG={},LDRS=[],TRADES=[],POS=[],EQD=[],EQ=[],EQX=[],EQABS=false;
@@ -1276,7 +1281,7 @@ function render(){
   $("rsState").innerHTML="";
   const shEQ2=S.tgEQ==="ON";
   let pkB=B0[0];const ddB=B0.map(v=>{pkB=Math.max(pkB,v);return 100*(v/pkB-1);});
-  const ddF=ma(dd,S.maF),ddS=ma(dd,S.maS);
+  const ddF=ma(dd,S.maF),ddS=ma(dd,S.maS),dd50=S.tgSMA50==="ON"?sma(dd,50):null; // v4.6: 50-SMA regime line follows the active curve — here the drawdown series
   const lo2=Math.min((mdd*1.15)||-1,Math.min(...ddB)*1.05,-1),Y2=v=>pt+(v/lo2)*chh;
   let g="";for(let k=0;k<4;k++){const v=lo2*k/3;
    g+=`<line x1="${pl}" x2="${w-pr}" y1="${Y2(v)}" y2="${Y2(v)}" stroke="rgba(255,255,255,.05)"/><text x="${w-pr+8}" y="${Y2(v)+3}" font-size="10" text-anchor="start">${f1(v)}%</text>`;}
@@ -1285,22 +1290,32 @@ function render(){
    <path d="${P(ddB.map((v,i)=>[X(i),Y2(v)]))}" fill="none" stroke="#3987e5" stroke-width="1.5" opacity=".9"/>
    ${shEQ2?`<path d="${P(ddF.map((v,i)=>[X(i),Y2(v)]))}" fill="none" stroke="#fab219" stroke-width="1.2" opacity=".9"/>
    <path d="${P(ddS.map((v,i)=>[X(i),Y2(v)]))}" fill="none" stroke="#60a5fa" stroke-width="1.2" opacity=".9"/>`:""}
+   ${dd50?`<path d="${P(dd50.map((v,i)=>[X(i),Y2(v)]))}" fill="none" stroke="#9085e9" stroke-width="1.3" stroke-dasharray="4 3" opacity=".9"/>`:""}
    <path d="${P(dpts)}" fill="none" stroke="#f06a6a" stroke-width="2"/>
    <circle cx="${X(n-1)}" cy="${Y2(dd[n-1])}" r="3.5" fill="#f06a6a"/>`+panes+tx;
-  $("eqLegend").innerHTML=prev+`<span class="g-red">— Drawdown</span> <span style="color:#3987e5">— ${S.bench} DD</span>`+(shEQ2?` <span class="g-amb">— DD ${S.maF}-${S.maT}</span> <span style="color:#60a5fa">— DD ${S.maS}-${S.maT}</span>`:"");
-  window._hv={pl,cw,n,dates:EQD.slice(i0,i1+1),dd,ddB,ddF:shEQ2?ddF:null,ddS:shEQ2?ddS:null,hlM,fmM,bench:S.bench,fN:S.maF+"-"+S.maT,sN:S.maS+"-"+S.maT,view:"DD",y0:6,y1:470};
+  $("eqLegend").innerHTML=prev+`<span class="g-red">— Drawdown</span> <span style="color:#3987e5">— ${S.bench} DD</span>`+(shEQ2?` <span class="g-amb">— DD ${S.maF}-${S.maT}</span> <span style="color:#60a5fa">— DD ${S.maS}-${S.maT}</span>`:"")+(dd50?` <span style="color:#9085e9">‒ ‒ 50-SMA</span>`:"");
+  window._hv={pl,cw,n,dates:EQD.slice(i0,i1+1),dd,ddB,ddF:shEQ2?ddF:null,ddS:shEQ2?ddS:null,M50:dd50,hlM,fmM,bench:S.bench,fN:S.maF+"-"+S.maT,sN:S.maS+"-"+S.maT,view:"DD",y0:6,y1:470};
  }else{
   $("ddStats").textContent="";
   $("rsState").innerHTML="";
-  const shEQ=S.tgEQ==="ON"&&!REAL,shSPY=S.tgSPY==="ON",shQQQ=S.tgQQQ==="ON";
+  const shEQ=S.tgEQ==="ON",shSPY=S.tgSPY==="ON",shQQQ=S.tgQQQ==="ON",shM50=S.tgSMA50==="ON"; // v4.6: MAs draw on every curve here (Drawdown has its own branch above)
+  // v4.6: on Realized the MAs run over the realized series itself; equity F/Sl stay untouched — the sizing throttle below still reads them
+  const Fv=REAL?ma(sel,S.maF):F,Sv=REAL?ma(sel,S.maS):Sl;
+  const M50=shM50?(REAL?sma(sel,50):sma(EQX,50).slice(i0,i1+1).map(v=>100*v/E[0])):null; // v4.6: 50-SMA regime line — always a simple MA of the active curve
   // live mark-to-market tail: open positions repriced from last daily close to the live quote (same fields portfolio() prices with)
   let liveIdx=null,liveEq$=null;
-  if(effCurve==="EQ"&&EQABS&&S.liveTail!=="OFF"&&typeof POS!=="undefined"&&POS.length){
-   let ld=0,got=0;
-   POS.forEach(p=>{const lp=LIVE[p.sym],ph=PRICES[p.sym];
-    if(lp!=null&&ph&&ph.length){ld+=p.sh*(lp-ph[ph.length-1][1])*(p.mlt||1);got++;}});
-   if(got){liveEq$=EQ[i1]+ld;liveIdx=E0[n-1]*liveEq$/EQ[i1];}}
-  const all=[...sel,...(liveIdx!=null?[liveIdx]:[]),...(shEQ?[...F,...Sl]:[]),...(shSPY?BSPY:[]),...(shQQQ?BQQQ:[])];
+  if(EQABS&&S.liveTail!=="OFF"&&typeof POS!=="undefined"&&POS.length){
+   if(effCurve==="EQ"){
+    let ld=0,got=0;
+    POS.forEach(p=>{const lp=LIVE[p.sym],ph=PRICES[p.sym];
+     if(lp!=null&&ph&&ph.length){ld+=p.sh*(lp-ph[ph.length-1][1])*(p.mlt||1);got++;}});
+    if(got){liveEq$=EQ[i1]+ld;liveIdx=E0[n-1]*liveEq$/EQ[i1];}
+   }else{ // v4.6: Realized tail = last realized value + CURRENT open P&L (vs cost basis — not vs last close, hence the "incl. open" tag)
+    const opl$=POS.reduce((a,p)=>a+p.sh*(p.px-p.basis)*(p.mlt||1),0);
+    if(effCurve==="REALD")liveIdx=sel[n-1]+opl$;
+    else{let ad=0;TRADES.forEach(t=>{if(t.open&&t.size0!=null){const p=POS.find(q=>q.sym===t.sym);if(p)ad+=p.pnl*t.size0/100;}});liveIdx=sel[n-1]+ad;} // same pct×size0/100 scaling R0 posts closed trades with
+   }}
+  const all=[...sel,...(liveIdx!=null?[liveIdx]:[]),...(shEQ?[...Fv,...Sv]:[]),...(M50||[]),...(shSPY?BSPY:[]),...(shQQQ?BQQQ:[])];
   const lo=Math.min(...all)-.5,hi=Math.max(...all)+.5;
   const Y=v=>pt+chh-(v-lo)/(hi-lo)*chh,pts=s=>s.map((v,i)=>[X(i),Y(v)]);
   const invMx=INV?Math.max(100,...INV):100,Yi=v=>pt+chh-(Math.min(v,invMx)/invMx)*(chh*.24);
@@ -1319,19 +1334,21 @@ function render(){
    <path d="${P(pts(sel))}L${X(n-1)} ${pt+chh}L${pl} ${pt+chh}Z" fill="url(#gr)"/>
    ${shSPY?`<path d="${P(pts(BSPY))}" fill="none" stroke="#d55181" stroke-width="1.6"/>`:""}
    ${shQQQ?`<path d="${P(pts(BQQQ))}" fill="none" stroke="#3987e5" stroke-width="1.6"/>`:""}
-   ${shEQ?`<path d="${P(pts(F))}" fill="none" stroke="#fab219" stroke-width="1.4" opacity=".95"/>
-   <path d="${P(pts(Sl))}" fill="none" stroke="#60a5fa" stroke-width="1.4" opacity=".95"/>`:""}
+   ${shEQ?`<path d="${P(pts(Fv))}" fill="none" stroke="#fab219" stroke-width="1.4" opacity=".95"/>
+   <path d="${P(pts(Sv))}" fill="none" stroke="#60a5fa" stroke-width="1.4" opacity=".95"/>`:""}
+   ${M50?`<path d="${P(pts(M50))}" fill="none" stroke="#9085e9" stroke-width="1.4" stroke-dasharray="4 3" opacity=".9"/>`:""}
    <path d="${P(pts(sel))}" fill="none" stroke="#2dd4a0" stroke-width="2.4"${REAL?' stroke-dasharray="6 4"':""}/>
    <circle cx="${X(n-1)}" cy="${Y(sel[n-1])}" r="4" fill="#2dd4a0"/>${liveIdx!=null?(()=>{const lx=X(n-1)+Math.min(20,Math.max(8,cw/n));
    const tagY=(Y(sel[n-1])-Y(liveIdx)>=-1)?Y(liveIdx)-8:Y(liveIdx)+15; // above the dot when flat/up, below when down — clear of the main tag row
    return `<line x1="${X(n-1)}" y1="${Y(sel[n-1])}" x2="${lx}" y2="${Y(liveIdx)}" stroke="#2dd4a0" stroke-width="1.6" stroke-dasharray="3 3" opacity=".85"/>
    <circle class="ltDot" cx="${lx}" cy="${Y(liveIdx)}" r="4" fill="#0c0e11" stroke="#2dd4a0" stroke-width="2"/>
-   <text x="${w-2}" y="${tagY}" font-size="10" font-weight="700" fill="#2dd4a0" text-anchor="end" style="paint-order:stroke" stroke="#0a0e16" stroke-width="3">now ${D0!=null?fmtD(liveEq$,true):sg(liveIdx-100)+"%"}</text>`;})():""}${tagSvg}`+panes+tx;
+   <text x="${w-2}" y="${tagY}" font-size="10" font-weight="700" fill="#2dd4a0" text-anchor="end" style="paint-order:stroke" stroke="#0a0e16" stroke-width="3">now${REAL?" (incl. open)":""} ${effCurve==="REALD"?fmtD(liveIdx,true):D0!=null?fmtD(liveEq$,true):sg(liveIdx-100)+"%"}</text>`;})():""}${tagSvg}`+panes+tx;
   $("eqLegend").innerHTML=prev+`<span class="g-cyn">${REAL?"‒ ‒ Realized "+(effCurve==="REALD"?"$":"%"):"— Equity"+(D0!=null?" $":"")}</span>`
    +(shEQ?` <span class="g-amb">— ${S.maF}-${S.maT}</span> <span style="color:#60a5fa">— ${S.maS}-${S.maT}</span>`:"")
+   +(M50?` <span style="color:#9085e9">‒ ‒ 50-SMA</span>`:"")
    +(shSPY?` <span style="color:#d55181">— SPY</span>`:"")+(shQQQ?` <span style="color:#3987e5">— QQQ</span>`:"")
    +(INV?` <span style="color:#22d3ee;opacity:.85">▓ Invested ${S.gmode==="$"?"$":"%"}</span>`:"");
-  window._hv={pl,cw,n,dates:EQD.slice(i0,i1+1),E0:sel,F:shEQ?F:null,Sl:shEQ?Sl:null,BSPY:shSPY?BSPY:null,BQQQ:shQQQ?BQQQ:null,inv:INV,invD:INVD,invU:S.gmode==="$",REAL,mainD:effCurve==="REALD",d0:D0,mainName:effCurve==="REALD"?"Realized $":REAL?"Realized %":"Equity",hlM,fmM,bench:S.bench,fN:S.maF+"-"+S.maT,sN:S.maS+"-"+S.maT,view:"EQ",y0:6,y1:470};
+  window._hv={pl,cw,n,dates:EQD.slice(i0,i1+1),E0:sel,F:shEQ?Fv:null,Sl:shEQ?Sv:null,M50,BSPY:shSPY?BSPY:null,BQQQ:shQQQ?BQQQ:null,inv:INV,invD:INVD,invU:S.gmode==="$",REAL,mainD:effCurve==="REALD",d0:D0,mainName:effCurve==="REALD"?"Realized $":REAL?"Realized %":"Equity",hlM,fmM,bench:S.bench,fN:S.maF+"-"+S.maT,sN:S.maS+"-"+S.maT,view:"EQ",y0:6,y1:470};
  }
  // ---- sizing throttle (now a strip inside Portfolio Status) ----
  const a10=E0[n-1]>F[n-1],a21=E0[n-1]>Sl[n-1],tc=$("thrCard");
@@ -2001,6 +2018,7 @@ function renderHold(){var hEl=document.getElementById("holdList");if(!hEl)return
   else if(r.stop!=null)stopCell='<span class="num">'+(r.lots.length===1?r.lots[0].stop:r.stop).toFixed(2)+'</span>';
   else stopCell='<span class="badge nostop">none — set stop</span>';
   var sellChip=' <span class="chiplet sellq" role="button" title="sell '+r.sym+' — opens the trade form prefilled with the remaining shares at the live price; review, then Save (nothing auto-submits)" onclick="qsell(\''+r.tk+'\')">Sell</span>'; // v4.5 quick sell
+  var wiChip=' <span class="chiplet wiq" role="button" title="what-if calculator for '+r.sym+' — sizes an add or a trim against live equity and the model band; nothing is saved" onclick="qwhatif(\''+r.tk+'\')">What-if</span>'; // v4.6
   html+='<tr'+(r.missStop?' class="alert"':'')+'>'
    +'<td>'+caret+'<b>'+r.sym+'</b>'+(r.opt?' <span style="font-size:9px;color:var(--vio)">OPT</span>':'')+chips(r)+sellChip+'</td>'
    +'<td style="text-align:left"><span class="badge theme">'+r.th+'</span></td>'
@@ -2018,7 +2036,7 @@ function renderHold(){var hEl=document.getElementById("holdList");if(!hEl)return
   if(exp&&r.lots.length){ // ---- lot ladder — from the FIFO lots deriveAll already computed (no re-derivation) ----
    var av=(S.lotView&&S.lotView[r.tk]==="AVG");
    var tg='<span class="lotTg" title="view only — transactions untouched, switch back any time"><span '+(av?'':'class="on" ')+'onclick="lotView(\''+r.tk+'\',\'FIFO\')">FIFO ▾</span><span '+(av?'class="on" ':'')+'onclick="lotView(\''+r.tk+'\',\'AVG\')">AVG</span></span>';
-   html+='<tr class="lothead"><td colspan="13">LOT LADDER — '+(av?'blended view (display only)':'FIFO fills, oldest first')+' &nbsp;'+tg+'&nbsp; <span style="text-transform:none;letter-spacing:0">cushion = that lot\'s own P&amp;L% · dist → stop = (live − stop) ÷ live</span>'+sellChip+'</td></tr>';
+   html+='<tr class="lothead"><td colspan="13">LOT LADDER — '+(av?'blended view (display only)':'FIFO fills, oldest first')+' &nbsp;'+tg+'&nbsp; <span style="text-transform:none;letter-spacing:0">cushion = that lot\'s own P&amp;L% · dist → stop = (live − stop) ÷ live</span>'+sellChip+wiChip+'</td></tr>';
    var lotRow=function(lbl,ld,lsh,lpx,lstop,isNew){
     var cush=(lpx>0&&isFinite(r.px))?100*(r.px/lpx-1):null;
     var ldist=(lstop!=null&&r.px>0)?100*(r.px-lstop)/r.px:null;
@@ -2048,6 +2066,7 @@ function qsell(tk){ // v4.5 quick sell — hands the position to the pwa.js entr
  if(!window.openTradePrefill)return; // pwa.js absent → chip is a safe no-op
  var p=(POS||[]).find(function(x){return x.sym===tk;});if(!p)return;
  openTradePrefill({ticker:p.sym,side:"Sell",shares:p.sh,price:p.px});} // shares = remaining, price = live quote (falls back to last transaction px upstream)
+function qwhatif(tk){if(window.openWhatIf)openWhatIf(tk);} // v4.6 — ladder-header link into the pwa.js What-if tab (read-only calculator); safe no-op without pwa.js
 function portfolio(){
  $("lotMode").textContent=(S.lots==="AVG"?"average cost":"FIFO lots")+" · live · "+(S.gmode==="$"?"$":"%")+" mode";
  const eqL=EQABS?EQ[EQ.length-1]:null;
@@ -2138,7 +2157,7 @@ $("lots").onchange=e=>{S.lots=e.target.value;save();deriveAll();render();};
 $("curve").onchange=e=>{S.curve=e.target.value;save();render();};
 ["EQ","DD"].forEach(v=>{const b=$("ev"+v);if(b)b.onclick=()=>{S.ev=v;save();
  $("evEQ").classList.toggle("on",v==="EQ");$("evDD").classList.toggle("on",v==="DD");render();};});
-["tgEQ","tgSPY","tgQQQ"].forEach(k=>{const b=$(k);if(b)b.onclick=()=>{S[k]=S[k]==="ON"?"OFF":"ON";save();b.classList.toggle("on",S[k]==="ON");render();};});
+["tgEQ","tgSPY","tgQQQ","tgSMA50"].forEach(k=>{const b=$(k);if(b)b.onclick=()=>{S[k]=S[k]==="ON"?"OFF":"ON";save();b.classList.toggle("on",S[k]==="ON");render();};});
 {const b=$("tgLive");if(b)b.onclick=()=>{S.liveTail=S.liveTail==="OFF"?"ON":"OFF";save();b.classList.toggle("on",S.liveTail!=="OFF");render();};}
 /* ---- v4.4: H/L pane view chips (exchange + NET/SPLIT) — same persisted-chip pattern as tgLive ---- */
 function hlChipUI(){const ex=(S.hlEx==="NAZ"||S.hlEx==="NYSE")?S.hlEx:"BOTH",md=S.hlMode==="SPLIT"?"SPLIT":"NET";
@@ -2622,6 +2641,7 @@ window.performancePage=performancePage;
  $("customBox").classList.toggle("show",S.tf==="CUSTOM");
  if($("evEQ")){$("evEQ").classList.toggle("on",S.ev!=="DD");$("evDD").classList.toggle("on",S.ev==="DD");}
  if($("tgEQ")){$("tgEQ").classList.toggle("on",S.tgEQ==="ON");$("tgSPY").classList.toggle("on",S.tgSPY==="ON");$("tgQQQ").classList.toggle("on",S.tgQQQ==="ON");}
+ if($("tgSMA50"))$("tgSMA50").classList.toggle("on",S.tgSMA50==="ON");
  if($("tgLive"))$("tgLive").classList.toggle("on",S.liveTail!=="OFF");
  if(window.hlChipUI)hlChipUI(); // v4.4: restore the persisted H/L pane view chips
  modeUI();
@@ -3185,9 +3205,11 @@ window.addEventListener("load",function(){setTimeout(function(){
  function eqRows(H,i){let rows;
   if(H.view==="DD"){rows=[["Drawdown",f1(H.dd[i])+"%","#f06a6a"]];
    if(H.ddB)rows.push([H.bench+" DD",f1(H.ddB[i])+"%","#3987e5"]);
-   if(H.ddF)rows.push(["DD "+H.fN,f1(H.ddF[i])+"%","#fab219"],["DD "+H.sN,f1(H.ddS[i])+"%","#60a5fa"]);}
+   if(H.ddF)rows.push(["DD "+H.fN,f1(H.ddF[i])+"%","#fab219"],["DD "+H.sN,f1(H.ddS[i])+"%","#60a5fa"]);
+   if(H.M50)rows.push(["50-SMA",f1(H.M50[i])+"%","#9085e9"]);}
   else{rows=[[H.mainName,H.mainD?fmtD(H.E0[i],false):H.d0!=null?fmtD(H.E0[i]/100*H.d0,false):sg(H.E0[i]-100)+"%","#2dd4a0"]];
-   if(H.F)rows.push([H.fN,sg(H.F[i]-100)+"%","#fab219"],[H.sN,sg(H.Sl[i]-100)+"%","#60a5fa"]);
+   if(H.F)rows.push([H.fN,H.mainD?fmtD(H.F[i],false):sg(H.F[i]-100)+"%","#fab219"],[H.sN,H.mainD?fmtD(H.Sl[i],false):sg(H.Sl[i]-100)+"%","#60a5fa"]); // v4.6: $-mode Realized MAs are dollar series
+   if(H.M50)rows.push(["50-SMA",H.mainD?fmtD(H.M50[i],false):sg(H.M50[i]-100)+"%","#9085e9"]);
    if(H.BSPY)rows.push(["SPY",sg(H.BSPY[i]-100)+"%","#d55181"]);
    if(H.BQQQ)rows.push(["QQQ",sg(H.BQQQ[i]-100)+"%","#3987e5"]);
    if(H.inv)rows.push(H.invU&&H.invD?["Invested $",fmtD(H.invD[i],false),"#22d3ee"]:["Invested %",H.inv[i].toFixed(0)+"%","#22d3ee"]);}

@@ -113,6 +113,13 @@
       "#entryModal .btnrow{position:sticky;bottom:-28px;background:#0d1320;padding:10px 0 6px;margin-bottom:-10px}" +
       ".enTabs .chip{flex:1;min-height:42px}" +
       "#enPrev{font-size:11.5px;color:var(--cyn);margin-top:8px;min-height:14px}" +
+      /* ---- v4.6: What-if tab — read-only calculator ---- */
+      "#wiOut{margin-top:10px;background:rgba(255,255,255,.02);border:1px solid var(--bd);border-radius:12px;padding:4px 12px;min-height:40px}" +
+      "body.light #wiOut{background:rgba(15,23,42,.03)}" +
+      ".wiRow{padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12.4px;line-height:1.5}" +
+      ".wiRow:last-child{border-bottom:0}" +
+      ".wiRow .num{font-variant-numeric:tabular-nums}" +
+      "#wiNote{font-size:11px;color:var(--dim);margin-top:10px}" +
       "@media(max-width:520px){#entryModal{align-items:end;padding:0}#entryModal .modal{max-width:none;width:100%;border-radius:20px 20px 0 0;max-height:92dvh;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}}" +
       "@media(display-mode:standalone){#dataPill{display:inline-block}}" +
 
@@ -226,6 +233,7 @@
       '<button class="chip on" data-en="T" id="enTabT">Trade</button>' +
       '<button class="chip" data-en="D" id="enTabD">Daily equity</button>' +
       '<button class="chip" data-en="R" id="enTabR">Fix rows</button>' +
+      '<button class="chip" data-en="W" id="enTabW">What-if</button>' +
       "</div>" +
       '<div class="err" id="enErr"></div><div class="enOk" id="enOk"></div>' +
 
@@ -261,15 +269,29 @@
       '<div id="enRows"></div>' +
       '<div class="btnrow"><button class="btn sec" id="enClose3">Close</button></div>' +
       "</div>" +
+
+      /* v4.6: What-if — sizes a hypothetical add/trim against live equity + the model band; never posts */
+      '<div id="enPaneW" style="display:none">' +
+      '<div class="enGrid">' +
+      '<div><label>Ticker</label><input type="text" id="wiTicker" list="wiTickers" placeholder="AVGO" autocapitalize="characters" autocomplete="off"><datalist id="wiTickers"></datalist></div>' +
+      '<div><label>Side</label><select id="wiSide"><option>Buy</option><option>Sell</option></select></div>' +
+      '<div><label>Shares</label><input type="number" id="wiShares" inputmode="decimal" step="any" min="0" placeholder="10"></div>' +
+      '<div><label>Price</label><input type="number" id="wiPrice" inputmode="decimal" step="any" min="0" placeholder="live auto-fills"></div>' +
+      '<div class="full"><label>Stop price (optional — risk line)</label><input type="number" id="wiStop" inputmode="decimal" step="any" min="0" placeholder="optional"></div>' +
+      "</div>" +
+      '<div id="wiOut"></div>' +
+      '<div class="btnrow"><button class="btn sec" id="enClose4">Close</button></div>' +
+      '<p id="wiNote">Calculator only — nothing is saved. Holdings use your live avg cost; commission follows the setting in ⚙ Commission (IBKR).</p>' +
+      "</div>" +
       "</div>";
     document.body.appendChild(ov);
 
-    var panes = { T: "enPaneT", D: "enPaneD", R: "enPaneR" };
+    var panes = { T: "enPaneT", D: "enPaneD", R: "enPaneR", W: "enPaneW" };
     function enTab(w) {
       Object.keys(panes).forEach(function (k) { $(panes[k]).style.display = k === w ? "" : "none"; $("enTab" + k).classList.toggle("on", k === w); });
-      msg(); if (w === "R") renderRows();
+      msg(); if (w === "R") renderRows(); if (w === "W") { wiSyms(); wiCalc(); }
     }
-    ["T", "D", "R"].forEach(function (k) { $("enTab" + k).onclick = function () { enTab(k); }; });
+    ["T", "D", "R", "W"].forEach(function (k) { $("enTab" + k).onclick = function () { enTab(k); }; });
 
     function msg(err, ok) {
       var e = $("enErr"), o = $("enOk");
@@ -287,7 +309,7 @@
       ov.classList.add("show");
     }
     eb.onclick = openModal;
-    ["enClose1", "enClose2", "enClose3"].forEach(function (id) { $(id).onclick = function () { ov.classList.remove("show"); }; });
+    ["enClose1", "enClose2", "enClose3", "enClose4"].forEach(function (id) { $(id).onclick = function () { ov.classList.remove("show"); }; });
     ov.addEventListener("click", function (e) { if (e.target === ov) ov.classList.remove("show"); });
 
     /* live preview + ADD detection + sell prefill (GPT UX round) */
@@ -398,6 +420,97 @@
       $("enStop").value = ""; $("enPivot").value = ""; $("enSetup").value = ""; $("enNote").value = "";
       updPrev();
       setTimeout(function () { var el = $("enShares"); try { el.focus(); el.select(); } catch (_) {} }, 60); // focus lands on shares
+    };
+
+    /* ---------- v4.6: What-if tab — read-only position calculator (never posts) ----------
+       New avg with commission folded in (same commAdj a real save would apply), position
+       weight of equity, portfolio exposure after vs the market-model band (_mmTier), and
+       stop-risk vs the 0.25–0.5%-NAV sizing guide. Recomputes on every input; no network. */
+    function wiPos(tk) { return (typeof POS !== "undefined" && POS || []).find(function (p) { return p.sym === tk; }) || null; }
+    function wiLivePx(tk) {
+      var p = wiPos(tk); if (p && p.px > 0) return p.px; // held → the same live-or-last-close price the Holdings table shows
+      var lv = (typeof LIVE !== "undefined" && LIVE) ? LIVE[tk] : null;
+      return (lv != null && lv > 0) ? lv : null;
+    }
+    function wiSyms() {
+      var dl = $("wiTickers"); if (!dl) return;
+      dl.innerHTML = (typeof POS !== "undefined" && POS || []).map(function (p) { return "<option value=\"" + esc(p.sym) + "\" label=\"" + (Math.round(p.sh * 100) / 100) + " held\">"; }).join("");
+    }
+    var wiMan = false; // price typed by hand — autofill stops overriding until the ticker changes again
+    function wiAutoPx() {
+      var tk = ($("wiTicker").value || "").trim().toUpperCase();
+      var lp = wiLivePx(tk);
+      if (lp != null) { $("wiPrice").value = Math.round(lp * 100) / 100; wiMan = false; }
+      else if (!wiMan) $("wiPrice").value = "";
+    }
+    function wiCalc() {
+      var out = $("wiOut"); if (!out) return;
+      var tk = ($("wiTicker").value || "").trim().toUpperCase();
+      var side = $("wiSide").value;
+      var sh = parseFloat($("wiShares").value), px = parseFloat($("wiPrice").value), st = parseFloat($("wiStop").value);
+      var p = tk ? wiPos(tk) : null, mlt = p ? (p.mlt || 1) : 1;
+      var eqL = (typeof EQABS !== "undefined" && EQABS && typeof EQ !== "undefined" && EQ.length) ? EQ[EQ.length - 1] : null;
+      var inv = (typeof POS !== "undefined" && POS || []).reduce(function (a, q) { return a + q.val; }, 0);
+      var row = function (id, html) { return "<div class='wiRow' id='" + id + "'>" + html + "</div>"; };
+      var d$ = function (v) { return (v < 0 ? "−$" : "$") + Math.round(Math.abs(v)).toLocaleString(); };
+      var L = [];
+      if (!tk) { out.innerHTML = row("wiMsg", "<span style='color:var(--dim)'>Type a ticker — held positions auto-fill their live price; any other symbol works once you enter a price.</span>"); return; }
+      if (p) L.push(row("wiNow", "<b>" + esc(p.disp || tk) + "</b> — holding <span class='num'>" + (Math.round(p.sh * 100) / 100) + "</span> sh @ avg <span class='num'>" + p.basis.toFixed(2) + "</span> · live <span class='num'>" + (p.px > 0 ? p.px.toFixed(2) : "—") + "</span>" + (p.est ? " <span class='g-amb'>(est)</span>" : "")));
+      else L.push(row("wiNow", "<b>" + esc(tk) + "</b> — not held today" + (wiLivePx(tk) != null ? " · live <span class='num'>" + wiLivePx(tk).toFixed(2) + "</span>" : "")));
+      if (!(px > 0)) { L.push(row("wiMsg", "<span class='g-amb'>enter a price</span> — no live quote for " + esc(tk) + ".")); out.innerHTML = L.join(""); return; }
+      if (!(sh > 0)) { L.push(row("wiMsg", "<span style='color:var(--dim)'>enter shares to size the trade.</span>")); out.innerHTML = L.join(""); return; }
+      if (side === "Sell" && !p) { L.push(row("wiMsg", "<span class='g-red'>you don't hold " + esc(tk) + "</span> — nothing to sell here.")); out.innerHTML = L.join(""); return; }
+      var used = sh, clamped = false;
+      if (side === "Sell") { used = Math.min(sh, p.sh); clamped = used < sh; } // the executable order is the clamped size — commission prices off it
+      var ca = commAdj(side, used, px), comm = ca ? ca.comm : 0, eff = ca ? ca.eff : px; // OFF → zero commission, raw price
+      var newSh, newAvg, real$ = null;
+      if (side === "Buy") {
+        newSh = (p ? p.sh : 0) + sh;
+        newAvg = p ? (p.sh * p.basis + sh * eff) / newSh : eff; // commission-inclusive effective price feeds the blend
+        L.push(row("wiAfter", "after <b class='g-grn'>BUY " + sh + "</b>: <span class='num'>" + (Math.round(newSh * 100) / 100) + "</span> sh @ new avg <b class='num'>" + newAvg.toFixed(2) + "</b>" + (p ? "" : " (new position)")));
+      } else {
+        newSh = p.sh - used; newAvg = p.basis;
+        real$ = used * (eff - p.basis) * mlt; // sold piece vs avg — avg itself never moves on a sell
+        L.push(row("wiAfter", "after <b class='g-red'>SELL " + used + (clamped ? " (clamped to held)" : "") + "</b>: <span class='num'>" + (Math.round(newSh * 100) / 100) + "</span> sh · avg unchanged <span class='num'>" + newAvg.toFixed(2) + "</span> · realized <b class='num " + (real$ >= 0 ? "g-grn" : "g-red") + "'>" + (real$ >= 0 ? "+" : "−") + "$" + Math.abs(real$).toFixed(2) + "</b>"));
+      }
+      L.push(row("wiComm", commMode() === "OFF"
+        ? "<span style='color:var(--dim)'>commission OFF — $0.00, raw price used</span>"
+        : "comm <span class='num'>$" + comm.toFixed(2) + "</span> → eff <span class='num'>" + eff.toFixed(2) + "</span> folded into " + (side === "Buy" ? "the new avg" : "the sale proceeds")));
+      if (eqL) {
+        var posVal = newSh * px * mlt, wgt = 100 * posVal / eqL, trade$ = used * px * mlt;
+        var eN = Math.round(100 * inv / eqL), eA = Math.round(100 * (inv + (side === "Buy" ? trade$ : -trade$)) / eqL);
+        L.push(row("wiVal", "position after: <b class='num'>" + d$(posVal) + "</b> · <b class='num'>" + wgt.toFixed(1) + "%</b> of equity"));
+        L.push(row("wiExpo", "portfolio exposure: <span class='num'>" + eN + "%</span> → <b class='num'>" + eA + "%</b> after <span style='color:var(--dim)'>(invested " + d$(inv) + " " + (side === "Buy" ? "+" : "−") + " " + d$(trade$) + " ÷ equity " + d$(eqL) + ")</span>"));
+        var MT = window._mmTier;
+        if (MT && MT.b0 != null) {
+          var bandTxt = (String(MT.lab || "").split(" — ")[0] || "model") + " " + MT.b0 + "–" + MT.b1 + "% band";
+          if (eA >= MT.b0 && eA <= MT.b1) L.push(row("wiBand", "<b class='g-grn'>→ " + eA + "% exposure — inside the " + bandTxt + " ✓</b>"));
+          else if (eA > MT.b1) L.push(row("wiBand", "<b class='g-red'>→ " + eA + "% exposure — above the " + bandTxt + " — breaks the band ✗</b>"));
+          else L.push(row("wiBand", "<b class='g-amb'>→ " + eA + "% exposure — below the " + bandTxt + " — breaks the band ✗</b>"));
+        }
+      } else L.push(row("wiVal", "<span class='g-amb'>add Daily equity rows to size weight, exposure and the band check.</span>"));
+      if (st > 0 && st < eff) {
+        var risk$ = used * (eff - st) * mlt, rPct = eqL ? 100 * risk$ / eqL : null;
+        var cls = rPct == null ? "g-amb" : rPct <= 0.5 ? "g-grn" : rPct <= 1 ? "g-amb" : "g-red";
+        L.push(row("wiRisk", "stop risk <b class='num " + cls + "'>" + d$(risk$) + (rPct != null ? " · " + rPct.toFixed(2) + "% NAV" : "") + "</b> <span style='color:var(--dim)'>(sizing guide 0.25–0.5% NAV)</span>"));
+      } else if ($("wiStop").value !== "") {
+        L.push(row("wiRisk", "<span class='g-amb'>stop must sit below the (effective) price for a risk read.</span>"));
+      }
+      out.innerHTML = L.join("");
+    }
+    $("wiTicker").oninput = function () { wiAutoPx(); wiCalc(); };
+    $("wiTicker").onchange = function () { wiAutoPx(); wiCalc(); };
+    $("wiPrice").oninput = function () { wiMan = $("wiPrice").value !== ""; wiCalc(); };
+    ["wiShares", "wiStop"].forEach(function (id) { $(id).oninput = wiCalc; });
+    $("wiSide").onchange = wiCalc;
+
+    /* v4.6: lot-ladder header link (index.html qwhatif) lands here — same hook shape as openTradePrefill */
+    window.openWhatIf = function (sym) {
+      openModal(); enTab("W");
+      $("wiTicker").value = sym ? String(sym).trim().toUpperCase() : "";
+      $("wiShares").value = ""; $("wiStop").value = ""; $("wiSide").value = "Buy"; // clean slate — the link prefills the ticker only
+      wiMan = false; wiAutoPx(); wiCalc();
+      setTimeout(function () { var el = $("wiShares"); try { el.focus(); el.select(); } catch (_) {} }, 60);
     };
 
     $("dnSubmit").onclick = async function () {
