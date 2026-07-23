@@ -349,7 +349,102 @@ header>.pill,header>.hpv,header>.hdate,header>select,header>.mode,header>.ytd{fl
 .voters .vo .lv{font-size:11px;font-weight:800;margin-top:2px}
 @media(max-width:1100px){.gA,.gB,.g3,.g4,.g6,.c3,.c4,.c5,.c6,.c7,.c8{grid-column:span 12}body{padding:12px}.fedgrid{grid-template-columns:1fr}.setpop{right:12px}.pbwrap{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}.tiles8{grid-template-columns:repeat(4,1fr)}.stats5{grid-template-columns:repeat(3,1fr)}.cstrip{grid-template-columns:1fr}.xmwrap{grid-template-columns:1fr}.scen3{grid-template-columns:repeat(2,1fr)}.voters{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:640px){.stats5{grid-template-columns:repeat(2,1fr)}.playgrid{grid-template-columns:1fr}.alloc{grid-template-columns:1fr}.kpis{grid-template-columns:1fr}.tiles8{grid-template-columns:repeat(2,1fr)}.scen3{grid-template-columns:1fr}.dgr{grid-template-columns:64px 1fr auto}.dgm{grid-column:1/-1;padding-left:2px}.rail{grid-template-columns:80px 64px minmax(0,1fr) 10px}}
-body.light{--bg:#f3f5f9;--card:#ffffff;--card2:#eef1f6;--bd:rgba(15,23,42,.09);--edge:rgba(15,23,42,.09);--tx:#0f172a;--mut:#475569;--dim:#5c6676}
+/* ============ v5.2 light mode — full token override (dark stays the :root default) ============ */
+body.light{--bg:#f3f5f9;--card:#ffffff;--card2:#eef1f6;--bd:rgba(15,23,42,.09);--edge:rgba(15,23,42,.09);--tx:#0f172a;--mut:#475569;--dim:#5c6676;
+--grid:#e3e8ef;--axis:#9aa4b2;
+--grn:#128a12;--red:#c94141;--amb:#9a7200;--cyn:#0e7490;--vio:#6f63d2;
+--good:#0b8a0b;--goodT:#128a12;--warn:#9a7200;--crit:#c94141;--critT:#c24444;
+--mint:#0b8a5f;--qqq:#2f78d2;--spy:#c2456f;
+--goodBg:rgba(12,138,12,.10);--warnBg:rgba(154,114,0,.10);--critBg:rgba(201,65,65,.10)}
+/* ---- light-mode component chrome: rules whose dark values are hardcoded (not var()-driven) ---- */
+body.light .chip.on{background:#d5eee1;color:#0b6b4f}
+body.light #tf .chip.on{background:#dbe7f7;color:#1d4f94}
+body.light .subtabs span.on,body.light .lotTg span.on{background:#d5eee1;color:#0b6b4f}
+body.light .snI:hover{color:var(--tx);background:rgba(15,23,42,.05)}
+body.light .snI.on{color:#1d4f94;background:#dbe7f7}
+body.light .chiplet.m,body.light .badge.sample,body.light .badge.newest,body.light .evrow .rk,body.light .nbadge{background:#e2e7ee}
+body.light .badge.theme,body.light .lyr,body.light .vint.of{background:#dbe7f7;color:#28588f}
+body.light .linkish,body.light .modalwrap .head h3{color:#0b7a52}
+body.light .err{color:#c2344c}
+body.light #setupErr{color:#c2344c!important}
+body.light .modal{background:#ffffff;border-color:rgba(15,23,42,.12)}
+body.light select,body.light input[type=date],body.light input[type=text]{background:#fff;color-scheme:light}
+body.light #tip{background:#fffffff7;border-color:rgba(15,23,42,.16);box-shadow:0 8px 30px rgba(15,23,42,.22)}
+body.light .setpop,body.light .viewpop{box-shadow:0 16px 48px rgba(15,23,42,.20)}
+body.light .gauge{background:linear-gradient(90deg,rgba(11,138,11,.16) 0 15%,#e2e7ee 15% 85%,rgba(201,65,65,.16) 85% 100%)}
+body.light .lwbar{background:#e2e7ee}
+body.light .meter{background:rgba(15,23,42,.10)}
+body.light .btn.sec{background:rgba(15,23,42,.06)}
+body.light .mode span.on{color:#ffffff}
+body.light .holdwrap::-webkit-scrollbar-thumb{background:#c3ccd9}
+body.light .rowline,body.light .alist .al,body.light .cat,body.light .evrow,body.light .rail,body.light .mmi{border-bottom-color:rgba(15,23,42,.09)}
+body.light td{border-bottom-color:rgba(15,23,42,.07)}
+body.light .postbl td{border-top-color:rgba(15,23,42,.09)}
+body.light .dgr{border-bottom-color:rgba(15,23,42,.08)}
+body.light tr.lotrow td{background:rgba(15,23,42,.024);border-bottom-color:rgba(15,23,42,.05)}
+body.light tr.lothead td{background:rgba(15,23,42,.024)}
+body.light tr.alert td{background:rgba(201,65,65,.06)}
+body.light .rail.click:hover{background:rgba(15,23,42,.045)}
+body.light .mgrid td.emp{color:#c2cbd7}
+body.light .clock .ck::before{background:#c2cbd7}
+body.light .dot.m{background:#9aa4b2}
+/* ---- light-mode SVG chrome: charts are JS-generated inline SVG with presentation ATTRIBUTES — exact-match attribute selectors beat them (CSS > attribute). One rule per dark literal actually emitted. ---- */
+body.light [stroke="rgba(255,255,255,.05)"]{stroke:rgba(15,23,42,.07)}
+body.light [stroke="rgba(255,255,255,.10)"]{stroke:rgba(15,23,42,.10)}
+body.light [stroke="rgba(255,255,255,.14)"]{stroke:rgba(15,23,42,.14)}
+body.light [stroke="rgba(255,255,255,.15)"]{stroke:rgba(15,23,42,.15)}
+body.light [stroke="rgba(255,255,255,.35)"]{stroke:rgba(15,23,42,.35)}
+body.light [fill="rgba(255,255,255,.07)"]{fill:rgba(15,23,42,.08)}
+body.light [stroke="#39404a"]{stroke:#9aa4b2}
+body.light [stroke="#20252d"]{stroke:#e3e8ef}
+body.light [stroke="#20252c"]{stroke:#e3e8ef} /* FOMO dial track */
+body.light [stroke="#0a0e16"]{stroke:#ffffff}
+body.light [fill="#0c0e11"]{fill:#ffffff}
+body.light [stroke="#0c0e11"]{stroke:#ffffff}
+body.light [stroke="#383835"]{stroke:#dfe3ea}
+body.light [stroke="#eef1f4"]{stroke:#0f172a}
+body.light text[fill="#eef1f4"],body.light text[fill="#eef1f5"]{fill:#0f172a}
+body.light circle[fill="#eef1f4"]{fill:#0f172a}
+body.light text[fill="#7d8590"]{fill:#5c6676}
+body.light text[fill="#a9b2bc"]{fill:#475569}
+body.light text[fill="#2dd4a0"]{fill:#0b8a5f}
+body.light text[fill="#8ff0cf"]{fill:#0b8a5f}
+body.light text[fill="#fab219"]{fill:#9a7200}
+body.light text[fill="#f06a6a"]{fill:#c24444}
+body.light text[fill="#1fb51f"]{fill:#128a12}
+body.light text[fill="#0ca30c"]{fill:#0b8a0b}
+body.light text[fill="#e14b4b"]{fill:#c94141}
+body.light text[fill="#9085e9"]{fill:#6f63d2}
+body.light text[fill="#3987e5"]{fill:#2f78d2}
+body.light text[fill="#60a5fa"]{fill:#2a63c8}
+body.light text[fill="#22d3ee"]{fill:#0e7490}
+body.light text[fill="#d55181"]{fill:#c2456f}
+body.light [stroke="#8ff0cf"]{stroke:#0b8a5f}
+body.light [stroke="#2dd4a0"]{stroke:#0da37b}
+body.light circle[fill="#2dd4a0"]{fill:#0da37b}
+body.light [stroke="#fab219"]{stroke:#c08a00}
+body.light [stroke="#60a5fa"]{stroke:#2a63c8}
+body.light [stroke="#1fb51f"]{stroke:#128a12}
+body.light [stroke="#0ca30c"]{stroke:#0b8a0b}
+/* ---- light-mode inline style="" overrides: JS-generated legends / markers carry dark-tuned literal colors in style attributes — substring-match + !important beats the inline style ---- */
+body.light [style*="color:#fab219"]{color:#9a7200!important}
+body.light [style*="color:#d55181"]{color:#c2456f!important}
+body.light [style*="color:#3987e5"]{color:#2f78d2!important}
+body.light [style*="color:#60a5fa"]{color:#2a63c8!important}
+body.light [style*="color:#9085e9"]{color:#6f63d2!important}
+body.light [style*="color:#22d3ee"]{color:#0e7490!important}
+body.light [style*="color:#8ff0cf"]{color:#0b7a52!important}
+body.light [style*="color:#ffb3bf"]{color:#c2344c!important}
+body.light [style*="color:#7d8590"]{color:#5c6676!important}
+body.light [style*="color:#1fb51f"]{color:#128a12!important}
+body.light [style*="color:#f06a6a"]{color:#c24444!important}
+body.light [style*="color:#a9b2bc"]{color:#475569!important}
+body.light [style*="background:#383835"]{background:#d8dde5!important}
+body.light [style*="fill:#eef1f4"]{fill:#0f172a!important}
+body.light [style*="fill:#7d8590"]{fill:#5c6676!important}
+body.light [style*="fill:#1fb51f"]{fill:#128a12!important}
+body.light [style*="fill:#f06a6a"]{fill:#c24444!important}
+body.light [style*="fill:#8b93a1"]{fill:#5c6676!important}
 /* ---- v4: lot ladder (Holdings expander), stale / earnings chips, add-gate chip, matrix meaning column ---- */
 .expTg{display:inline-block;width:16px;color:var(--dim);cursor:pointer;user-select:none;font-size:11px;margin-right:2px}
 .expTg:hover{color:var(--tx)}
@@ -376,7 +471,14 @@ body.light .chiplet.wiq{background:rgba(14,116,144,.08);color:#0e7490;border-col
 @media(max-width:640px){.chiplet.wiq{min-height:32px;min-width:46px;justify-content:center;padding:0 11px;font-size:11px}}
 .mxt .mean{display:none}
 @media(min-width:1400px){.mxt td.mean,.mxt th.mean{display:table-cell;text-align:left;font-weight:400;color:var(--dim);white-space:normal;max-width:300px;font-size:10.5px}}
-</style></head><body><div class="wrap">
+</style></head><body><script>
+/* v5.2 pre-paint: resolve the stored theme synchronously so a light-mode user never sees a dark flash.
+   Key must match const LS ("talalTJ3") below; any failure leaves the dark default untouched. */
+try{var _s0=JSON.parse(localStorage.getItem("talalTJ3")||"{}"),_t0=_s0.theme||"dark";
+if(_t0==="light"||(_t0==="auto"&&window.matchMedia&&matchMedia("(prefers-color-scheme: light)").matches)){
+ document.body.classList.add("light");
+ var _m0=document.querySelector('meta[name="theme-color"]');if(_m0)_m0.setAttribute("content","#f3f5f9");}}catch(e){}
+</script><div class="wrap">
 
 <aside id="sideNav">
   <div class="snLogo"><div class="logo">T</div><div class="snTitle"><b>Talal</b><small>Trading Journal</small></div></div>
@@ -419,8 +521,7 @@ body.light .chiplet.wiq{background:rgba(14,116,144,.08);color:#0e7490;border-col
   <span class="pill btn" id="dataPill" title="Data source">…</span>
   <span class="mode" id="modeTg" title="Whole-page $ / % display"><span data-m="$">$</span><span data-m="%" class="on">%</span></span>
   <span class="pill btn" id="reloadBtn">⟳ Refresh</span>
-  <span class="pill btn" id="themeBtn" style="display:none">☀ Light</span>
-  <span class="pill btn" id="gearBtn" title="Settings — lots, MA, curve, connection">⚙ settings</span>
+  <span class="pill btn" id="gearBtn" title="Settings — lots, MA, curve, theme, connection">⚙ settings</span>
   <span class="ytd num" id="hYtd"></span>
 </header>
 
@@ -439,6 +540,9 @@ body.light .chiplet.wiq{background:rgba(14,116,144,.08);color:#0e7490;border-col
   </div>
   <div class="ctl">CURVE
     <select id="curve"><option value="EQ">Equity</option><option value="REAL">Realized</option></select>
+  </div>
+  <div class="ctl">THEME
+    <select id="themeSel"><option value="dark">Dark</option><option value="light">Light</option><option value="auto">Auto (device)</option></select>
   </div>
   <div class="ctl" style="display:none">BENCHMARK <select id="bench"></select></div>
   <button class="chip" id="connOpen" style="border:1px solid var(--edge)">Data connection…</button>
@@ -518,7 +622,7 @@ body.light .chiplet.wiq{background:rgba(14,116,144,.08);color:#0e7490;border-col
     <!-- v4.7: popover lives at card level (positioned under the chip row on open) so it never creates scrollable overflow on the row -->
     <div class="viewpop" id="viewPop">
       <div class="vpLbl">Overlays</div>
-      <div class="vpRow"><button class="chip" id="tgEQ">MAs</button><button class="chip" id="tgSMA50" title="50-period simple moving average of the active curve — dashed regime line, display only">50-SMA</button><button class="chip" id="tgSPY">SPY</button><button class="chip" id="tgQQQ">QQQ</button><button class="chip" id="tgLive" title="mark-to-market tail — live quotes vs last daily close">LIVE</button><button class="chip on" id="tgP50" title="FOMO pane: % of Nasdaq stocks above their 50-day SMA ($NCFI) — participation breadth, needs a Pct50 column in the Signals side table">%&gt;50-SMA</button></div>
+      <div class="vpRow"><button class="chip" id="tgEQ" title="two moving averages of the active curve — change periods &amp; EMA/SMA in ⚙ settings">MAs</button><button class="chip" id="tgSPY">SPY</button><button class="chip" id="tgQQQ">QQQ</button><button class="chip" id="tgLive" title="mark-to-market tail — live quotes vs last daily close">LIVE</button><button class="chip on" id="tgP50" title="FOMO pane: % of Nasdaq stocks above their 50-day SMA ($NCFI) — participation breadth, needs a Pct50 column in the Signals side table">%&gt;50-SMA</button></div>
       <div class="vpLbl">Highs / Lows pane</div>
       <div class="vpRow"><button class="chip" id="hlxNAZ" title="net new highs−lows pane — Nasdaq only">NASDAQ</button><button class="chip" id="hlxNYSE" title="net new highs−lows pane — NYSE only">NYSE</button><button class="chip on" id="hlxBOTH" title="net new highs−lows pane — both exchanges: Nasdaq solid, NYSE faded">BOTH</button></div>
       <div class="vpRow"><button class="chip on" id="hlmNET" title="one bar per day: new highs minus new lows">NET</button><button class="chip" id="hlmSPLIT" title="TradingView-style: plot new highs and lows separately — highs up in green, lows down in red, raw counts, no netting">SPLIT</button></div>
@@ -859,7 +963,7 @@ body.light .chiplet.wiq{background:rgba(14,116,144,.08);color:#0e7490;border-col
 "use strict";
 const $=id=>document.getElementById(id);
 const LS="talalTJ3";
-let S=Object.assign({tf:"YTD",gmode:"%",alTab:"TH",bench:"QQQ",maT:"EMA",maF:10,maS:21,lots:"FIFO",curve:"EQ",rs:"ON",ev:"EQ",tgEQ:"ON",tgSPY:"OFF",tgQQQ:"ON",tgSMA50:"OFF",tgP50:"ON",liveTail:"ON",hlEx:"BOTH",hlMode:"NET",theme:"dark",page:"J",sellExp:"OFF",id:"11d1lD0YtMcD9yJ8au8w5TxfTmlu3XIQd8wCMdaK0gms",src:"sheet"},JSON.parse(localStorage.getItem(LS)||"{}"));
+let S=Object.assign({tf:"YTD",gmode:"%",alTab:"TH",bench:"QQQ",maT:"EMA",maF:10,maS:21,lots:"FIFO",curve:"EQ",rs:"ON",ev:"EQ",tgEQ:"ON",tgSPY:"OFF",tgQQQ:"ON",tgP50:"ON",liveTail:"ON",hlEx:"BOTH",hlMode:"NET",theme:"dark",page:"J",sellExp:"OFF",id:"11d1lD0YtMcD9yJ8au8w5TxfTmlu3XIQd8wCMdaK0gms",src:"sheet"},JSON.parse(localStorage.getItem(LS)||"{}"));
 const save=()=>localStorage.setItem(LS,JSON.stringify(S));
 // ---------- data holders ----------
 let TX=[],DAILY=[],PRICES={},LIVE={},SIG={},LDRS=[],TRADES=[],POS=[],EQD=[],EQ=[],EQX=[],EQABS=false;
@@ -1330,7 +1434,7 @@ function render(){
   $("rsState").innerHTML="";
   const shEQ2=S.tgEQ==="ON";
   let pkB=B0[0];const ddB=B0.map(v=>{pkB=Math.max(pkB,v);return 100*(v/pkB-1);});
-  const ddF=ma(dd,S.maF),ddS=ma(dd,S.maS),dd50=S.tgSMA50==="ON"?sma(dd,50):null; // v4.6: 50-SMA regime line follows the active curve — here the drawdown series
+  const ddF=ma(dd,S.maF),ddS=ma(dd,S.maS); // the two configurable MAs follow the active curve — here the drawdown series (v5.2: separate 50-SMA overlay removed; set a 50 period in ⚙ settings instead)
   const lo2=Math.min((mdd*1.15)||-1,Math.min(...ddB)*1.05,-1),Y2=v=>pt+(v/lo2)*chh;
   let g="";for(let k=0;k<4;k++){const v=lo2*k/3;
    g+=`<line x1="${pl}" x2="${w-pr}" y1="${Y2(v)}" y2="${Y2(v)}" stroke="rgba(255,255,255,.05)"/><text x="${w-pr+8}" y="${Y2(v)+3}" font-size="10" text-anchor="start">${f1(v)}%</text>`;}
@@ -1339,18 +1443,16 @@ function render(){
    <path d="${P(ddB.map((v,i)=>[X(i),Y2(v)]))}" fill="none" stroke="#3987e5" stroke-width="1.5" opacity=".9"/>
    ${shEQ2?`<path d="${P(ddF.map((v,i)=>[X(i),Y2(v)]))}" fill="none" stroke="#fab219" stroke-width="1.2" opacity=".9"/>
    <path d="${P(ddS.map((v,i)=>[X(i),Y2(v)]))}" fill="none" stroke="#60a5fa" stroke-width="1.2" opacity=".9"/>`:""}
-   ${dd50?`<path d="${P(dd50.map((v,i)=>[X(i),Y2(v)]))}" fill="none" stroke="#9085e9" stroke-width="1.3" stroke-dasharray="4 3" opacity=".9"/>`:""}
    <path d="${P(dpts)}" fill="none" stroke="#f06a6a" stroke-width="2"/>
    <circle cx="${X(n-1)}" cy="${Y2(dd[n-1])}" r="3.5" fill="#f06a6a"/>`+panes+tx;
-  $("eqLegend").innerHTML=prev+`<span class="g-red">— Drawdown</span> <span style="color:#3987e5">— ${S.bench} DD</span>`+(shEQ2?` <span class="g-amb">— DD ${S.maF}-${S.maT}</span> <span style="color:#60a5fa">— DD ${S.maS}-${S.maT}</span>`:"")+(dd50?` <span style="color:#9085e9">‒ ‒ 50-SMA</span>`:"");
-  window._hv={pl,cw,n,dates:EQD.slice(i0,i1+1),dd,ddB,ddF:shEQ2?ddF:null,ddS:shEQ2?ddS:null,M50:dd50,hlM,fmM,p50M,bench:S.bench,fN:S.maF+"-"+S.maT,sN:S.maS+"-"+S.maT,view:"DD",y0:6,y1:470};
+  $("eqLegend").innerHTML=prev+`<span class="g-red">— Drawdown</span> <span style="color:#3987e5">— ${S.bench} DD</span>`+(shEQ2?` <span class="g-amb">— DD ${S.maF}-${S.maT}</span> <span style="color:#60a5fa">— DD ${S.maS}-${S.maT}</span>`:"");
+  window._hv={pl,cw,n,dates:EQD.slice(i0,i1+1),dd,ddB,ddF:shEQ2?ddF:null,ddS:shEQ2?ddS:null,hlM,fmM,p50M,bench:S.bench,fN:S.maF+"-"+S.maT,sN:S.maS+"-"+S.maT,view:"DD",y0:6,y1:470};
  }else{
   $("ddStats").textContent="";
   $("rsState").innerHTML="";
-  const shEQ=S.tgEQ==="ON",shSPY=S.tgSPY==="ON",shQQQ=S.tgQQQ==="ON",shM50=S.tgSMA50==="ON"; // v4.6: MAs draw on every curve here (Drawdown has its own branch above)
+  const shEQ=S.tgEQ==="ON",shSPY=S.tgSPY==="ON",shQQQ=S.tgQQQ==="ON"; // v4.6: MAs draw on every curve here (Drawdown has its own branch above)
   // v4.6: on Realized the MAs run over the realized series itself; equity F/Sl stay untouched — the sizing throttle below still reads them
   const Fv=REAL?ma(sel,S.maF):F,Sv=REAL?ma(sel,S.maS):Sl;
-  const M50=shM50?(REAL?sma(sel,50):sma(EQX,50).slice(i0,i1+1).map(v=>100*v/E[0])):null; // v4.6: 50-SMA regime line — always a simple MA of the active curve
   // live mark-to-market tail: open positions repriced from last daily close to the live quote (same fields portfolio() prices with)
   let liveIdx=null,liveEq$=null;
   if(EQABS&&S.liveTail!=="OFF"&&typeof POS!=="undefined"&&POS.length){
@@ -1364,7 +1466,7 @@ function render(){
     if(effCurve==="REALD")liveIdx=sel[n-1]+opl$;
     else{let ad=0;TRADES.forEach(t=>{if(t.open&&t.size0!=null){const p=POS.find(q=>q.sym===t.sym);if(p)ad+=p.pnl*t.size0/100;}});liveIdx=sel[n-1]+ad;} // same pct×size0/100 scaling R0 posts closed trades with
    }}
-  const all=[...sel,...(liveIdx!=null?[liveIdx]:[]),...(shEQ?[...Fv,...Sv]:[]),...(M50||[]),...(shSPY?BSPY:[]),...(shQQQ?BQQQ:[])];
+  const all=[...sel,...(liveIdx!=null?[liveIdx]:[]),...(shEQ?[...Fv,...Sv]:[]),...(shSPY?BSPY:[]),...(shQQQ?BQQQ:[])];
   const lo=Math.min(...all)-.5,hi=Math.max(...all)+.5;
   const Y=v=>pt+chh-(v-lo)/(hi-lo)*chh,pts=s=>s.map((v,i)=>[X(i),Y(v)]);
   const invMx=INV?Math.max(100,...INV):100,Yi=v=>pt+chh-(Math.min(v,invMx)/invMx)*(chh*.24);
@@ -1385,7 +1487,6 @@ function render(){
    ${shQQQ?`<path d="${P(pts(BQQQ))}" fill="none" stroke="#3987e5" stroke-width="1.6"/>`:""}
    ${shEQ?`<path d="${P(pts(Fv))}" fill="none" stroke="#fab219" stroke-width="1.4" opacity=".95"/>
    <path d="${P(pts(Sv))}" fill="none" stroke="#60a5fa" stroke-width="1.4" opacity=".95"/>`:""}
-   ${M50?`<path d="${P(pts(M50))}" fill="none" stroke="#9085e9" stroke-width="1.4" stroke-dasharray="4 3" opacity=".9"/>`:""}
    <path d="${P(pts(sel))}" fill="none" stroke="#2dd4a0" stroke-width="2.4"${REAL?' stroke-dasharray="6 4"':""}/>
    <circle cx="${X(n-1)}" cy="${Y(sel[n-1])}" r="4" fill="#2dd4a0"/>${liveIdx!=null?(()=>{const lx=X(n-1)+Math.min(20,Math.max(8,cw/n));
    const tagY=(Y(sel[n-1])-Y(liveIdx)>=-1)?Y(liveIdx)-8:Y(liveIdx)+15; // above the dot when flat/up, below when down — clear of the main tag row
@@ -1395,10 +1496,9 @@ function render(){
    <text x="${w-2}" y="${tagY}" font-size="10" font-weight="700" fill="#2dd4a0" text-anchor="end" style="paint-order:stroke" stroke="#0a0e16" stroke-width="3">now${REAL?" (incl. open)":""} ${effCurve==="REALD"?fmtD(liveIdx,true):D0!=null?fmtD(liveEq$,true):sg(liveIdx-100)+"%"}</text>`;})():""}${tagSvg}`+panes+tx;
   $("eqLegend").innerHTML=prev+`<span class="g-cyn">${REAL?"‒ ‒ Realized "+(effCurve==="REALD"?"$":"%"):"— Equity"+(D0!=null?" $":"")}</span>`
    +(shEQ?` <span class="g-amb">— ${S.maF}-${S.maT}</span> <span style="color:#60a5fa">— ${S.maS}-${S.maT}</span>`:"")
-   +(M50?` <span style="color:#9085e9">‒ ‒ 50-SMA</span>`:"")
    +(shSPY?` <span style="color:#d55181">— SPY</span>`:"")+(shQQQ?` <span style="color:#3987e5">— QQQ</span>`:"")
    +(INV?` <span style="color:#22d3ee;opacity:.85">▓ Invested ${S.gmode==="$"?"$":"%"}</span>`:"");
-  window._hv={pl,cw,n,dates:EQD.slice(i0,i1+1),E0:sel,F:shEQ?Fv:null,Sl:shEQ?Sv:null,M50,BSPY:shSPY?BSPY:null,BQQQ:shQQQ?BQQQ:null,inv:INV,invD:INVD,invU:S.gmode==="$",REAL,mainD:effCurve==="REALD",d0:D0,mainName:effCurve==="REALD"?"Realized $":REAL?"Realized %":"Equity",hlM,fmM,p50M,bench:S.bench,fN:S.maF+"-"+S.maT,sN:S.maS+"-"+S.maT,view:"EQ",y0:6,y1:470};
+  window._hv={pl,cw,n,dates:EQD.slice(i0,i1+1),E0:sel,F:shEQ?Fv:null,Sl:shEQ?Sv:null,BSPY:shSPY?BSPY:null,BQQQ:shQQQ?BQQQ:null,inv:INV,invD:INVD,invU:S.gmode==="$",REAL,mainD:effCurve==="REALD",d0:D0,mainName:effCurve==="REALD"?"Realized $":REAL?"Realized %":"Equity",hlM,fmM,p50M,bench:S.bench,fN:S.maF+"-"+S.maT,sN:S.maS+"-"+S.maT,view:"EQ",y0:6,y1:470};
  }
  // ---- v5.1: always-visible live readout — top-right of the equity-card header ----
  // Same mark-to-market repricing as the LIVE tail's liveEq$ (open positions, last logged close
@@ -2267,7 +2367,7 @@ $("lots").onchange=e=>{S.lots=e.target.value;save();deriveAll();render();};
 $("curve").onchange=e=>{S.curve=e.target.value;save();render();};
 ["EQ","DD"].forEach(v=>{const b=$("ev"+v);if(b)b.onclick=()=>{S.ev=v;save();
  $("evEQ").classList.toggle("on",v==="EQ");$("evDD").classList.toggle("on",v==="DD");render();};});
-["tgEQ","tgSPY","tgQQQ","tgSMA50"].forEach(k=>{const b=$(k);if(b)b.onclick=()=>{S[k]=S[k]==="ON"?"OFF":"ON";save();b.classList.toggle("on",S[k]==="ON");viewDotUI();render();};});
+["tgEQ","tgSPY","tgQQQ"].forEach(k=>{const b=$(k);if(b)b.onclick=()=>{S[k]=S[k]==="ON"?"OFF":"ON";save();b.classList.toggle("on",S[k]==="ON");viewDotUI();render();};});
 {const b=$("tgLive");if(b)b.onclick=()=>{S.liveTail=S.liveTail==="OFF"?"ON":"OFF";save();b.classList.toggle("on",S.liveTail!=="OFF");viewDotUI();render();};}
 {const b=$("tgP50");if(b)b.onclick=()=>{S.tgP50=S.tgP50==="OFF"?"ON":"OFF";save();b.classList.toggle("on",S.tgP50!=="OFF");viewDotUI();render();};} // v4.9: %>50-SMA breadth line in the FOMO pane — default-ON pattern like tgLive (undefined counts as ON)
 /* ---- v4.4: H/L pane view chips (exchange + NET/SPLIT) — same persisted-chip pattern as tgLive ---- */
@@ -2281,7 +2381,7 @@ hlChipUI();
 /* ---- v4.7: "view ▾" popover — declutters the chart chip row. The toggles above kept their ids/handlers/S.* persistence;
    toggling inside re-renders the chart live and the popover stays open. Closes on outside pointerdown or Esc. ---- */
 function viewDotUI(){const b=$("tgView");if(!b)return;
- const def=S.tgEQ==="ON"&&S.tgSPY!=="ON"&&S.tgQQQ==="ON"&&S.tgSMA50!=="ON"&&S.liveTail!=="OFF"&&S.tgP50!=="OFF" /* v4.9 */
+ const def=S.tgEQ==="ON"&&S.tgSPY!=="ON"&&S.tgQQQ==="ON"&&S.liveTail!=="OFF"&&S.tgP50!=="OFF" /* v4.9 */
   &&!(S.hlEx==="NAZ"||S.hlEx==="NYSE")&&S.hlMode!=="SPLIT";
  b.classList.toggle("mark",!def);} // dot marker whenever any view option is off its default — state isn't hidden by the closed menu
 window.viewDotUI=viewDotUI;
@@ -2300,7 +2400,20 @@ Object.keys(PGS).forEach(function(pg){var b=$("tab"+pg);if(!b)return;b.onclick=f
  if(pg==="F"&&window.performancePage)try{performancePage();}catch(e){}
  if(pg==="F2"&&window.fedPage)try{fedPage();}catch(e){}
  window.scrollTo(0,0);};});
-$("themeBtn").onclick=()=>{S.theme=S.theme==="light"?"dark":"light";save();document.body.classList.toggle("light",S.theme==="light");$("themeBtn").textContent=S.theme==="light"?"☾ Dark":"☀ Light";};
+/* ---- v5.2: ONE theme entry point — ⚙ settings select persists S.theme (dark|light|auto); applyTheme() resolves
+   "auto" via prefers-color-scheme, flips body.light (pure CSS swap — charts never re-render), and keeps the
+   browser-chrome <meta name="theme-color"> in sync. Auto mode re-applies live on device scheme change. ---- */
+function applyTheme(){
+ var mq=window.matchMedia?window.matchMedia("(prefers-color-scheme: light)"):null;
+ var light=S.theme==="light"||(S.theme==="auto"&&!!(mq&&mq.matches));
+ document.body.classList.toggle("light",light);
+ var m=document.querySelector('meta[name="theme-color"]');
+ if(m)m.setAttribute("content",light?"#f3f5f9":"#0c0e11");
+ if(S.theme==="auto"&&mq&&!applyTheme._mql){applyTheme._mql=1; // attach once; handler no-ops unless still on auto
+  var re=function(){if(S.theme==="auto")applyTheme();};
+  if(mq.addEventListener)mq.addEventListener("change",re);else if(mq.addListener)mq.addListener(re);}}
+window.applyTheme=applyTheme;
+if($("themeSel"))$("themeSel").onchange=e=>{S.theme=e.target.value;save();applyTheme();};
 $("gearBtn").onclick=function(e){$("setPop").classList.toggle("show");e.stopPropagation();};
 document.addEventListener("click",function(e){var sp=$("setPop");if(sp&&sp.classList.contains("show")&&!sp.contains(e.target)&&e.target!==$("gearBtn"))sp.classList.remove("show");});
 if($("connOpen"))$("connOpen").onclick=function(){$("setPop").classList.remove("show");$("setup").classList.add("show");};
@@ -2779,13 +2892,14 @@ window.performancePage=performancePage;
  $("customBox").classList.toggle("show",S.tf==="CUSTOM");
  if($("evEQ")){$("evEQ").classList.toggle("on",S.ev!=="DD");$("evDD").classList.toggle("on",S.ev==="DD");}
  if($("tgEQ")){$("tgEQ").classList.toggle("on",S.tgEQ==="ON");$("tgSPY").classList.toggle("on",S.tgSPY==="ON");$("tgQQQ").classList.toggle("on",S.tgQQQ==="ON");}
- if($("tgSMA50"))$("tgSMA50").classList.toggle("on",S.tgSMA50==="ON");
  if($("tgLive"))$("tgLive").classList.toggle("on",S.liveTail!=="OFF");
  if($("tgP50"))$("tgP50").classList.toggle("on",S.tgP50!=="OFF"); // v4.9: restore the %>50-SMA chip
  if(window.hlChipUI)hlChipUI(); // v4.4: restore the persisted H/L pane view chips
  if(window.viewDotUI)viewDotUI(); // v4.7: restore the "view ▾" non-default marker
  modeUI();
- document.body.classList.toggle("light",S.theme==="light");if($("themeBtn"))$("themeBtn").textContent=S.theme==="light"?"☾ Dark":"☀ Light";
+ if(!/^(dark|light|auto)$/.test(S.theme||""))S.theme="dark"; // stale/garbage stored value → safe default
+ if($("themeSel"))$("themeSel").value=S.theme;
+ applyTheme();
  if(S.id){if($("sheetUrl"))$("sheetUrl").value=S.id==="api"?"":"https://docs.google.com/spreadsheets/d/"+S.id;loadSheet();}
  else if(S.src==="demo"){demo();setPill();render();}
  else{$("setup").classList.add("show");demo();setPill();render();}})();
@@ -3345,11 +3459,9 @@ window.addEventListener("load",function(){setTimeout(function(){
  function eqRows(H,i){let rows;
   if(H.view==="DD"){rows=[["Drawdown",f1(H.dd[i])+"%","#f06a6a"]];
    if(H.ddB)rows.push([H.bench+" DD",f1(H.ddB[i])+"%","#3987e5"]);
-   if(H.ddF)rows.push(["DD "+H.fN,f1(H.ddF[i])+"%","#fab219"],["DD "+H.sN,f1(H.ddS[i])+"%","#60a5fa"]);
-   if(H.M50)rows.push(["50-SMA",f1(H.M50[i])+"%","#9085e9"]);}
+   if(H.ddF)rows.push(["DD "+H.fN,f1(H.ddF[i])+"%","#fab219"],["DD "+H.sN,f1(H.ddS[i])+"%","#60a5fa"]);}
   else{rows=[[H.mainName,H.mainD?fmtD(H.E0[i],false):H.d0!=null?fmtD(H.E0[i]/100*H.d0,false):sg(H.E0[i]-100)+"%","#2dd4a0"]];
    if(H.F)rows.push([H.fN,H.mainD?fmtD(H.F[i],false):sg(H.F[i]-100)+"%","#fab219"],[H.sN,H.mainD?fmtD(H.Sl[i],false):sg(H.Sl[i]-100)+"%","#60a5fa"]); // v4.6: $-mode Realized MAs are dollar series
-   if(H.M50)rows.push(["50-SMA",H.mainD?fmtD(H.M50[i],false):sg(H.M50[i]-100)+"%","#9085e9"]);
    if(H.BSPY)rows.push(["SPY",sg(H.BSPY[i]-100)+"%","#d55181"]);
    if(H.BQQQ)rows.push(["QQQ",sg(H.BQQQ[i]-100)+"%","#3987e5"]);
    if(H.inv)rows.push(H.invU&&H.invD?["Invested $",fmtD(H.invD[i],false),"#22d3ee"]:["Invested %",H.inv[i].toFixed(0)+"%","#22d3ee"]);}
