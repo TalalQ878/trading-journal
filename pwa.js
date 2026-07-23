@@ -674,8 +674,41 @@
     }, { passive: true });
 
     /* ----- service worker + auto-refresh ----- */
-    if ("serviceWorker" in navigator && location.protocol === "https:") {
-      try { navigator.serviceWorker.register("./sw.js"); } catch (_) {}
+    /* v5.1: auto-reload once when a new service worker takes control — kills the "reopen
+       twice" update dance. sw.js is skipWaiting+clients.claim, so the moment an updated SW
+       activates it controls this page while the old shell is still painted; one reload shows
+       the new build. Guards: (a) module-scoped swReloaded flag → can never loop; (b) on the
+       very first install there was no previous controller (swHadCtrl false) — that initial
+       claim is not an update, so no reload; (c) if an entry form is open (+Add / setup
+       overlay) the reload is deferred until it closes so a half-typed trade is never lost.
+       reg.update() runs at registration and again whenever the app returns to the
+       foreground (visibilitychange → visible, throttled to ≥60s) so a phone that reopens
+       the PWA finds a new deploy immediately instead of on the next cold start.
+       (__swTestAllow lets the localhost test rig exercise this path; production stays https-only.) */
+    if ("serviceWorker" in navigator && (location.protocol === "https:" || window.__swTestAllow === true)) {
+      var swHadCtrl = !!navigator.serviceWorker.controller, swReloaded = false, swPending = false;
+      var swFormOpen = function () { return !!document.querySelector(".overlay.show"); };
+      navigator.serviceWorker.addEventListener("controllerchange", function () {
+        if (!swHadCtrl) { swHadCtrl = true; return; } // first-ever install claiming the page — not an update
+        if (swReloaded || swPending) return;          // one reload per takeover, never a loop
+        if (swFormOpen()) {                           // don't interrupt a form mid-entry
+          swPending = true;
+          var iv = setInterval(function () {
+            if (!swFormOpen()) { clearInterval(iv); if (!swReloaded) { swReloaded = true; location.reload(); } }
+          }, 500);
+          return;
+        }
+        swReloaded = true; location.reload();
+      });
+      try {
+        navigator.serviceWorker.register("./sw.js").then(function (reg) {
+          var swChk = function () { try { reg.update().catch(function () {}); } catch (_) {} };
+          swChk(); window.__swLastChk = Date.now();
+          document.addEventListener("visibilitychange", function () {
+            if (document.visibilityState === "visible" && Date.now() - (window.__swLastChk || 0) >= 60e3) { window.__swLastChk = Date.now(); swChk(); }
+          });
+        }).catch(function () {});
+      } catch (_) {}
     }
     window.__lastLoad = Date.now();
     if (window.loadSheet) {

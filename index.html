@@ -64,6 +64,9 @@ select:focus,input:focus{border-color:rgba(45,212,160,.5)}
 .head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap}
 .head h3{font-size:11.5px;letter-spacing:.09em;color:var(--mut);font-weight:700;text-transform:uppercase}
 .head .rt{margin-left:auto;font-size:10.5px;color:var(--dim);font-weight:600}
+#liveNow{font-size:11px;font-weight:700;white-space:nowrap;cursor:default} /* v5.1: always-visible mark-to-market readout in the equity-card corner — no hover needed */
+#liveNow .lnDot{font-size:8.5px;vertical-align:1px}
+@media(max-width:640px){#liveNow .lnX{display:none}} /* phones: drops to "● +1.0%" to fit */
 .gA{grid-column:span 8}.gB{grid-column:span 4}.g3{grid-column:span 3}.g4{grid-column:span 4}.g6{grid-column:span 6}
 .c12{grid-column:span 12}.c8{grid-column:span 8}.c7{grid-column:span 7}.c6{grid-column:span 6}.c5{grid-column:span 5}.c4{grid-column:span 4}.c3{grid-column:span 3}
 svg{display:block;width:100%}
@@ -509,6 +512,8 @@ body.light .chiplet.wiq{background:rgba(14,116,144,.08);color:#0e7490;border-col
       <div class="chips" id="eqChipRow" style="padding:2px"><button class="chip on" id="evEQ">Equity</button><button class="chip" id="evDD">Drawdown</button><button class="chip vchip" id="tgView" title="chart view options — overlays + highs/lows pane">view ▾<span class="vdot"></span></button></div>
       <h3 style="margin-left:4px">Equity curve — FOMO + net H/L attached</h3>
       <span class="rt">vs <span id="benchName">…</span> · <span id="rsState"></span><span class="num" id="ddStats"></span> <span id="eqLegend"></span></span>
+      <!-- v5.1: live mark-to-market readout — always visible while LIVE is on, any curve/view -->
+      <span class="num" id="liveNow" style="display:none" title="mark-to-market now — quotes refresh every 1 min (source can lag a few min)"></span>
     </div>
     <!-- v4.7: popover lives at card level (positioned under the chip row on open) so it never creates scrollable overflow on the row -->
     <div class="viewpop" id="viewPop">
@@ -1395,6 +1400,23 @@ function render(){
    +(INV?` <span style="color:#22d3ee;opacity:.85">▓ Invested ${S.gmode==="$"?"$":"%"}</span>`:"");
   window._hv={pl,cw,n,dates:EQD.slice(i0,i1+1),E0:sel,F:shEQ?Fv:null,Sl:shEQ?Sv:null,M50,BSPY:shSPY?BSPY:null,BQQQ:shQQQ?BQQQ:null,inv:INV,invD:INVD,invU:S.gmode==="$",REAL,mainD:effCurve==="REALD",d0:D0,mainName:effCurve==="REALD"?"Realized $":REAL?"Realized %":"Equity",hlM,fmM,p50M,bench:S.bench,fN:S.maF+"-"+S.maT,sN:S.maS+"-"+S.maT,view:"EQ",y0:6,y1:470};
  }
+ // ---- v5.1: always-visible live readout — top-right of the equity-card header ----
+ // Same mark-to-market repricing as the LIVE tail's liveEq$ (open positions, last logged close
+ // → live quote, option multiplier included), but anchored to the LAST logged Daily equity and
+ // rendered on every curve/view, so the live change reads without a finger on the chart.
+ // Populated here → refreshes with every render cycle (60s auto-refresh included). The $ value
+ // stays in the % display mode too — it's a level, not a return. Hidden when LIVE is off,
+ // no quote landed, or the journal has no absolute Daily equity yet.
+ {const lnEl=$("liveNow");
+  if(lnEl){let lnOn=false;
+   if(EQABS&&S.liveTail!=="OFF"&&typeof POS!=="undefined"&&POS.length&&EQ.length){
+    const lnBase=EQ[EQ.length-1];let lnD=0,lnGot=0;
+    POS.forEach(p=>{const lp=LIVE[p.sym],ph=PRICES[p.sym];
+     if(lp!=null&&ph&&ph.length){lnD+=p.sh*(lp-ph[ph.length-1][1])*(p.mlt||1);lnGot++;}});
+    if(lnGot&&lnBase>0){const lnEq=lnBase+lnD,lnPc=Math.abs(100*lnD/lnBase)<.05?0:100*lnD/lnBase;
+     lnEl.className="num "+(lnPc===0?"g-mut":lnPc>0?"g-grn":"g-red");
+     lnEl.innerHTML=`<span class="lnDot">●</span> <span class="lnX">${fmtD(lnEq,false)} · </span>${sg(lnPc)}%<span class="lnX"> today</span>`;lnOn=true;}}
+   lnEl.style.display=lnOn?"":"none";}}
  // ---- sizing throttle (now a strip inside Portfolio Status) ----
  const a10=E0[n-1]>F[n-1],a21=E0[n-1]>Sl[n-1],tc=$("thrCard");
  $("thrLine").innerHTML=`equity <b class="${a10?"g-grn":"g-red"}">${a10?"ABOVE":"BELOW"}</b> ${S.maF}-${S.maT} · <b class="${a21?"g-grn":"g-red"}">${a21?"ABOVE":"BELOW"}</b> ${S.maS}-${S.maT} · RS ${rsHigh?"at highs":"off highs"}`;
