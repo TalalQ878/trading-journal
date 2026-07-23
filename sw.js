@@ -4,7 +4,7 @@
    which keeps its own localStorage fallback for offline viewing).
    Google Fonts: cached after first use so typography works offline. */
 "use strict";
-const VERSION = "tj-v5j"; /* v5j: evidence rank hidden on touch devices (lives in the exposure popup); desktop keeps it */
+const VERSION = "tj-v5k"; /* v5k: % above 50-SMA breadth line in the FOMO pane */
 const SHELL = [
   "./",
   "./index.html",
