@@ -231,6 +231,7 @@ header .pill{white-space:nowrap}
 header>.pill,header>.hpv,header>.hdate,header>select,header>.mode,header>.ytd{flex:0 0 auto}
 /* ---- Journal: playbook two-pane + segmented state strip + evidence rank list ---- */
 .pbwrap{display:grid;grid-template-columns:1.55fr 1fr;gap:6px 30px}
+@media(pointer:coarse){.evcol{display:none}.pbwrap{grid-template-columns:1fr}} /* iPhone/iPad: evidence rank hidden — same signals live in the Ideal-exposure popup; desktop keeps the column */
 .segstrip{display:flex;gap:6px;margin:0 0 12px}
 .segstrip .seg{flex:1;text-align:center;border:1px solid var(--edge);border-radius:9px;padding:6px 4px;font-size:10.5px;font-weight:800;letter-spacing:.07em;color:var(--dim);cursor:default;user-select:none}
 .segstrip .seg small{display:block;font-weight:500;font-size:8.5px;letter-spacing:0;color:var(--dim);margin-top:1px}
@@ -483,7 +484,7 @@ body.light .chiplet.wiq{background:rgba(14,116,144,.08);color:#0e7490;border-col
           <div class="note" id="procScore" style="display:none"></div>
         </div>
       </div>
-      <div>
+      <div class="evcol">
         <div class="evhead"><span>Rank</span><span>Evidence — model signals by contribution</span></div>
         <div id="pbEvid"><div class="kv" style="padding:6px 0">…</div></div>
       </div>
