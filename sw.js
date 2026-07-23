@@ -4,7 +4,7 @@
    which keeps its own localStorage fallback for offline viewing).
    Google Fonts: cached after first use so typography works offline. */
 "use strict";
-const VERSION = "tj-v5n"; /* v5n: auto-reload on new version + always-visible live readout */
+const VERSION = "tj-v5o"; /* v5o: live readout pinned to the card's right edge */
 const SHELL = [
   "./",
   "./index.html",
