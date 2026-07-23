@@ -301,7 +301,7 @@ header>.pill,header>.hpv,header>.hdate,header>select,header>.mode,header>.ytd{fl
 .mgrid td.pos{color:var(--goodT);font-weight:600}.mgrid td.neg{color:var(--critT);font-weight:600}.mgrid td.emp{color:#39404a}
 .mgrid td.ytd{font-weight:800;border-left:1px solid var(--grid)}
 /* ---- Market Conditions: tile row, gauge, matrix, credit strip, exposure band ---- */
-.tiles8{display:grid;grid-template-columns:repeat(8,1fr);gap:10px}
+.tiles8{display:grid;grid-template-columns:repeat(9,1fr);gap:10px} /* v5.0: 9th tile — distribution days */
 .tiles8 .snap .v{font-size:12.5px}
 .mxt td{font-size:11px;font-weight:700;padding:6px 6px;text-align:center;white-space:nowrap}
 .mxt th{text-align:center}
@@ -674,6 +674,7 @@ body.light .chiplet.wiq{background:rgba(14,116,144,.08);color:#0e7490;border-col
       <div class="snap"><div class="l">Credit</div><div class="v" id="frCrV">—</div><div class="s" id="frCrS"></div></div>
       <div class="snap"><div class="l">Yield curve</div><div class="v" id="frCvV">—</div><div class="s" id="frCvS"></div></div>
       <div class="snap"><div class="l">Volume / follow-through</div><div class="v" id="frVmV">—</div><div class="s" id="frVmS"></div></div>
+      <div class="snap" id="tileDd" title="down ≥0.2% on higher volume, QQQ, 25 sessions"><div class="l">Distribution days (25d)</div><div class="v" id="frDdV">—</div><div class="s" id="frDdS"></div></div>
       <div class="snap"><div class="l">FOMO</div><div class="v" id="frFoV">—</div><div class="s" id="frFoS"></div></div>
     </div>
   </div>
@@ -853,7 +854,7 @@ body.light .chiplet.wiq{background:rgba(14,116,144,.08);color:#0e7490;border-col
 "use strict";
 const $=id=>document.getElementById(id);
 const LS="talalTJ3";
-let S=Object.assign({tf:"YTD",gmode:"%",alTab:"TH",bench:"QQQ",maT:"EMA",maF:10,maS:21,lots:"FIFO",curve:"EQ",rs:"ON",ev:"EQ",tgEQ:"ON",tgSPY:"OFF",tgQQQ:"ON",tgSMA50:"OFF",tgP50:"ON",liveTail:"ON",hlEx:"BOTH",hlMode:"NET",theme:"dark",page:"J",id:"11d1lD0YtMcD9yJ8au8w5TxfTmlu3XIQd8wCMdaK0gms",src:"sheet"},JSON.parse(localStorage.getItem(LS)||"{}"));
+let S=Object.assign({tf:"YTD",gmode:"%",alTab:"TH",bench:"QQQ",maT:"EMA",maF:10,maS:21,lots:"FIFO",curve:"EQ",rs:"ON",ev:"EQ",tgEQ:"ON",tgSPY:"OFF",tgQQQ:"ON",tgSMA50:"OFF",tgP50:"ON",liveTail:"ON",hlEx:"BOTH",hlMode:"NET",theme:"dark",page:"J",sellExp:"OFF",id:"11d1lD0YtMcD9yJ8au8w5TxfTmlu3XIQd8wCMdaK0gms",src:"sheet"},JSON.parse(localStorage.getItem(LS)||"{}"));
 const save=()=>localStorage.setItem(LS,JSON.stringify(S));
 // ---------- data holders ----------
 let TX=[],DAILY=[],PRICES={},LIVE={},SIG={},LDRS=[],TRADES=[],POS=[],EQD=[],EQ=[],EQX=[],EQABS=false;
@@ -1259,6 +1260,13 @@ function render(){
  const D0=(S.gmode==="$"&&EQABS&&effCurve==="EQ")?EQ[i0]:null;
  const tot=effCurve==="REALD"?sel[n-1]:sel[n-1]-100;
  $("hYtd").textContent=S.tf+" "+(effCurve==="REALD"?fmtD(tot,true):D0!=null?fmtD(tot/100*D0,true):sg(tot)+"%");
+ {const hE=$("hYtd"); // v5.0: chip color = RELATIVE performance vs both benches over the SAME window, always in % terms ($ modes compare the underlying % totals; REALD compares the realized % total)
+  const accPct=effCurve==="REALD"?(R0[n-1]-100):tot;
+  if((PRICES.QQQ||[]).length&&(PRICES.SPY||[]).length&&n>1){
+   const dq=accPct-(BQQQ[n-1]-100),dsp=accPct-(BSPY[n-1]-100),beats=(dq>0?1:0)+(dsp>0?1:0);
+   hE.className="ytd num "+(beats===2?"g-grn":beats===1?"g-amb":"g-red");
+   hE.title="vs QQQ "+sg(dq)+" · vs SPY "+sg(dsp)+" (this period)";
+  }else{hE.className="ytd num";hE.removeAttribute("title");}} // bench data missing → keep the stock coloring
  const Wn=T.filter(t=>t.w),L=T.filter(t=>!t.w);
  const avg=(a,fn)=>a.length?a.reduce((x,t)=>x+fn(t),0)/a.length:0;
  const aw=avg(Wn,t=>t.pct),al=avg(L,t=>t.pct);
@@ -1460,6 +1468,14 @@ function marketModel(){
  let ud=null;
  if(q.length>52&&v.length>52){const n=Math.min(q.length,v.length),qc=q.slice(-n),vv=v.slice(-n);
   let up=0,dn=0;for(let i=n-50;i<n;i++)qc[i]>qc[i-1]?up+=vv[i]:dn+=vv[i];ud=dn?up/dn:null;}
+ // ---- v5.0: O'Neil distribution days — QQQ closed down ≥0.2% on volume above the prior session,
+ // counted over the rolling last 25 sessions (older ones age out of the window by construction) ----
+ {let dd=null;
+  if(q.length>26&&v.length>26){const nD=Math.min(q.length,v.length),qc2=q.slice(-nD),vv2=v.slice(-nD),qd2=(PRICES.QQQ||[]).slice(-nD);
+   const dts=[];let c7=0;
+   for(let i=Math.max(1,nD-25);i<nD;i++)if((qc2[i-1]-qc2[i])/qc2[i-1]>=0.002-1e-9&&vv2[i]>vv2[i-1]){c7++;dts.push(qd2[i][0]);}
+   dd={n:c7,dates:dts};}
+  window._distDays=dd;}
  let hl=null; // three rising 15-session swing lows on QQQ
  if(q.length>50){const w=15,L1=Math.min(...q.slice(-w)),L2=Math.min(...q.slice(-2*w,-w)),L3=Math.min(...q.slice(-3*w,-2*w));hl=L1>L2&&L2>L3;}
  const ie=cl("IEI");let jn=null,ratio=false,jr=j; // credit: JNK (÷IEI = dividend-drift adjusted) vs 21-EMA
@@ -1533,6 +1549,8 @@ function marketModel(){
  {const upT2=tr(EF.naz)>0||tr(EF.nyse)>0,dnT2=nlTrend,hasT2=hasT;
   tile("frBrV","frBrS",!hasT2?"—":upT2&&!dnT2?"POSITIVE":dnT2&&!upT2?"NEGATIVE":"MIXED",!hasT2?"vmut":upT2&&!dnT2?"vgood":dnT2&&!upT2?"vcrit":"vwarn",hasT2?("Nasdaq "+(EF.naz||"—")+" · NYSE "+(EF.nyse||"—")+(EF.aT?" · auto from daily counts":"")):"set trend words in the Signals tab");}
  tile("frVmV","frVmS",ud==null?"—":ud>1?"ACCUMULATION":"DISTRIBUTION",ud==null?"vmut":ud>1?"vgood":"vcrit",ud==null?"—  · add QQQVOL to Prices":"U/D vol 50d "+ud.toFixed(2)+(ftdShow?" · FTD "+ftdShow:""));
+ {const dd2=window._distDays; // v5.0: 0–3 normal churn · 4–5 caution · ≥6 danger (the classic 5–6 threshold)
+  tile("frDdV","frDdS",dd2==null?"—":String(dd2.n),dd2==null?"vmut":"num "+(dd2.n<=3?"g-grn":dd2.n<=5?"g-amb":"g-red"),dd2==null?"add QQQVOL to Prices":dd2.n<=3?"QQQ 25d — normal churn":dd2.n<=5?"QQQ 25d — selling clustering":"QQQ 25d — heavy institutional selling");}
  tile("frFoV","frFoS",fomo==null?"—":fomo.toFixed(0)+(fomo>85?" FOMO":fomo<15?" FEAR":" NEUTRAL"),fomo==null?"vmut":fomo>85?"vcrit":fomo<15?"vgood":"vwarn",fomo==null?"set FOMO in the Signals tab":fomo>85?"trim zone — don't chase":fomo<15?"buy zone — leaders only":"no extreme either way");
  // ---- breadth & sentiment card ----
  const wrd=v2=>/^u/i.test(v2||"")?["POSITIVE — net highs persist","g-grn"]:/^d/i.test(v2||"")?["NEGATIVE — net lows persist","g-red"]:v2?[String(v2).toUpperCase(),"g-amb"]:["—","g-mut"];
@@ -1912,7 +1930,7 @@ function drawSmall(T,Wn,L,wr,aw,al){
  {const el2=$("pbSell");
   if(el2){
    if(SP){const pf2=x=>(x*100).toFixed(0)+"%";
-    let rungs="";
+    let rungs="",redL=""; // v5.0: rungs = every per-position line in place (body); redL = red action lines only, hoisted next to the header while collapsed
     const opens=(TRADES||[]).filter(c2=>c2.open&&!c2.opt).slice(0,4);
     const posBy9={};(POS||[]).forEach(p=>{posBy9[p.sym]=p;});
     for(const c2 of opens){const b0=c2.buys[0],pp9=posBy9[c2.sym];
@@ -1922,9 +1940,16 @@ function drawSmall(T,Wn,L,wr,aw,al){
      if(!locked9&&seed9.stop!=null&&seed9.stop<seed9.px){const rps=seed9.px-seed9.stop;
       rungs+=`<div class="kv num" style="margin-top:3px">${c2.sym}: ${SP.lad.map(x=>"+"+x[1]+"R ≈ $"+(seed9.px+x[1]*rps).toFixed(2)).join(" · ")} <span style="color:var(--dim)">(from seed entry ${seed9.px} / stop ${seed9.stop})</span></div>`;}
      else{const g9=pp9?lotStopGaps(pp9):[1,0];
-      rungs+=`<div style="font-size:11.5px;margin-top:3px"><span class="vcrit">${c2.sym}: set a stop${g9[1]&&g9[0]&&g9[0]<g9[1]?" on every lot ("+g9[0]+" of "+g9[1]+" missing)":""} to unlock its sell levels.</span></div>`;}}
-    el2.innerHTML=`<div style="display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap"><span><b>SELL PLAN — ${SP.mode} ladder:</b> ${SP.lad.map(x=>pf2(x[0])+" at +"+x[1]+"R").join(" · ")} · ${pf2(SP.fRun)} runner → ${SP.T.toFixed(1)}R target.</span><span class="${SP.mode==="DEFENSE"?"vcrit":SP.mode==="HARVEST"?"vwarn":"vgood"} num">needs ≥ ${SP.req.toFixed(1)}R avg winner</span></div>
-     <div class="xln" style="margin-top:5px">At your ${(SP.p*100).toFixed(0)}% win rate (shrunk) and ${SP.L.toFixed(1)}R average loser, winners must average ${SP.req.toFixed(1)}R${SP.mode==="DEFENSE"?" — this defense ladder deliberately trades payoff for capital preservation; the real defense is smaller initial risk and no pyramids":" — this ladder plans "+SP.avgW.toFixed(1)+"R if the runner reaches "+SP.T.toFixed(1)+"R"}. Selling heavy at +1R/+2R is mathematically incompatible with a low-win-rate, high-payoff system.</div>${rungs}`;
+      const red9=`<div style="font-size:11.5px;margin-top:3px"><span class="vcrit">${c2.sym}: set a stop${g9[1]&&g9[0]&&g9[0]<g9[1]?" on every lot ("+g9[0]+" of "+g9[1]+" missing)":""} to unlock its sell levels.</span></div>`;
+      rungs+=red9;redL+=red9;}}
+    // v5.0: body collapsible exactly like the v4.3 Full-breakdown pattern (S.sellExp persists, default OFF).
+    // The header row keeps the ladder name + the needs-line; red action lines surface in the hoist while collapsed.
+    el2.innerHTML=`<div style="display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap"><span><b>SELL PLAN — ${SP.mode} ladder</b></span><span class="${SP.mode==="DEFENSE"?"vcrit":SP.mode==="HARVEST"?"vwarn":"vgood"} num">needs ≥ ${SP.req.toFixed(1)}R avg winner</span></div>
+     <div id="pbSellHoist">${redL}</div>
+     <div class="pbTgl" id="pbSellTgl" onclick="sellExpTg()"><span class="expTg" id="pbSellCaret">▸</span><span>ladder levels &amp; per-position targets</span></div>
+     <div id="pbSellBody" style="display:none"><div class="kv num" style="margin-top:1px"><b>${SP.lad.map(x=>pf2(x[0])+" at +"+x[1]+"R").join(" · ")} · ${pf2(SP.fRun)} runner → ${SP.T.toFixed(1)}R target.</b></div>
+     <div class="xln" style="margin-top:5px">At your ${(SP.p*100).toFixed(0)}% win rate (shrunk) and ${SP.L.toFixed(1)}R average loser, winners must average ${SP.req.toFixed(1)}R${SP.mode==="DEFENSE"?" — this defense ladder deliberately trades payoff for capital preservation; the real defense is smaller initial risk and no pyramids":" — this ladder plans "+SP.avgW.toFixed(1)+"R if the runner reaches "+SP.T.toFixed(1)+"R"}. Selling heavy at +1R/+2R is mathematically incompatible with a low-win-rate, high-payoff system.</div>${rungs}</div>`;
+    if(window.sellExpUI)sellExpUI();
    } else el2.innerHTML=`<span class="kv">Sell plan unlocks at 20 closed trades in the period.</span>`;
   }}
  // Edge map — kept computed (hidden element) for continuity
@@ -1968,6 +1993,14 @@ window.holdExp=function(sym){window._holdExp[sym]=!window._holdExp[sym];renderHo
 window.lotView=function(sym,v){S.lotView=S.lotView||{};if(v==="AVG")S.lotView[sym]="AVG";else delete S.lotView[sym];save();renderHold();};
 /* ---- v4.3: Edge & Risk Playbook — plain-english summary first, full breakdown behind the ▸ (same expander pattern as the lot ladder; S.pbExp persists like every other toggle) ---- */
 window.pbExpTg=function(){S.pbExp=S.pbExp==="ON"?"OFF":"ON";save();pbDetUI();};
+/* ---- v5.0: SELL PLAN body behind the same ▸ pattern — header (ladder name + needs-line) always visible; red set-a-stop lines hoist next to the header while collapsed; S.sellExp persists, default OFF ---- */
+window.sellExpTg=function(){S.sellExp=S.sellExp==="ON"?"OFF":"ON";save();sellExpUI();};
+window.sellExpUI=function(){var b=$("pbSellBody"),h=$("pbSellHoist"),c=$("pbSellCaret"),t=$("pbSellTgl"),on=S.sellExp==="ON";
+ if(!b)return;
+ b.style.display=on?"":"none";
+ if(h)h.style.display=on?"none":"";
+ if(c)c.textContent=on?"▾":"▸";
+ if(t)t.title=(on?"collapse":"expand")+" — scale-out rungs, the payoff rationale and each open position's +R price targets";};
 function pbDetUI(){var d=$("pbDetail"),c=$("pbCaret"),t=$("pbTgl"),on=S.pbExp==="ON";if(!d)return;
  d.style.display=on?"":"none";
  if(c)c.textContent=on?"▾":"▸";
@@ -2001,6 +2034,24 @@ window.renderPbSum=function(){var el=$("pbSum");if(!el)return;var V=window._pbVa
     :eS2==="RISING"?`<b class="g-grn">full size (1.0R)</b> — pyramids OK while the model agrees`
     :`<b class="g-grn">full size (1.0R)</b> — follow the plan, don't press beyond it`;
   s.push(`${tt}${ew?" with the edge "+ew:""}: ${vb}.`);}
+ // S4b — v5.0 market-call sentence: ONE line synthesizing the tape from the ALREADY-computed states
+ // (trend · participation vs the 50 line · SPY–VIX tell · credit primary word · FOMO zone · distribution
+ // days), ending at the model tier. Reuses the exact computed words/values; missing states drop their clause.
+ {var tw9=window._trendW,tell9=window._tellW,cr9=window._credW,dd9=window._distDays,MT9=window._mmTier;
+  var p9=(typeof SIG!=="undefined"&&SIG&&SIG.p50HistD&&SIG.p50HistD.length)?SIG.p50HistD[SIG.p50HistD.length-1].v:null;
+  var f9=(typeof SIG!=="undefined"&&SIG&&SIG.fomo!=null&&SIG.fomo!=="")?num(SIG.fomo):null;
+  var twW=tw9==="UPTREND"?['trend <b class="g-grn">up</b>',1]:tw9==="DOWNTREND"?['trend <b class="g-red">down</b>',-1]:tw9==="MIXED"?['trend <b class="g-amb">mixed</b>',0]:null;
+  var pW9=p9==null?null:p9>=50?['participation <b class="g-grn">healthy</b>',1]:['participation <b class="g-amb">thinning</b>',-1]; // above 50 healthy, under 50 repair — same read as the pane footer
+  var lead9=twW&&pW9?twW[0]+(twW[1]>0!==pW9[1]>0?" but ":", ")+pW9[0]:twW?twW[0]:pW9?pW9[0]:"";
+  var mid9=[];
+  if(tell9)mid9.push(tell9[0]==="ALIGNED"?'SPY–VIX <b class="g-grn">aligned</b>':'SPY–VIX <b class="'+tell9[1]+'">diverging</b>');
+  if(cr9)mid9.push(cr9==="CLIMBING"?'credit <b class="g-grn">climbing</b>':cr9==="TIGHTENING"?'credit <b class="g-red">tightening</b>':'credit <b class="g-amb">flat</b>');
+  if(p9!=null)mid9.push('<b class="num">'+p9.toFixed(0)+'%</b> of stocks above their 50-day');
+  if(f9!=null)mid9.push(f9>85?'FOMO in the <b class="g-red">trim zone</b>':f9<15?'FOMO in the <b class="g-grn">buy zone</b>':'FOMO <b class="g-mut">neutral</b>');
+  if(dd9)mid9.push('<b class="num '+(dd9.n<=3?"g-grn":dd9.n<=5?"g-amb":"g-red")+'">'+dd9.n+'</b> distribution day'+(dd9.n===1?"":"s"));
+  var tail9=MT9?'model says <b class="g-'+MT9.cc+'">'+MT9.lab.replace(/ —.*/,"")+" "+MT9.b0+"–"+MT9.b1+"%</b>":"";
+  var core9=[lead9,mid9.join(", ")].filter(function(x){return x;}).join(" — ");
+  if(core9||tail9)s.push("<b>Market:</b> "+[core9,tail9].filter(function(x){return x;}).join(" — ")+".");}
  // S5 — closing line: the same TODAY plan the coach note computes
  if(window._pbToday)s.push(`<b>Today:</b> ${window._pbToday}.`);
  el.innerHTML=s.join(" ");};
@@ -2320,7 +2371,7 @@ function performancePage(){
  var CL=(TRADES||[]).filter(function(t){return !t.open&&!t.recon&&t.pct!=null;}).sort(function(a,b){return a.dout-b.dout;});
  try{var _pw=win();if(_pw&&_pw[2]&&_pw[3]){CL=CL.filter(function(t){return t.dout>=_pw[2]&&t.dout<=_pw[3];});}}catch(_e){}
  var setV=function(id,v,cl){var e=$(id);if(e){e.textContent=v;if(cl)e.className=cl;}};
- if(CL.length<2){if($("fpStory"))$("fpStory").textContent="Need closed trades in the selected period to build the story.";if($("fpHead"))$("fpHead").textContent="";if($("fKpis"))$("fKpis").innerHTML="";if($("fpChip")){$("fpChip").textContent="—";$("fpChip").className="chiplet m";}["nsA","nsB","nsC","nsD"].forEach(function(i){setV(i,"–");});["cat1","cat2","cat3","cat4","cat5","cat6","fMonGrid"].forEach(function(i){if($(i))$(i).innerHTML="<div class='sub2'>Need closed trades to compute performance.</div>";});if($("fRhist"))$("fRhist").innerHTML="";if($("fRelEq"))$("fRelEq").innerHTML="";if($("fMaeNote"))$("fMaeNote").textContent="";return;}
+ if(CL.length<2){if($("fpStory"))$("fpStory").textContent="Need closed trades in the selected period to build the story.";if($("fpHead"))$("fpHead").textContent="";if($("fKpis"))$("fKpis").innerHTML="";if($("fpChip")){$("fpChip").textContent="—";$("fpChip").className="chiplet m";}["nsA","nsB","nsC","nsD"].forEach(function(i){setV(i,"–");});["cat1","cat2","cat3","cat4","cat5","cat6","fMonGrid"].forEach(function(i){if($(i))$(i).innerHTML="<div class='sub2'>Need closed trades to compute performance.</div>";});if($("fRhist")){$("fRhist").innerHTML='<text x="20" y="92" font-size="11.5" fill="#a9b2bc">R distribution needs closed trades —</text><text x="20" y="110" font-size="11.5" fill="#a9b2bc">log stops at entry for true R.</text>';window._hvRdist=null;} if($("fRn"))$("fRn").textContent="no closed trades in the period";if($("fRelEq"))$("fRelEq").innerHTML="";if($("fMaeNote"))$("fMaeNote").textContent="";return;}
  var pcts=CL.map(function(t){return t.pct;}), dols=CL.map(function(t){return t.dol||0;});
  var Rs=CL.map(function(t){return t.R;}).filter(function(r){return r!=null&&isFinite(r);});
  var n=CL.length, mean=function(a){return a.length?a.reduce(function(x,y){return x+y;},0)/a.length:0;};
@@ -2617,18 +2668,31 @@ function performancePage(){
   ):"<div class='sub2'>Unlocks at 5 winning multi-tranche campaigns — you have "+P5.nMS+". Sells need stops on the buys to compute R-at-sale.</div>";
  }
  if($("fRhist")){
-  if(Rs.length){var lab=["<-2","-2..-1","-1..0","0..1","1..2","2..3","3+"],cnt=lab.map(function(){return 0;});
-   Rs.forEach(function(r){var b=0;if(r< -2)b=0;else if(r<-1)b=1;else if(r<0)b=2;else if(r<1)b=3;else if(r<2)b=4;else if(r<3)b=5;else b=6;cnt[b]++;});
+  /* v5.0: trades WITHOUT a stop no longer vanish — estimated R = trade pct ÷ |average loss %| of the window
+     (the standard proxy), drawn as a faded/hatched stack on the same bars. True R stays solid; every other
+     stat (strip tiles, expectancy R, SQN) keeps using true R only. */
+  var estDen=avgLpc>0?avgLpc:null;
+  var estR=estDen?CL.filter(function(t){return t.R==null||!isFinite(t.R);}).map(function(t){return t.pct/estDen;}):[];
+  var Mtot=Rs.length+estR.length;
+  if(Mtot){var lab=["<-2","-2..-1","-1..0","0..1","1..2","2..3","3+"],cntT=lab.map(function(){return 0;}),cntE=lab.map(function(){return 0;});
+   var bkt=function(r){return r< -2?0:r<-1?1:r<0?2:r<1?3:r<2?4:r<3?5:6;};
+   Rs.forEach(function(r){cntT[bkt(r)]++;});estR.forEach(function(r){cntE[bkt(r)]++;});
+   var cnt=lab.map(function(_,i){return cntT[i]+cntE[i];});
    var mx=Math.max.apply(null,cnt)||1,bw=40,gap=6,x0=20,Hh=150;
-   var rh=cnt.map(function(v,i){var bh=Hh*v/mx,x=x0+i*(bw+gap),col=i<=2?'#f06a6a':'#1fb51f';var shr=100*v/Rs.length;
-    return '<rect x="'+x+'" y="'+(Hh-bh+20)+'" width="'+bw+'" height="'+bh+'" rx="2" fill="'+col+'" opacity="0.85"/><text x="'+(x+bw/2)+'" y="'+(Hh+34)+'" font-size="9" text-anchor="middle" fill="#a9b2bc">'+lab[i]+'</text>'+(v?'<text x="'+(x+bw/2)+'" y="'+(Hh-bh+15)+'" font-size="9.5" font-weight="700" text-anchor="middle" fill="#eef1f5">'+(shr>=9.5?shr.toFixed(0):shr.toFixed(1))+'%</text>':'');}).join("");
+   var rh=cnt.map(function(v,i){var x=x0+i*(bw+gap),col=i<=2?'#f06a6a':'#1fb51f';var shr=100*v/Mtot;
+    var hT=Hh*cntT[i]/mx,hE=Hh*cntE[i]/mx,yT=Hh-hT+20,yE=yT-hE,out="";
+    if(cntT[i])out+='<rect x="'+x+'" y="'+yT+'" width="'+bw+'" height="'+hT+'" rx="2" fill="'+col+'" opacity="0.85"/>';
+    if(cntE[i])out+='<rect x="'+x+'" y="'+yE+'" width="'+bw+'" height="'+hE+'" rx="2" fill="'+col+'" opacity="0.32" stroke="'+col+'" stroke-width="1" stroke-dasharray="3 2" stroke-opacity="0.6"/>';
+    out+='<text x="'+(x+bw/2)+'" y="'+(Hh+34)+'" font-size="9" text-anchor="middle" fill="#a9b2bc">'+lab[i]+'</text>';
+    if(v)out+='<text x="'+(x+bw/2)+'" y="'+(yE-5)+'" font-size="9.5" font-weight="700" text-anchor="middle" fill="#eef1f5">'+(shr>=9.5?shr.toFixed(0):shr.toFixed(1))+'%</text>';
+    return out;}).join("");
    var xL0=x0,xL1=x0+3*(bw+gap)-gap,xG0=x0+3*(bw+gap),xG1=x0+7*(bw+gap)-gap;
    rh+='<line x1="'+xL0+'" x2="'+xL1+'" y1="196" y2="196" stroke="#e14b4b" stroke-dasharray="3 3" opacity=".7"/><text x="'+((xL0+xL1)/2)+'" y="209" font-size="8.5" letter-spacing=".14em" text-anchor="middle" fill="#f06a6a">LOSSES</text>';
    rh+='<line x1="'+xG0+'" x2="'+xG1+'" y1="196" y2="196" stroke="#0ca30c" stroke-dasharray="3 3" opacity=".7"/><text x="'+((xG0+xG1)/2)+'" y="209" font-size="8.5" letter-spacing=".14em" text-anchor="middle" fill="#1fb51f">GAINS</text>';
    $("fRhist").innerHTML=rh;
-   if($("fRn"))$("fRn").textContent=Rs.length+" trades w/ R · % of trades above each bar";
-   window._hvRdist={bar:1,pl:x0,bw:bw+gap,n:lab.length,y0:12,y1:176,label:function(i){return lab[i]+"R bucket";},rows:function(i){return[["Trades",String(cnt[i]),i<=2?"#f06a6a":"#1fb51f"],["Share",(100*cnt[i]/Rs.length).toFixed(1)+"%","#a9b2bc"]];}};
-  } else {$("fRhist").innerHTML="";if($("fRn"))$("fRn").textContent="no R data";}
+   if($("fRn"))$("fRn").textContent=Mtot+" trades · solid = true R (stop logged) · faded = estimated vs avg loss — "+estR.length+" of "+Mtot+" estimated";
+   window._hvRdist={bar:1,pl:x0,bw:bw+gap,n:lab.length,y0:12,y1:176,label:function(i){return lab[i]+"R bucket";},rows:function(i){return[["Trades",String(cnt[i]),i<=2?"#f06a6a":"#1fb51f"],["true R (stop)",String(cntT[i]),"#a9b2bc"],["estimated",String(cntE[i]),"#7d8590"],["Share",(100*cnt[i]/Mtot).toFixed(1)+"%","#a9b2bc"]];}};
+  } else {$("fRhist").innerHTML='<text x="20" y="92" font-size="11.5" fill="#a9b2bc">R distribution needs closed trades —</text><text x="20" y="110" font-size="11.5" fill="#a9b2bc">log stops at entry for true R.</text>';if($("fRn"))$("fRn").textContent="no closed trades in the period";window._hvRdist=null;}
  }
  if($("fRelEq")){
   if(relSys.length>2){var Wc=1060,Hc=240,pl=8,pr=48,pt=10,cw=Wc-pl-pr,chh=Hc-pt-8,all=relSys.concat(relQQ),lo=Math.min.apply(null,all),hi=Math.max.apply(null,all);
