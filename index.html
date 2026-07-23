@@ -44,6 +44,15 @@ h1{font-size:16.5px;font-weight:700;letter-spacing:.2px}
 .chip:hover{color:var(--tx)}
 .chip.on{background:#1d3a30;color:#8ff0cf;font-weight:700}
 #tf .chip.on{background:#233042;color:#bcd7fa}
+/* ---- v4.7: "view ▾" popover — the equity-chart chip row keeps only the curve switch; every overlay/pane toggle lives in here ---- */
+.vchip{display:inline-flex;align-items:center;gap:5px}
+.vdot{display:none;width:5px;height:5px;border-radius:50%;background:#2dd4a0;box-shadow:0 0 6px rgba(45,212,160,.7)}
+.vchip.mark .vdot{display:inline-block} /* dot = some view option is off its default, so state never hides inside the closed menu */
+.viewpop{position:absolute;left:16px;top:56px;z-index:46;display:none;flex-direction:column;gap:7px;background:var(--card2);border:1px solid var(--edge);border-radius:10px;padding:10px 12px;min-width:238px;box-shadow:0 16px 48px rgba(0,0,0,.55)} /* card-level anchor; left/top set under the chip row on open */
+.viewpop.show{display:flex}
+.vpLbl{font-size:9px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--dim)}
+.vpRow{display:flex;gap:4px;flex-wrap:wrap}
+@media(max-width:640px){.viewpop{width:calc(100vw - 62px);max-width:334px}.viewpop .chip{padding:9px 13px}} /* full-width sheet under the header row; comfier touch targets */
 .ctl{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--dim);font-weight:600}
 select,input[type=date],input[type=text]{background:#0e1420;color:var(--tx);border:1px solid var(--edge);border-radius:9px;padding:7px 9px;font:600 12px Inter,system-ui;outline:none;color-scheme:dark}
 select:focus,input:focus{border-color:rgba(45,212,160,.5)}
@@ -495,9 +504,18 @@ body.light .chiplet.wiq{background:rgba(14,116,144,.08);color:#0e7490;border-col
 <div class="grid">
   <div class="card c8">
     <div class="head">
-      <div class="chips" style="padding:2px"><button class="chip on" id="evEQ">Equity</button><button class="chip" id="evDD">Drawdown</button><button class="chip" id="tgEQ">MAs</button><button class="chip" id="tgSMA50" title="50-period simple moving average of the active curve — dashed regime line, display only">50-SMA</button><button class="chip" id="tgSPY">SPY</button><button class="chip" id="tgQQQ">QQQ</button><button class="chip" id="tgLive" title="mark-to-market tail — live quotes vs last daily close">LIVE</button><span style="align-self:center;font-size:9px;font-weight:800;letter-spacing:.07em;color:var(--dim);padding-left:6px">H/L:</span><button class="chip" id="hlxNAZ" title="net new highs−lows pane — Nasdaq only">NASDAQ</button><button class="chip" id="hlxNYSE" title="net new highs−lows pane — NYSE only">NYSE</button><button class="chip on" id="hlxBOTH" title="net new highs−lows pane — both exchanges: Nasdaq solid, NYSE faded">BOTH</button><button class="chip on" id="hlmNET" title="one bar per day: new highs minus new lows">NET</button><button class="chip" id="hlmSPLIT" title="TradingView-style: plot new highs and lows separately — highs up in green, lows down in red, raw counts, no netting">SPLIT</button></div>
+      <!-- v4.7: row keeps only the curve switch + "view ▾"; the overlay/pane toggles moved (ids/handlers unchanged) into #viewPop below -->
+      <div class="chips" id="eqChipRow" style="padding:2px"><button class="chip on" id="evEQ">Equity</button><button class="chip" id="evDD">Drawdown</button><button class="chip vchip" id="tgView" title="chart view options — overlays + highs/lows pane">view ▾<span class="vdot"></span></button></div>
       <h3 style="margin-left:4px">Equity curve — FOMO + net H/L attached</h3>
       <span class="rt">vs <span id="benchName">…</span> · <span id="rsState"></span><span class="num" id="ddStats"></span> <span id="eqLegend"></span></span>
+    </div>
+    <!-- v4.7: popover lives at card level (positioned under the chip row on open) so it never creates scrollable overflow on the row -->
+    <div class="viewpop" id="viewPop">
+      <div class="vpLbl">Overlays</div>
+      <div class="vpRow"><button class="chip" id="tgEQ">MAs</button><button class="chip" id="tgSMA50" title="50-period simple moving average of the active curve — dashed regime line, display only">50-SMA</button><button class="chip" id="tgSPY">SPY</button><button class="chip" id="tgQQQ">QQQ</button><button class="chip" id="tgLive" title="mark-to-market tail — live quotes vs last daily close">LIVE</button></div>
+      <div class="vpLbl">Highs / Lows pane</div>
+      <div class="vpRow"><button class="chip" id="hlxNAZ" title="net new highs−lows pane — Nasdaq only">NASDAQ</button><button class="chip" id="hlxNYSE" title="net new highs−lows pane — NYSE only">NYSE</button><button class="chip on" id="hlxBOTH" title="net new highs−lows pane — both exchanges: Nasdaq solid, NYSE faded">BOTH</button></div>
+      <div class="vpRow"><button class="chip on" id="hlmNET" title="one bar per day: new highs minus new lows">NET</button><button class="chip" id="hlmSPLIT" title="TradingView-style: plot new highs and lows separately — highs up in green, lows down in red, raw counts, no netting">SPLIT</button></div>
     </div>
     <div class="chartbox"><svg id="svgEq" viewBox="0 0 1060 500" preserveAspectRatio="none" style="height:500px"></svg></div>
     <div class="kv" style="margin-top:6px">FOMO = % of Nasdaq stocks above their 5-day average (<b style="color:var(--mut)">$NCFD</b>, from the Signals tab). Bands: <span class="vcrit">&gt;85 don't chase — trim extended laggards</span> · <span class="vgood">&lt;15 fear — hunt entries in resilient leaders</span>. Net highs/lows = the liquidity gauge. Point anywhere (mouse or finger) to read any date.</div>
@@ -1341,7 +1359,8 @@ function render(){
    <circle cx="${X(n-1)}" cy="${Y(sel[n-1])}" r="4" fill="#2dd4a0"/>${liveIdx!=null?(()=>{const lx=X(n-1)+Math.min(20,Math.max(8,cw/n));
    const tagY=(Y(sel[n-1])-Y(liveIdx)>=-1)?Y(liveIdx)-8:Y(liveIdx)+15; // above the dot when flat/up, below when down — clear of the main tag row
    return `<line x1="${X(n-1)}" y1="${Y(sel[n-1])}" x2="${lx}" y2="${Y(liveIdx)}" stroke="#2dd4a0" stroke-width="1.6" stroke-dasharray="3 3" opacity=".85"/>
-   <circle class="ltDot" cx="${lx}" cy="${Y(liveIdx)}" r="4" fill="#0c0e11" stroke="#2dd4a0" stroke-width="2"/>
+   <circle class="ltHalo" cx="${lx}" cy="${Y(liveIdx)}" r="8" fill="none" stroke="#2dd4a0" stroke-width="1.6" opacity=".3" pointer-events="none"><animate attributeName="r" values="6;10.5;6" dur="2.2s" repeatCount="indefinite"/><animate attributeName="opacity" values=".42;.06;.42" dur="2.2s" repeatCount="indefinite"/></circle>
+   <circle class="ltDot" cx="${lx}" cy="${Y(liveIdx)}" r="5" fill="#0c0e11" stroke="#2dd4a0" stroke-width="2.2"/>
    <text x="${w-2}" y="${tagY}" font-size="10" font-weight="700" fill="#2dd4a0" text-anchor="end" style="paint-order:stroke" stroke="#0a0e16" stroke-width="3">now${REAL?" (incl. open)":""} ${effCurve==="REALD"?fmtD(liveIdx,true):D0!=null?fmtD(liveEq$,true):sg(liveIdx-100)+"%"}</text>`;})():""}${tagSvg}`+panes+tx;
   $("eqLegend").innerHTML=prev+`<span class="g-cyn">${REAL?"‒ ‒ Realized "+(effCurve==="REALD"?"$":"%"):"— Equity"+(D0!=null?" $":"")}</span>`
    +(shEQ?` <span class="g-amb">— ${S.maF}-${S.maT}</span> <span style="color:#60a5fa">— ${S.maS}-${S.maT}</span>`:"")
@@ -2157,16 +2176,30 @@ $("lots").onchange=e=>{S.lots=e.target.value;save();deriveAll();render();};
 $("curve").onchange=e=>{S.curve=e.target.value;save();render();};
 ["EQ","DD"].forEach(v=>{const b=$("ev"+v);if(b)b.onclick=()=>{S.ev=v;save();
  $("evEQ").classList.toggle("on",v==="EQ");$("evDD").classList.toggle("on",v==="DD");render();};});
-["tgEQ","tgSPY","tgQQQ","tgSMA50"].forEach(k=>{const b=$(k);if(b)b.onclick=()=>{S[k]=S[k]==="ON"?"OFF":"ON";save();b.classList.toggle("on",S[k]==="ON");render();};});
-{const b=$("tgLive");if(b)b.onclick=()=>{S.liveTail=S.liveTail==="OFF"?"ON":"OFF";save();b.classList.toggle("on",S.liveTail!=="OFF");render();};}
+["tgEQ","tgSPY","tgQQQ","tgSMA50"].forEach(k=>{const b=$(k);if(b)b.onclick=()=>{S[k]=S[k]==="ON"?"OFF":"ON";save();b.classList.toggle("on",S[k]==="ON");viewDotUI();render();};});
+{const b=$("tgLive");if(b)b.onclick=()=>{S.liveTail=S.liveTail==="OFF"?"ON":"OFF";save();b.classList.toggle("on",S.liveTail!=="OFF");viewDotUI();render();};}
 /* ---- v4.4: H/L pane view chips (exchange + NET/SPLIT) — same persisted-chip pattern as tgLive ---- */
 function hlChipUI(){const ex=(S.hlEx==="NAZ"||S.hlEx==="NYSE")?S.hlEx:"BOTH",md=S.hlMode==="SPLIT"?"SPLIT":"NET";
  [["hlxNAZ","NAZ"],["hlxNYSE","NYSE"],["hlxBOTH","BOTH"]].forEach(([id2,v2])=>{const b=$(id2);if(b)b.classList.toggle("on",ex===v2);});
  [["hlmNET","NET"],["hlmSPLIT","SPLIT"]].forEach(([id2,v2])=>{const b=$(id2);if(b)b.classList.toggle("on",md===v2);});}
 window.hlChipUI=hlChipUI;
-[["hlxNAZ","NAZ"],["hlxNYSE","NYSE"],["hlxBOTH","BOTH"]].forEach(([id2,v2])=>{const b=$(id2);if(b)b.onclick=()=>{S.hlEx=v2;save();hlChipUI();render();};});
-[["hlmNET","NET"],["hlmSPLIT","SPLIT"]].forEach(([id2,v2])=>{const b=$(id2);if(b)b.onclick=()=>{S.hlMode=v2;save();hlChipUI();render();};});
+[["hlxNAZ","NAZ"],["hlxNYSE","NYSE"],["hlxBOTH","BOTH"]].forEach(([id2,v2])=>{const b=$(id2);if(b)b.onclick=()=>{S.hlEx=v2;save();hlChipUI();viewDotUI();render();};});
+[["hlmNET","NET"],["hlmSPLIT","SPLIT"]].forEach(([id2,v2])=>{const b=$(id2);if(b)b.onclick=()=>{S.hlMode=v2;save();hlChipUI();viewDotUI();render();};});
 hlChipUI();
+/* ---- v4.7: "view ▾" popover — declutters the chart chip row. The toggles above kept their ids/handlers/S.* persistence;
+   toggling inside re-renders the chart live and the popover stays open. Closes on outside pointerdown or Esc. ---- */
+function viewDotUI(){const b=$("tgView");if(!b)return;
+ const def=S.tgEQ==="ON"&&S.tgSPY!=="ON"&&S.tgQQQ==="ON"&&S.tgSMA50!=="ON"&&S.liveTail!=="OFF"
+  &&!(S.hlEx==="NAZ"||S.hlEx==="NYSE")&&S.hlMode!=="SPLIT";
+ b.classList.toggle("mark",!def);} // dot marker whenever any view option is off its default — state isn't hidden by the closed menu
+window.viewDotUI=viewDotUI;
+{const b=$("tgView"),p=$("viewPop");
+ if(b&&p){b.onclick=e=>{e.stopPropagation();
+   if(!p.classList.contains("show")){const r=$("eqChipRow");p.style.left=r.offsetLeft+"px";p.style.top=(r.offsetTop+r.offsetHeight+6)+"px";} // anchor under the row at open time (card-relative, re-measured each open)
+   p.classList.toggle("show");};
+  document.addEventListener("pointerdown",e=>{if(p.classList.contains("show")&&!p.contains(e.target)&&!b.contains(e.target))p.classList.remove("show");});
+  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&p.classList.contains("show"))p.classList.remove("show");});}}
+viewDotUI(); // restore the marker from persisted S on load
 var PGS={J:"pageJournal",F:"pagePerformance",M:"pageMarket",F2:"pageForecast"};
 Object.keys(PGS).forEach(function(pg){var b=$("tab"+pg);if(!b)return;b.onclick=function(){
  S.page=pg;save();
@@ -2644,6 +2677,7 @@ window.performancePage=performancePage;
  if($("tgSMA50"))$("tgSMA50").classList.toggle("on",S.tgSMA50==="ON");
  if($("tgLive"))$("tgLive").classList.toggle("on",S.liveTail!=="OFF");
  if(window.hlChipUI)hlChipUI(); // v4.4: restore the persisted H/L pane view chips
+ if(window.viewDotUI)viewDotUI(); // v4.7: restore the "view ▾" non-default marker
  modeUI();
  document.body.classList.toggle("light",S.theme==="light");if($("themeBtn"))$("themeBtn").textContent=S.theme==="light"?"☾ Dark":"☀ Light";
  if(S.id){if($("sheetUrl"))$("sheetUrl").value=S.id==="api"?"":"https://docs.google.com/spreadsheets/d/"+S.id;loadSheet();}

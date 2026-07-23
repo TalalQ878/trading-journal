@@ -4,7 +4,7 @@
    which keeps its own localStorage fallback for offline viewing).
    Google Fonts: cached after first use so typography works offline. */
 "use strict";
-const VERSION = "tj-v5h"; /* v5h: What-if portfolio-after block */
+const VERSION = "tj-v5i"; /* v5i: chart chip row decluttered into view menu, live-now dot emphasized */
 const SHELL = [
   "./",
   "./index.html",
