@@ -618,7 +618,7 @@ if(_t0==="light"||(_t0==="auto"&&window.matchMedia&&matchMedia("(prefers-color-s
       <!-- v4.7: row keeps only the curve switch + "view ▾"; the overlay/pane toggles moved (ids/handlers unchanged) into #viewPop below -->
       <div class="chips" id="eqChipRow" style="padding:2px"><button class="chip on" id="evEQ">Equity</button><button class="chip" id="evDD">Drawdown</button><button class="chip vchip" id="tgView" title="chart view options — overlays + highs/lows pane">view ▾<span class="vdot"></span></button></div>
       <h3 style="margin-left:4px">Equity curve — FOMO + net H/L attached</h3>
-      <span class="rt">vs <span id="benchName">…</span> · <span id="rsState"></span><span class="num" id="ddStats"></span> <span id="eqLegend"></span></span>
+      <span class="rt">vs <span id="benchName">…</span> · <span id="rsState"></span><span class="num" id="ddStats"></span> <span id="eqLegend"></span> <span id="autoNote" style="display:none;color:var(--dim);font-weight:600"></span></span>
       <!-- v5.1: live mark-to-market readout — always visible while LIVE is on, any curve/view -->
       <span class="num" id="liveNow" style="display:none" title="mark-to-market now — quotes refresh every 1 min (source can lag a few min)"></span>
     </div>
@@ -959,7 +959,7 @@ if(_t0==="light"||(_t0==="auto"&&window.matchMedia&&matchMedia("(prefers-color-s
   <span class="k"><span class="sq" style="background:var(--crit)"></span> red — bad / defense / action needed</span>
   <span class="k" style="margin-left:auto">every verdict is a word first, number small second — color never carries meaning alone</span>
 </div>
-<footer><b>How it works →</b> log a BUY row when you buy, a SELL row when you sell (any number of shares) — remaining shares, closed-trade history and all stats update themselves. Multiple buys of one ticker: switch LOTS in ⚙ settings between Individual (FIFO) and Average cost any time. <b>Daily tab</b> = date + account equity (powers equity curve / MAs / RS / drawdown). Quotes refresh every 1 min; sheet &amp; signals auto-refresh.</footer>
+<footer><b>How it works →</b> log a BUY row when you buy, a SELL row when you sell (any number of shares) — remaining shares, closed-trade history and all stats update themselves. Multiple buys of one ticker: switch LOTS in ⚙ settings between Individual (FIFO) and Average cost any time. <b>Daily tab</b> = date + account equity (powers equity curve / MAs / RS / drawdown) — and the curve now rolls forward by itself from your holdings' closes on days you don't log, so log only deposits/withdrawals (Flow column) or true-ups. Quotes refresh every 1 min; sheet &amp; signals auto-refresh.</footer>
 </div>
 
 <script>
@@ -1073,8 +1073,53 @@ function loadSheetData(tx,dy,pr,lv,sn,ld,yl,mc,er){
  MAC={};if(mc){try{parseCSV(mc).slice(1).forEach(r=>{const k=String(r[0]||"").trim().toLowerCase();if(k)MAC[k]={v:String(r[1]==null?"":r[1]).trim(),sub:String(r[2]==null?"":r[2]).trim(),st:String(r[3]==null?"":r[3]).trim().toLowerCase(),asof:String(r[4]==null?"":r[4]).trim()};});}catch(_m){MAC={};}}
  ERN={};if(er){try{parseCSV(er).slice(1).forEach(r=>{const s5=String(r[0]||"").trim().toUpperCase(),d5=dt(r[1]);if(s5&&d5)ERN[s5]=d5;});}catch(_er){ERN={};}} // optional Earnings tab: Ticker,Date — absent = render nothing
  deriveAll();}
+// ---------- v5.4: auto-extending daily equity — the curve rolls forward from the holdings' closes ----------
+/* When the last LOGGED Daily row is older than the newest close in PRICES, synthetic rows
+   {d,eq,fl:0,auto:true} are appended for every market day in between, by exact portfolio
+   reconstruction: holdings as of the last logged day L come from TX (net shares per symbol,
+   OCC options ×100 — the same net-share ledger the campaign builder walks), cash = eq(L) −
+   Σ shares×close(L) (negative = margin, kept as-is), then each later market day first applies
+   that day's TX at their recorded commission-effective prices (buy: cash−, sell: cash+) and
+   marks the rest at the day's closes. Market days = union of the walked symbols' price dates
+   + SPY/QQQ (the benchmark calendar), so weekends/holidays never get a row; a fill dated on a
+   non-market day applies on the next walked day. SIMPLIFICATION: a symbol with NO price
+   history in PRICES (options, unlisted) is carried at its LAST TX PRICE as a constant — no
+   daily marks exist for it, so it contributes a fixed value until a real log trues it up.
+   Pure app-side math: nothing is ever written to the sheet, and the tail is recomputed from
+   scratch on every refresh, so a real NLV logged on a formerly-synthetic date simply becomes
+   the new anchor and the synthetic tail re-derives forward from it (real rows always win).
+   If NO held symbol has any price history at all, nothing is appended — the curve behaves
+   exactly as v5.3. Zero open positions ⇒ the walk flat-lines at eq(L): cash only, correct. */
+function extendDaily(){
+ DAILY=DAILY.filter(function(x){return !x.auto;}); // re-derive from the real anchor every time
+ if(!DAILY.length)return;
+ var anchor=DAILY[DAILY.length-1],t0=anchor.d.getTime();
+ var net={},mult={},lastPx={};
+ TX.forEach(function(t){if(t.d.getTime()>t0)return;mult[t.sym]=t.mult||1;lastPx[t.sym]=t.px;
+  net[t.sym]=t.act==="B"?(net[t.sym]||0)+t.sh:Math.max(0,(net[t.sym]||0)-t.sh);}); // sells clamp at 0 — same oversell guard the campaign builder applies
+ var held=Object.keys(net).filter(function(s){return net[s]>1e-9;});
+ if(held.length&&!held.some(function(s){return PRICES[s]&&PRICES[s].length;}))return; // no marks for ANY holding → pure guesswork, append nothing
+ var gap=TX.filter(function(t){return t.d.getTime()>t0;}); // TX is date-sorted upstream
+ var calS={},walk={SPY:1,QQQ:1};held.forEach(function(s){walk[s]=1;});gap.forEach(function(t){walk[t.sym]=1;});
+ for(var ws in walk){var wa=PRICES[ws];if(!wa)continue;
+  for(var wi=wa.length-1;wi>=0&&wa[wi][0].getTime()>t0;wi--)calS[wa[wi][0].getTime()]=1;}
+ var cal=Object.keys(calS).map(Number).sort(function(a,b){return a-b;});
+ if(!cal.length)return; // the log already reaches the newest close → nothing to extend
+ var idx={};function closeAt(sym,tm){var a=PRICES[sym];if(!a||!a.length)return null; // latest close ≤ tm; per-symbol cursor — the walk is chronological
+  var j=idx[sym]||0;while(j<a.length-1&&a[j+1][0].getTime()<=tm)j++;idx[sym]=j;
+  return a[j][0].getTime()<=tm?a[j][1]:null;}
+ function mark(tm){var v=0;for(var s in net){if(net[s]<=1e-9)continue;
+  var c=closeAt(s,tm);v+=net[s]*(c!=null?c:lastPx[s])*(mult[s]||1);}return v;}
+ var cash=anchor.eq-mark(t0),k=0;
+ cal.forEach(function(tm){
+  while(k<gap.length&&gap[k].d.getTime()<=tm){var t=gap[k++],m=t.mult||1;mult[t.sym]=m;lastPx[t.sym]=t.px;
+   if(t.act==="B"){cash-=t.sh*t.px*m;net[t.sym]=(net[t.sym]||0)+t.sh;}
+   else{var s5=Math.min(t.sh,net[t.sym]||0);cash+=s5*t.px*m;net[t.sym]=(net[t.sym]||0)-s5;}}
+  DAILY.push({d:new Date(tm),eq:cash+mark(tm),fl:0,auto:true});});
+}
 // ---------- ledger -> campaigns & positions ----------
 function deriveAll(){
+ extendDaily(); // v5.4: synthetic tail first — every consumer below sees the extended series (a display that must show only user-logged rows filters on !x.auto)
  TRADES=[];POS=[];
  const by={};TX.forEach(t=>(by[t.sym]=by[t.sym]||[]).push(t));
  for(const sym in by){
@@ -1207,7 +1252,7 @@ function bindHover(id,key,builder){var sv=$(id);if(!sv||sv.__hovWired)return;sv.
   ln.setAttribute("y1",H.y0!=null?H.y0:6);ln.setAttribute("y2",H.y1!=null?H.y1:vb.height-16);
   ln.style.display="";
   var rows=builder?builder(H,i):H.rows(i);
-  var lab=H.label?H.label(i):hvDate(H.dates[i]);
+  var lab=H.label?H.label(i):hvDate(H.dates[i])+(H.auto&&H.auto[i]?" · auto":""); // v5.4: synthetic (auto-extended) days flag themselves in the date row
   var html='<div class="d">'+lab+'</div>';
   rows.forEach(function(rw){html+='<div class="r"><i><span class="swl" style="background:'+rw[2]+'"></span>'+rw[0]+'</i><b class="num">'+rw[1]+'</b></div>';});
   tip.innerHTML=html;tip.style.display="block";
@@ -1363,6 +1408,7 @@ function eqPanes(pl,pr,w,X,i0,i1,to){
 function render(){
  if(EQX.length<3){$("errBox").textContent="Not enough data yet — log a few days of equity (Daily tab) or a few closed trades.";$("errBox").classList.add("show");return;}
  const[i0,i1,from,to]=win(),n=i1-i0+1;
+ const AUT=EQABS?DAILY.slice(i0,i1+1).map(x=>x.auto?1:0):null; // v5.4: per-point synthetic markers for the crosshair (EQD ≡ DAILY dates when EQABS)
  const effCurve=(S.curve==="REAL"&&S.gmode==="$")?"REALD":S.curve; // one Realized chip — its unit follows the global $/% toggle
  const E=EQX.slice(i0,i1+1),E0=E.map(v=>100*v/E[0]);
  const BA=benchAt(S.bench),B0=BA.slice(i0,i1+1),B=B0.map(v=>100*v/B0[0]);
@@ -1466,7 +1512,7 @@ function render(){
    <path d="${P(dpts)}" fill="none" stroke="#f06a6a" stroke-width="2"/>
    <circle cx="${X(n-1)}" cy="${Y2(dd[n-1])}" r="3.5" fill="#f06a6a"/>`+panes+tx;
   $("eqLegend").innerHTML=prev+`<span class="g-red">— Drawdown</span> <span style="color:#3987e5">— ${S.bench} DD</span>`+(shEQ2?` <span class="g-amb">— DD ${S.maF}-${S.maT}</span> <span style="color:#60a5fa">— DD ${S.maS}-${S.maT}</span>`:"");
-  window._hv={pl,cw,n,dates:EQD.slice(i0,i1+1),dd,ddB,ddF:shEQ2?ddF:null,ddS:shEQ2?ddS:null,hlM,fmM,p50M,p20M,bench:S.bench,fN:S.maF+"-"+S.maT,sN:S.maS+"-"+S.maT,view:"DD",y0:6,y1:470};
+  window._hv={pl,cw,n,dates:EQD.slice(i0,i1+1),auto:AUT,dd,ddB,ddF:shEQ2?ddF:null,ddS:shEQ2?ddS:null,hlM,fmM,p50M,p20M,bench:S.bench,fN:S.maF+"-"+S.maT,sN:S.maS+"-"+S.maT,view:"DD",y0:6,y1:470};
  }else{
   $("ddStats").textContent="";
   $("rsState").innerHTML="";
@@ -1518,8 +1564,13 @@ function render(){
    +(shEQ?` <span class="g-amb">— ${S.maF}-${S.maT}</span> <span style="color:#60a5fa">— ${S.maS}-${S.maT}</span>`:"")
    +(shSPY?` <span style="color:#d55181">— SPY</span>`:"")+(shQQQ?` <span style="color:#3987e5">— QQQ</span>`:"")
    +(INV?` <span style="color:#22d3ee;opacity:.85">▓ Invested ${S.gmode==="$"?"$":"%"}</span>`:"");
-  window._hv={pl,cw,n,dates:EQD.slice(i0,i1+1),E0:sel,F:shEQ?Fv:null,Sl:shEQ?Sv:null,BSPY:shSPY?BSPY:null,BQQQ:shQQQ?BQQQ:null,inv:INV,invD:INVD,invU:S.gmode==="$",REAL,mainD:effCurve==="REALD",d0:D0,mainName:effCurve==="REALD"?"Realized $":REAL?"Realized %":"Equity",hlM,fmM,p50M,p20M,bench:S.bench,fN:S.maF+"-"+S.maT,sN:S.maS+"-"+S.maT,view:"EQ",y0:6,y1:470};
+  window._hv={pl,cw,n,dates:EQD.slice(i0,i1+1),auto:AUT,E0:sel,F:shEQ?Fv:null,Sl:shEQ?Sv:null,BSPY:shSPY?BSPY:null,BQQQ:shQQQ?BQQQ:null,inv:INV,invD:INVD,invU:S.gmode==="$",REAL,mainD:effCurve==="REALD",d0:D0,mainName:effCurve==="REALD"?"Realized $":REAL?"Realized %":"Equity",hlM,fmM,p50M,p20M,bench:S.bench,fN:S.maF+"-"+S.maT,sN:S.maS+"-"+S.maT,view:"EQ",y0:6,y1:470};
  }
+ // ---- v5.4: auto-extension note — one muted span beside the legend, hidden when the log is current ----
+ {const an=$("autoNote");
+  if(an){const la=(EQABS&&DAILY.length&&DAILY[DAILY.length-1].auto)?DAILY[DAILY.length-1].d:null; // synthetic rows are always the tail — the last row tells all
+   if(la){an.textContent="· auto-marked through "+(la.getMonth()+1)+"/"+la.getDate()+" — log your real NLV anytime to true-up";an.style.display="";}
+   else{an.textContent="";an.style.display="none";}}}
  // ---- v5.1: always-visible live readout — top-right of the equity-card header ----
  // Same mark-to-market repricing as the LIVE tail's liveEq$ (open positions, last logged close
  // → live quote, option multiplier included), but anchored to the LAST logged Daily equity and
