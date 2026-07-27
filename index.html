@@ -464,6 +464,16 @@ tr.lothead td:first-child{padding-left:26px}
 .badge.ldrG{background:var(--goodBg);color:var(--goodT);cursor:help}
 .badge.ldrA{background:var(--warnBg);color:var(--warn);cursor:help}
 .badge.ldrR{background:var(--critBg);color:var(--critT);cursor:help}
+/* ---- v5.6: breakeven nudge (warn) · 3-EMA exit — armed (warn) / fired (crit) / post-buy line-in-sand (muted hold note, deliberately NOT a warn) — token-only so light mode just works ---- */
+.badge.bev{background:var(--warnBg);color:var(--warn);cursor:help}
+.badge.ema3a{background:var(--warnBg);color:var(--warn);cursor:help}
+.badge.ema3f{background:var(--critBg);color:var(--critT);cursor:help}
+.badge.ema3h{background:var(--card2);color:var(--mut);border:1px solid var(--edge);cursor:help}
+/* ---- v5.6: HARVEST ⅓ chip — sellq geometry, amber (a suggested partial sell into strength, not an exit) ---- */
+.chiplet.hvq{background:rgba(250,178,25,.10);color:#fabf3a;border:1px solid rgba(250,178,25,.32);cursor:pointer;margin-left:7px;padding:1px 8px;font-size:10px;letter-spacing:.04em;text-transform:none;vertical-align:middle;line-height:1.6}
+.chiplet.hvq:hover{background:rgba(250,178,25,.22);color:#ffd77a}
+body.light .chiplet.hvq{background:rgba(176,108,0,.08);color:#8a5a00;border-color:rgba(176,108,0,.35)}
+@media(max-width:640px){.chiplet.hvq{min-height:32px;min-width:46px;justify-content:center;padding:0 11px;font-size:11px}}
 .badge.eflag{background:var(--warnBg);color:var(--warn);cursor:help}
 .badge.newest{background:#1c2027;color:var(--dim);font-weight:600}
 /* ---- v4.5: quick-sell chip (Holdings rows + lot-ladder header) — opens the +Add modal prefilled ---- */
@@ -1174,6 +1184,7 @@ function deriveAll(){
    const live=LIVE[c.sym]??c.buys[c.buys.length-1].px;
    POS.push({sym:c.sym,disp:c.disp,opt:c.opt,mlt:c.m,set:c.set,din:c.din,sh:rem,basis,px:live,est:LIVE[c.sym]==null,stop,lots:openLots,
     px0:b0.px, // v5.5: the FIRST buy's price — the 3-4wk leader test measures from the initial entry, never the average
+    risk0:c.riskp, // v5.6: the FIRST buy's entry-stop distance % ((px0−stop0)/px0×100) — the initial risk the breakeven/harvest rules multiply; null when the first lot carried no stop at entry
     val:rem*live*c.m,pnl:(live/basis-1)*100,real:(proc-shS*basis)*c.m});}
  });
  EQABS=DAILY.length>2;
@@ -1184,7 +1195,7 @@ function deriveAll(){
   if(EQ.length<3){EQD=[new Date()];EQ=[100];}EQX=EQ.slice();}
  const eqAt=d=>{let e=null;for(const x of DAILY){if(x.d<=d)e=x.eq;else break;}return e;};
  TRADES.forEach(c=>{const b0=c.buys[0],ea=EQABS?eqAt(b0.d):null;c.size0=ea?100*b0.sh*b0.px*c.m/ea:null;});
- const YK=window._yieldKeys||[];const bl=Object.keys(PRICES).filter(b=>!["JNK","QQQVOL","NFCI","XLP","VIX","IEI","SPYO"].includes(b)&&!YK.includes(b));if(bl.length&&!bl.includes(S.bench))S.bench=bl.includes("QQQ")?"QQQ":bl.includes("SPY")?"SPY":bl[0];
+ const YK=window._yieldKeys||[];const bl=Object.keys(PRICES).filter(b=>!["JNK","QQQVOL","NFCI","XLP","VIX","IEI","SPYO"].includes(b)&&!YK.includes(b)&&!(/LOW$/.test(b)&&b.length>3&&PRICES[b.slice(0,-3)])); /* v5.6: "<SYM>LOW" daily-low columns feed the 3-EMA exit, not the bench list (only a low-series when the base symbol also has closes) */ if(bl.length&&!bl.includes(S.bench))S.bench=bl.includes("QQQ")?"QQQ":bl.includes("SPY")?"SPY":bl[0];
  $("bench").innerHTML=bl.map(b=>`<option ${b===S.bench?"selected":""}>${b}</option>`).join("");
  if(EQD.length){$("d1").value=EQD[0].toISOString().slice(0,10);$("d2").value=EQD[EQD.length-1].toISOString().slice(0,10);}}
 function benchAt(tk){const arr=PRICES[tk]||[];let j=0;return EQD.map(d=>{
@@ -2155,6 +2166,22 @@ function drawSmall(T,Wn,L,wr,aw,al){
       else ldr8.push([2,`<div style="font-size:11.5px;margin-top:3px"><span class="vcrit">${p8.sym}: failed the 4-week leader test (&lt;15%) → raise stop or exit</span></div>`,1]);});
      ldr8.sort((a8,b8)=>a8[0]-b8[0]);
      ldr8.forEach(x8=>{rungs+=x8[1];if(x8[2])redL+=x8[1];});}
+    { // v5.6: per-position course action lines — 3-EMA exit fired (crit, joins the collapsed-state
+      // hoist like the stop nags), 3-EMA armed (warn, SHAKE-IN context only — the post-buy hold
+      // note is row-only by design: it's a hold instruction, not a sell nag), breakeven nudge
+      // (warn), 3-4R harvest (warn). data-* tags = stable test hooks.
+     const act6=[];
+     (POS||[]).forEach(p6=>{
+      const e6=window.ema3Sig?ema3Sig(p6):null;
+      if(e6&&e6.state==="fired")act6.push([0,`<div style="font-size:11.5px;margin-top:3px" data-ema3="${p6.sym}"><span class="vcrit">${p6.sym}: 3-EMA exit fired ($${e6.low.toFixed(2)} broke) → sell into any strength</span></div>`,1]);
+      else if(e6&&e6.state==="armed"&&e6.ctx==="shake")act6.push([1,`<div style="font-size:11.5px;margin-top:3px" data-ema3="${p6.sym}"><span class="vwarn">${p6.sym}: 3-EMA exit — armed at $${e6.low.toFixed(2)}, exit if it breaks</span></div>`,0]);
+      const b6=window.beNudge?beNudge(p6):null;
+      if(b6)act6.push([2,`<div style="font-size:11.5px;margin-top:3px" data-be="${p6.sym}"><span class="vwarn">${p6.sym}: up +${b6.gain.toFixed(1)}% — raise stop to breakeven ($${b6.bas.toFixed(2)})</span></div>`,0]);
+      const h6=window.harvestSig?harvestSig(p6):null;
+      if(h6)act6.push([3,`<div style="font-size:11.5px;margin-top:3px" data-hv="${p6.sym}"><span class="vwarn">${p6.sym}: up 3-4× your risk without leader confirmation — harvest ⅓ into strength</span></div>`,0]);
+     });
+     act6.sort((a6,c6)=>a6[0]-c6[0]);
+     act6.forEach(x6=>{rungs+=x6[1];if(x6[2])redL+=x6[1];});}
     // v5.0: body collapsible exactly like the v4.3 Full-breakdown pattern (S.sellExp persists, default OFF).
     // The header row keeps the ladder name + the needs-line; red action lines surface in the hoist while collapsed.
     el2.innerHTML=`<div style="display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap"><span><b>SELL PLAN — ${SP.mode} ladder</b></span><span class="${SP.mode==="DEFENSE"?"vcrit":SP.mode==="HARVEST"?"vwarn":"vgood"} num">needs ≥ ${SP.req.toFixed(1)}R avg winner</span></div>
@@ -2297,7 +2324,96 @@ function leaderTest(p){
  return peak<.15?{st:"R"}:null; // <15% by week 4 = not the leader; 15-20% = neutral zone
 }
 window._ldrTip="hit +20% within 3 weeks of the first buy (or +15% by week 4 with exceptional relative strength) = potential monster — hold it at least 8 weeks. Under +15% by week 4 = not the leader — raise your stop or exit.";
+/* ---------- v5.6: BREAKEVEN-STOP NUDGE (course rule) ----------
+   Once a position has advanced ~4-5× its initial risk (or +12-15% when that risk is unknown),
+   the stop moves to breakeven — no longer a stock you can lose money on. riskPct = the FIRST
+   lot's entry-stop distance (POS.risk0); no stop on the first buy → null → the flat +12% bar
+   applies. Fires only while the HIGHEST stop on the position (best open-lot stop or the
+   position stop) still sits under the average cost — a stop already at/above basis means the
+   rule is satisfied and nothing renders. Trigger: (risk0!=null && gain ≥ 4×risk0) || gain ≥ 12. */
+function beNudge(p){
+ if(!p||!(p.basis>0)||!(p.px>0))return null;
+ var st=null,ls=(p.lots||[]).filter(function(L){return L.stop!=null;});
+ if(ls.length)st=Math.max.apply(null,ls.map(function(L){return L.stop;}));
+ if(p.stop!=null&&(st==null||p.stop>st))st=p.stop;
+ if(st!=null&&st>=p.basis)return null; // already breakeven-or-better — rule satisfied, stay quiet
+ var gain=100*(p.px/p.basis-1),r=p.risk0!=null&&p.risk0>0?p.risk0:null;
+ if((r!=null&&gain>=4*r)||gain>=12)return{gain:gain,bas:p.basis,risk:r};
+ return null;}
+/* ---------- v5.6: 3-EMA EXIT (course rule) ----------
+   Data: PRICES[sym] daily closes + PRICES[sym+"LOW"] daily lows (the sheet serves "<SYM>LOW"
+   column pairs). DORMANT — state "dormant", nothing rendered, no errors — until the LOW column
+   exists or while close history is too short (<8 bars). Options are skipped entirely.
+   ema3 = 3-period EMA of closes (k=2/(3+1)=0.5), seeded with the first close of the series
+   (converges within a handful of bars — simplification, documented).
+   Contexts, partitioned by position age in SESSIONS (= price bars strictly after din):
+    · "post" (age ≤ 10): the entry itself is the breakout. The first bar after din that CLOSES
+      under that bar's ema3 ARMS the signal at that bar's LOW — rendered as a muted hold note
+      (a normal first retest), never a sell nag; only an actual break of the low fires it.
+    · "shake" (age > 10): significant prior high = max CLOSE over the 60 sessions ENDING 5
+      sessions before the last bar (the most recent 5 excluded so a fresh breakout has
+      something to break; shorter history uses what exists). Breakout day = the LATEST bar in
+      the last 10 sessions whose close crossed ABOVE that prior high (previous close ≤ it) —
+      a newer breakout supersedes an older armed/fired state. Watch the 3 bars after the
+      breakout day: the first that CLOSES under its own ema3 arms at that bar's LOW.
+   FIRED: any LATER bar's LOW strictly under the armed low, or the live quote under it; the
+   fired state then holds until the position closes or a newer breakout supersedes it.
+   Simplifications (closes+lows only — no intraday marks): breakout crossings are judged on
+   CLOSES (an intraday poke above the prior high does not count), fires on LOWS; a date whose
+   LOW is missing falls back to its close; the post-buy state ends when the 10-session guard
+   window does (the shake-in machinery takes over from there).
+   Test hook: window._ema3[SYM] = {state:"dormant"|"none"|"armed"|"fired", low, ctx}. */
+window._ema3={};
+function ema3Sig(p){
+ if(!p||p.opt)return null;
+ var cl=PRICES[p.sym]||null,lw=PRICES[p.sym+"LOW"]||null,out;
+ if(!cl||cl.length<8||!lw||!lw.length){out={state:"dormant",low:null,ctx:null};window._ema3[p.sym]=out;return out;}
+ var lowBy={};for(var q=0;q<lw.length;q++)lowBy[+lw[q][0]]=lw[q][1];
+ var n=cl.length,ema=new Array(n),e=cl[0][1];
+ for(var i=0;i<n;i++){if(i)e=(cl[i][1]+e)/2;ema[i]=e;}
+ var LO=function(k){var v=lowBy[+cl[k][0]];return v!=null?v:cl[k][1];};
+ var d0=p.din?+p.din:0,age=0,i0=n;
+ for(var a=0;a<n;a++)if(+cl[a][0]>d0){if(a<i0)i0=a;age++;}
+ var ctx=age<=10?"post":"shake",armIdx=-1;
+ if(ctx==="post"){
+  for(var b=i0;b<n;b++)if(cl[b][1]<ema[b]){armIdx=b;break;}
+ }else{
+  var wEnd=n-6,wSt=Math.max(0,wEnd-59),ph=null;
+  for(var w=wSt;w<=wEnd;w++)if(ph==null||cl[w][1]>ph)ph=cl[w][1];
+  var bo=-1;
+  if(ph!=null)for(var c=Math.max(1,n-10);c<n;c++)if(cl[c][1]>ph&&cl[c-1][1]<=ph)bo=c; // latest crossing governs
+  if(bo>=0)for(var w3=bo+1;w3<Math.min(n,bo+4);w3++)if(cl[w3][1]<ema[w3]){armIdx=w3;break;}
+ }
+ if(armIdx<0){out={state:"none",low:null,ctx:ctx};window._ema3[p.sym]=out;return out;}
+ var L=LO(armIdx),fired=false;
+ for(var f=armIdx+1;f<n;f++)if(LO(f)<L){fired=true;break;}
+ if(!fired&&p.px>0&&p.px<L)fired=true;
+ out={state:fired?"fired":"armed",low:L,ctx:ctx};
+ window._ema3[p.sym]=out;return out;}
+/* ---------- v5.6: 3-4R HARVEST LINE (course rule) ----------
+   Up 3-4× the initial risk WITHOUT leader confirmation — the amber in-window state or the
+   neutral judgment zone, NEVER the green hold-rule state (a confirmed leader is held, not
+   harvested — explicit in the course) — and ≥15 sessions old → harvest ⅓ into strength.
+   A failed-test (red) position keeps its own raise-stop/exit action, so no chip there either.
+   Needs a measured initial risk (first-lot entry stop). Sessions = price bars after din when
+   the ticker has close history, else weekday-approximated calendar days (×5/7). */
+function harvestSig(p){
+ if(!p||p.opt||!(p.basis>0)||!(p.px>0)||p.risk0==null||!(p.risk0>0)||!p.din)return null;
+ var gain=100*(p.px/p.basis-1);
+ if(gain<3*p.risk0)return null;
+ var lt=window.leaderTest?leaderTest(p):null;
+ if(lt&&(lt.st==="G"||lt.st==="R"))return null;
+ var arr=PRICES[p.sym],d0=+p.din,age=0;
+ if(arr&&arr.length){for(var i=0;i<arr.length;i++)if(+arr[i][0]>d0)age++;}
+ else age=Math.floor((Date.now()-d0)/864e5*5/7);
+ if(age<15)return null;
+ return{gain:gain,sh:Math.max(1,Math.floor(p.sh/3))};}
+function qharvest(tk){ // v5.6 — ⅓ into strength through the same prefill path the Sell chip uses; user reviews + taps Save, nothing auto-submits
+ if(!window.openTradePrefill)return; // pwa.js absent → chip is a safe no-op
+ var p=(POS||[]).find(function(x){return x.sym===tk;});if(!p)return;
+ openTradePrefill({ticker:p.sym,side:"Sell",shares:Math.max(1,Math.floor(p.sh/3)),price:p.px});} // shares = floor(remaining/3) (min 1 — same floor-never-0 rule as the fraction chips), price = live
 function renderHold(){var hEl=document.getElementById("holdList");if(!hEl)return;
+ window._ema3={}; // v5.6: rebuilt per render — every open row recomputes its 3-EMA state below
  var eqL=(typeof DAILY!=="undefined"&&DAILY&&DAILY.length)?DAILY[DAILY.length-1].eq:null;
  var nEl=document.getElementById("holdN");
  if(nEl)nEl.innerHTML=POS.length+" open · price updates <span class='livep'>every 1 min ↻</span> · "+(S.lots==="AVG"?"avg cost":"FIFO")+(POS.length>6?" · 6 rows visible — more scrolls":"")+(S.gmode==="$"?" · $ mode":" · % mode");
@@ -2334,6 +2450,14 @@ function renderHold(){var hEl=document.getElementById("holdList");if(!hEl)return
   else if(lt&&lt.st==="A")c2+=' <span class="badge ldrA" title="'+window._ldrTip+'">LEADER TEST — '+sg5(lt.cur)+' vs 20%-in-3wk bar</span>';
   else if(lt&&lt.st==="R")c2+=' <span class="badge ldrR" title="'+window._ldrTip+'">FAILED 4-WK TEST (&lt;15%) — raise stop / exit</span>';
   else if(r.pnl!=null&&r.pnl<0&&r.days!=null&&r.days>10)c2+=' <span class="badge stale" title="your winners run ~29d; losers should be gone in ~9d">STALE — '+r.days+'d underwater</span>';
+  // v5.6: breakeven nudge — coexists with the leader badges (different concern; at 390px they wrap)
+  var be6=r.pref&&window.beNudge?beNudge(r.pref):null;
+  if(be6)c2+=' <span class="badge bev" title="up ~4-5× your risk — move the stop to breakeven: this can no longer be a losing trade. If it comes back and takes you out at flat, it wasn\'t the leader anyway.">RAISE STOP → breakeven ($'+be6.bas.toFixed(2)+')</span>';
+  // v5.6: 3-EMA exit — fired (crit) beats armed; the post-buy armed state is a muted hold note, not a sell nag
+  var e6=r.pref&&window.ema3Sig?ema3Sig(r.pref):null;
+  if(e6&&e6.state==="fired")c2+=' <span class="badge ema3f" title="the armed low broke — the 3-EMA exit is live: sell into any strength">3-EMA EXIT — $'+e6.low.toFixed(2)+' broke</span>';
+  else if(e6&&e6.state==="armed"&&e6.ctx==="shake")c2+=' <span class="badge ema3a" title="fresh breakout closed back under its 3-day EMA — a shake-in warning: exit only if that bar\'s low actually breaks">3-EMA armed — exit if $'+e6.low.toFixed(2)+' breaks</span>';
+  else if(e6&&e6.state==="armed"&&e6.ctx==="post")c2+=' <span class="badge ema3h" title="normal first retest — only exit if $'+e6.low.toFixed(2)+' actually breaks (or your stop hits)">3-EMA line in sand: $'+e6.low.toFixed(2)+'</span>';
   if(typeof ERN!=="undefined"&&ERN&&ERN[r.tk]){var ed=ERN[r.tk],dd3=Math.ceil((ed-now)/864e5); // calendar days until the earnings date
    if(dd3>=0&&dd3<=7)c2+=' <span class="badge eflag" title="earnings '+fd(ed)+' — gap risk; hedge or trim per plan">E-'+dd3+'d</span>';}
   return c2;};
@@ -2356,8 +2480,11 @@ function renderHold(){var hEl=document.getElementById("holdList");if(!hEl)return
   var hasStop=r.lots.length?r.lots.some(function(L){return L.stop!=null;}):(r.stop!=null);
   var stopChip=(hasStop&&r.stop!=null)?' <span class="chiplet stopq" role="button" title="stopped out — opens the trade form as a sell of all '+(Math.round(r.sh*100)/100)+' remaining at the position stop '+r.stop.toFixed(2)+' with the note “stop hit”; review, then Save (nothing auto-submits)" onclick="qstop(\''+r.tk+'\')">⛔ stopped</span>':'';
   var wiChip=' <span class="chiplet wiq" role="button" title="what-if calculator for '+r.sym+' — sizes an add or a trim against live equity and the model band; nothing is saved" onclick="qwhatif(\''+r.tk+'\')">What-if</span>'; // v4.6
+  // v5.6: HARVEST ⅓ — up 3-4× the initial risk without leader confirmation; opens the sell form prefilled with ⅓ of the remainder at the live price (never on a green hold-rule row)
+  var hv6=r.pref&&window.harvestSig?harvestSig(r.pref):null;
+  var hvChip=hv6?' <span class="chiplet hvq" role="button" title="up 3-4× your initial risk without leader confirmation — harvest ⅓ ('+hv6.sh+' of '+(Math.round(r.sh*100)/100)+') into strength; opens the trade form prefilled, review then Save (nothing auto-submits)" onclick="qharvest(\''+r.tk+'\')">HARVEST ⅓</span>':'';
   html+='<tr'+(r.missStop?' class="alert"':'')+'>'
-   +'<td>'+caret+'<b>'+r.sym+'</b>'+(r.opt?' <span style="font-size:9px;color:var(--vio)">OPT</span>':'')+chips(r)+sellChip+stopChip+'</td>'
+   +'<td>'+caret+'<b>'+r.sym+'</b>'+(r.opt?' <span style="font-size:9px;color:var(--vio)">OPT</span>':'')+chips(r)+sellChip+stopChip+hvChip+'</td>'
    +'<td style="text-align:left"><span class="badge theme">'+r.th+'</span></td>'
    +'<td style="text-align:left" class="num">'+fd(r.din)+'</td>'
    +'<td class="num">'+(r.days==null?"—":r.days)+'</td>'
