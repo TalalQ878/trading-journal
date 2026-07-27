@@ -460,6 +460,10 @@ tr.lothead td:first-child{padding-left:26px}
 .lotTg span{padding:2px 8px;border-radius:5px;color:var(--dim);cursor:pointer;font-weight:700}
 .lotTg span.on{background:#1d3a30;color:#8ff0cf}
 .badge.stale{background:var(--critBg);color:var(--critT);cursor:help}
+/* ---- v5.5: 3-4wk leader-test badges — hold rule (good) · in-window (warn) · failed (crit); token-only so light mode just works ---- */
+.badge.ldrG{background:var(--goodBg);color:var(--goodT);cursor:help}
+.badge.ldrA{background:var(--warnBg);color:var(--warn);cursor:help}
+.badge.ldrR{background:var(--critBg);color:var(--critT);cursor:help}
 .badge.eflag{background:var(--warnBg);color:var(--warn);cursor:help}
 .badge.newest{background:#1c2027;color:var(--dim);font-weight:600}
 /* ---- v4.5: quick-sell chip (Holdings rows + lot-ladder header) — opens the +Add modal prefilled ---- */
@@ -467,6 +471,11 @@ tr.lothead td:first-child{padding-left:26px}
 .chiplet.sellq:hover{background:rgba(251,113,133,.22);color:#ffb3bf}
 body.light .chiplet.sellq{background:rgba(225,75,75,.08);color:#c2344c;border-color:rgba(225,75,75,.35)}
 @media(max-width:640px){.chiplet.sellq{min-height:32px;min-width:46px;justify-content:center;padding:0 11px;font-size:11px}}
+/* ---- v5.5: stopped-out one-tap chip — same geometry as sellq, harder red (the stop did its job) ---- */
+.chiplet.stopq{background:rgba(225,75,75,.14);color:#ffb3bf;border:1px solid rgba(225,75,75,.4);cursor:pointer;margin-left:7px;padding:1px 8px;font-size:10px;letter-spacing:.04em;text-transform:none;vertical-align:middle;line-height:1.6}
+.chiplet.stopq:hover{background:rgba(225,75,75,.26);color:#ffd0d8}
+body.light .chiplet.stopq{background:rgba(201,65,65,.10);color:#c2344c;border-color:rgba(201,65,65,.4)}
+@media(max-width:640px){.chiplet.stopq{min-height:32px;min-width:46px;justify-content:center;padding:0 11px;font-size:11px}}
 /* ---- v4.6: lot-ladder What-if link — same chiplet geometry as sellq, cyan (calculator, never posts) ---- */
 .chiplet.wiq{background:rgba(34,211,238,.10);color:#7fe3f2;border:1px solid rgba(34,211,238,.32);cursor:pointer;margin-left:7px;padding:1px 8px;font-size:10px;letter-spacing:.04em;text-transform:none;vertical-align:middle;line-height:1.6}
 .chiplet.wiq:hover{background:rgba(34,211,238,.22);color:#aef0fa}
@@ -1164,6 +1173,7 @@ function deriveAll(){
    const stop=[...c.buys].reverse().find(b=>b.stop!=null)?.stop??null;
    const live=LIVE[c.sym]??c.buys[c.buys.length-1].px;
    POS.push({sym:c.sym,disp:c.disp,opt:c.opt,mlt:c.m,set:c.set,din:c.din,sh:rem,basis,px:live,est:LIVE[c.sym]==null,stop,lots:openLots,
+    px0:b0.px, // v5.5: the FIRST buy's price — the 3-4wk leader test measures from the initial entry, never the average
     val:rem*live*c.m,pnl:(live/basis-1)*100,real:(proc-shS*basis)*c.m});}
  });
  EQABS=DAILY.length>2;
@@ -2135,6 +2145,16 @@ function drawSmall(T,Wn,L,wr,aw,al){
      else{const g9=pp9?lotStopGaps(pp9):[1,0];
       const red9=`<div style="font-size:11.5px;margin-top:3px"><span class="vcrit">${c2.sym}: set a stop${g9[1]&&g9[0]&&g9[0]<g9[1]?" on every lot ("+g9[0]+" of "+g9[1]+" missing)":""} to unlock its sell levels.</span></div>`;
       rungs+=red9;redL+=red9;}}
+    { // v5.5: 3-4wk leader-test lines — every open position with a verdict. Hold-rule (positive) leads the
+      // body list, then in-window, then failed; FAILED is a red ACTION line, so it also joins the hoist
+      // that stays visible while the ladder body is collapsed (same rule as the stop nags above).
+     const sg8=v=>(v>=0?"+":"−")+Math.abs(v).toFixed(1)+"%",ldr8=[];
+     (POS||[]).forEach(p8=>{const lt8=window.leaderTest?leaderTest(p8):null;if(!lt8)return;
+      if(lt8.st==="G")ldr8.push([0,`<div style="font-size:11.5px;margin-top:3px"><span class="vgood">${p8.sym}: hold rule ✓ +20% in ${lt8.k}wk — hold ≥8 wks (through ${lt8.thru.getMonth()+1}/${lt8.thru.getDate()})</span></div>`,0]);
+      else if(lt8.st==="A")ldr8.push([1,`<div style="font-size:11.5px;margin-top:3px"><span class="vwarn">${p8.sym}: 3-4wk leader test — ${sg8(lt8.cur)} vs 20% bar</span></div>`,0]);
+      else ldr8.push([2,`<div style="font-size:11.5px;margin-top:3px"><span class="vcrit">${p8.sym}: failed the 4-week leader test (&lt;15%) → raise stop or exit</span></div>`,1]);});
+     ldr8.sort((a8,b8)=>a8[0]-b8[0]);
+     ldr8.forEach(x8=>{rungs+=x8[1];if(x8[2])redL+=x8[1];});}
     // v5.0: body collapsible exactly like the v4.3 Full-breakdown pattern (S.sellExp persists, default OFF).
     // The header row keeps the ladder name + the needs-line; red action lines surface in the hoist while collapsed.
     el2.innerHTML=`<div style="display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap"><span><b>SELL PLAN — ${SP.mode} ladder</b></span><span class="${SP.mode==="DEFENSE"?"vcrit":SP.mode==="HARVEST"?"vwarn":"vgood"} num">needs ≥ ${SP.req.toFixed(1)}R avg winner</span></div>
@@ -2251,6 +2271,32 @@ window.renderPbSum=function(){var el=$("pbSum");if(!el)return;var V=window._pbVa
  if(window._pbToday)s.push(`<b>Today:</b> ${window._pbToday}.`);
  el.innerHTML=s.join(" ");};
 pbDetUI(); // restore the saved open/closed state at boot (default: collapsed)
+/* ---------- v5.5: 3-4 WEEK LEADER TEST (hold rule) ----------
+   Anchor = the FIRST buy of the open campaign (px0 · din) — the initial entry, never the average.
+   peak = best close/px0 − 1 over PRICES closes with din ≤ date ≤ din+28d; the live quote joins
+   the max while today is still inside that window. Options are skipped (no daily marks).
+   States: hit +20% inside the 28 days → HOLD RULE triggered — badge from that day through
+   day 56 (hold ≥8 weeks), then it retires quietly. Day 21-28 with no trigger → in-window amber.
+   Past day 28: peak under 15% → failed (raise stop / exit); 15-20% → neutral judgment zone,
+   no badge (the relative-strength-relaxed variant we can't measure reliably). */
+function leaderTest(p){
+ if(!p||p.opt||!(p.px0>0)||!p.din)return null;
+ var d0=p.din.getTime(),lim=d0+28*864e5,now=Date.now();
+ var ageD=Math.floor((now-d0)/864e5);
+ var peak=null,hitT=null,arr=PRICES[p.sym]||[];
+ for(var i=0;i<arr.length;i++){var t=arr[i][0].getTime();if(t<d0||t>lim)continue;
+  var g=arr[i][1]/p.px0-1;if(peak==null||g>peak)peak=g;
+  if(hitT==null&&g>=.20)hitT=t;}
+ if(ageD<=28){var gl=p.px/p.px0-1;if(peak==null||gl>peak)peak=gl;if(hitT==null&&gl>=.20)hitT=now;}
+ if(hitT!=null){ // hold rule triggered — potential monster; count the weeks it took
+  if(ageD>56)return null; // the 8-week hold window has run its course — badge retires
+  var k=Math.max(1,Math.ceil(((hitT-d0)/864e5)/7));
+  return{st:"G",k:k,thru:new Date(d0+56*864e5)};}
+ if(ageD<21||peak==null)return null; // too young to judge, or no measurable window
+ if(ageD<=28)return{st:"A",cur:100*(p.px/p.px0-1)}; // week 3-4, bar not hit yet
+ return peak<.15?{st:"R"}:null; // <15% by week 4 = not the leader; 15-20% = neutral zone
+}
+window._ldrTip="hit +20% within 3 weeks of the first buy (or +15% by week 4 with exceptional relative strength) = potential monster — hold it at least 8 weeks. Under +15% by week 4 = not the leader — raise your stop or exit.";
 function renderHold(){var hEl=document.getElementById("holdList");if(!hEl)return;
  var eqL=(typeof DAILY!=="undefined"&&DAILY&&DAILY.length)?DAILY[DAILY.length-1].eq:null;
  var nEl=document.getElementById("holdN");
@@ -2263,7 +2309,7 @@ function renderHold(){var hEl=document.getElementById("holdList");if(!hEl)return
   var stopped=lots.filter(function(L){return L.stop!=null;});
   var nearStop=stopped.length?Math.max.apply(null,stopped.map(function(L){return L.stop;})):(p.stop!=null?p.stop:null);
   var dist=(nearStop!=null&&p.px>0)?100*(p.px-nearStop)/p.px:null; // nearest-stop lot's distance
-  return{sym:p.disp||p.sym,tk:p.sym,opt:p.opt,din:p.din,days:p.din?Math.max(0,Math.round((now-p.din)/864e5)):null,sh:p.sh,basis:p.basis,px:p.px,est:p.est,stop:p.stop,wt:wt,pnl:pnl,up:up,port:port,th:cls(p.sym)[1],lots:lots,missStop:missStop,nearStop:nearStop,dist:dist};});
+  return{sym:p.disp||p.sym,tk:p.sym,opt:p.opt,din:p.din,days:p.din?Math.max(0,Math.round((now-p.din)/864e5)):null,sh:p.sh,basis:p.basis,px:p.px,est:p.est,stop:p.stop,wt:wt,pnl:pnl,up:up,port:port,th:cls(p.sym)[1],lots:lots,missStop:missStop,nearStop:nearStop,dist:dist,pref:p};});
  var s=window._holdSort,dir=s.dir;
  var v=function(r){switch(s.key){case "sym":return r.sym;case "th":return r.th;case "din":return r.din?+r.din:0;case "sh":return r.sh;case "basis":return r.basis;case "px":return r.px;case "stop":return r.stop==null?-1e12:r.stop;case "dist":return r.dist==null?-1e12:r.dist;case "wt":return r.wt==null?-1e12:r.wt;case "pnl":return r.pnl==null?-1e12:r.pnl;case "port":return r.port==null?-1e12:r.port;default:return 0;}};
  rows.sort(function(a,b){var x=v(a),y=v(b);if(typeof x==="string")return dir*String(x).localeCompare(String(y));return dir*(x-y);});
@@ -2281,8 +2327,13 @@ function renderHold(){var hEl=document.getElementById("holdList");if(!hEl)return
   if(dv==null)return '<td class="num" title="no stop logged — distance unmeasured">—</td>';
   var cl2=dv<0?'var(--critT)':dv<3?'var(--warn)':'var(--mut)';
   return '<td class="num" style="color:'+cl2+'" title="(live − stop) ÷ live'+(st!=null?' · stop '+st.toFixed(2):'')+(dv<0?' — stop above price: exit signal already given':'')+'">'+(dv>=0?'−':'+')+Math.abs(dv).toFixed(1)+'%</td>';};
+ var sg5=function(v){return (v>=0?"+":"−")+Math.abs(v).toFixed(1)+"%";};
  var chips=function(r){var c2='';
-  if(r.pnl!=null&&r.pnl<0&&r.days!=null&&r.days>10)c2+=' <span class="badge stale" title="your winners run ~29d; losers should be gone in ~9d">STALE — '+r.days+'d underwater</span>';
+  var lt=r.pref?leaderTest(r.pref):null; // v5.5: the leader verdict subsumes staleness — one judgment per row
+  if(lt&&lt.st==="G")c2+=' <span class="badge ldrG" title="'+window._ldrTip+'">HOLD RULE ✓ +20% in '+lt.k+'wk — hold ≥8 wks</span>';
+  else if(lt&&lt.st==="A")c2+=' <span class="badge ldrA" title="'+window._ldrTip+'">LEADER TEST — '+sg5(lt.cur)+' vs 20%-in-3wk bar</span>';
+  else if(lt&&lt.st==="R")c2+=' <span class="badge ldrR" title="'+window._ldrTip+'">FAILED 4-WK TEST (&lt;15%) — raise stop / exit</span>';
+  else if(r.pnl!=null&&r.pnl<0&&r.days!=null&&r.days>10)c2+=' <span class="badge stale" title="your winners run ~29d; losers should be gone in ~9d">STALE — '+r.days+'d underwater</span>';
   if(typeof ERN!=="undefined"&&ERN&&ERN[r.tk]){var ed=ERN[r.tk],dd3=Math.ceil((ed-now)/864e5); // calendar days until the earnings date
    if(dd3>=0&&dd3<=7)c2+=' <span class="badge eflag" title="earnings '+fd(ed)+' — gap risk; hedge or trim per plan">E-'+dd3+'d</span>';}
   return c2;};
@@ -2301,9 +2352,12 @@ function renderHold(){var hEl=document.getElementById("holdList");if(!hEl)return
   else if(r.stop!=null)stopCell='<span class="num">'+(r.lots.length===1?r.lots[0].stop:r.stop).toFixed(2)+'</span>';
   else stopCell='<span class="badge nostop">none — set stop</span>';
   var sellChip=' <span class="chiplet sellq" role="button" title="sell '+r.sym+' — opens the trade form prefilled with the remaining shares at the live price; review, then Save (nothing auto-submits)" onclick="qsell(\''+r.tk+'\')">Sell</span>'; // v4.5 quick sell
+  // v5.5 stopped-out one-tap — only when an OPEN lot carries a stop (a consumed lot's stop doesn't count); prefills ALL remaining at the position stop
+  var hasStop=r.lots.length?r.lots.some(function(L){return L.stop!=null;}):(r.stop!=null);
+  var stopChip=(hasStop&&r.stop!=null)?' <span class="chiplet stopq" role="button" title="stopped out — opens the trade form as a sell of all '+(Math.round(r.sh*100)/100)+' remaining at the position stop '+r.stop.toFixed(2)+' with the note “stop hit”; review, then Save (nothing auto-submits)" onclick="qstop(\''+r.tk+'\')">⛔ stopped</span>':'';
   var wiChip=' <span class="chiplet wiq" role="button" title="what-if calculator for '+r.sym+' — sizes an add or a trim against live equity and the model band; nothing is saved" onclick="qwhatif(\''+r.tk+'\')">What-if</span>'; // v4.6
   html+='<tr'+(r.missStop?' class="alert"':'')+'>'
-   +'<td>'+caret+'<b>'+r.sym+'</b>'+(r.opt?' <span style="font-size:9px;color:var(--vio)">OPT</span>':'')+chips(r)+sellChip+'</td>'
+   +'<td>'+caret+'<b>'+r.sym+'</b>'+(r.opt?' <span style="font-size:9px;color:var(--vio)">OPT</span>':'')+chips(r)+sellChip+stopChip+'</td>'
    +'<td style="text-align:left"><span class="badge theme">'+r.th+'</span></td>'
    +'<td style="text-align:left" class="num">'+fd(r.din)+'</td>'
    +'<td class="num">'+(r.days==null?"—":r.days)+'</td>'
@@ -2319,7 +2373,7 @@ function renderHold(){var hEl=document.getElementById("holdList");if(!hEl)return
   if(exp&&r.lots.length){ // ---- lot ladder — from the FIFO lots deriveAll already computed (no re-derivation) ----
    var av=(S.lotView&&S.lotView[r.tk]==="AVG");
    var tg='<span class="lotTg" title="view only — transactions untouched, switch back any time"><span '+(av?'':'class="on" ')+'onclick="lotView(\''+r.tk+'\',\'FIFO\')">FIFO ▾</span><span '+(av?'class="on" ':'')+'onclick="lotView(\''+r.tk+'\',\'AVG\')">AVG</span></span>';
-   html+='<tr class="lothead"><td colspan="13">LOT LADDER — '+(av?'blended view (display only)':'FIFO fills, oldest first')+' &nbsp;'+tg+'&nbsp; <span style="text-transform:none;letter-spacing:0">cushion = that lot\'s own P&amp;L% · dist → stop = (live − stop) ÷ live</span>'+sellChip+wiChip+'</td></tr>';
+   html+='<tr class="lothead"><td colspan="13">LOT LADDER — '+(av?'blended view (display only)':'FIFO fills, oldest first')+' &nbsp;'+tg+'&nbsp; <span style="text-transform:none;letter-spacing:0">cushion = that lot\'s own P&amp;L% · dist → stop = (live − stop) ÷ live</span>'+sellChip+stopChip+wiChip+'</td></tr>';
    var lotRow=function(lbl,ld,lsh,lpx,lstop,isNew){
     var cush=(lpx>0&&isFinite(r.px))?100*(r.px/lpx-1):null;
     var ldist=(lstop!=null&&r.px>0)?100*(r.px-lstop)/r.px:null;
@@ -2349,6 +2403,10 @@ function qsell(tk){ // v4.5 quick sell — hands the position to the pwa.js entr
  if(!window.openTradePrefill)return; // pwa.js absent → chip is a safe no-op
  var p=(POS||[]).find(function(x){return x.sym===tk;});if(!p)return;
  openTradePrefill({ticker:p.sym,side:"Sell",shares:p.sh,price:p.px});} // shares = remaining, price = live quote (falls back to last transaction px upstream)
+function qstop(tk){ // v5.5 stopped-out one-tap — sell ALL remaining at the position stop; pwa.js retitles the form and notes "stop hit"
+ if(!window.openTradePrefill)return; // pwa.js absent → chip is a safe no-op
+ var p=(POS||[]).find(function(x){return x.sym===tk;});if(!p||p.stop==null)return;
+ openTradePrefill({ticker:p.sym,side:"Sell",shares:p.sh,price:p.stop,stopped:true});} // shares = all remaining, price = the position stop shown in the row
 function qwhatif(tk){if(window.openWhatIf)openWhatIf(tk);} // v4.6 — ladder-header link into the pwa.js What-if tab (read-only calculator); safe no-op without pwa.js
 function portfolio(){
  $("lotMode").textContent=(S.lots==="AVG"?"average cost":"FIFO lots")+" · live · "+(S.gmode==="$"?"$":"%")+" mode";

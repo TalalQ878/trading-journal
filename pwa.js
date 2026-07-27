@@ -123,6 +123,16 @@
       "#entryModal .btnrow{position:sticky;bottom:-28px;background:#0d1320;padding:10px 0 6px;margin-bottom:-10px}" +
       ".enTabs .chip{flex:1;min-height:42px}" +
       "#enPrev{font-size:11.5px;color:var(--cyn);margin-top:8px;min-height:14px}" +
+      /* ---- v5.5: one-tap sells — fraction chips (Sell side, held ticker) + realized-result toast ---- */
+      "#enFracRow{display:flex;align-items:center;gap:6px;margin:6px 0 2px;flex-wrap:wrap}" +
+      "#enFracRow .flbl{font-size:11px;color:var(--dim);font-weight:700;letter-spacing:.04em}" +
+      ".fchip{border:1px solid var(--bd);background:none;color:var(--mut);border-radius:999px;padding:6px 13px;font:700 12px Inter;cursor:pointer;touch-action:manipulation}" +
+      ".fchip.on{border-color:var(--cyn);color:var(--cyn);background:rgba(45,212,160,.10)}" +
+      "#tjToast{position:fixed;right:18px;bottom:18px;z-index:70;background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px 16px;box-shadow:0 18px 50px -12px rgba(0,0,0,.45);font:600 13px Inter;color:var(--tx);cursor:pointer;max-width:340px;transition:opacity .35s,transform .35s}" +
+      "#tjToast.hide{opacity:0;transform:translateY(8px)}" +
+      "#tjToast .t1{font-weight:800;letter-spacing:.02em}" +
+      "#tjToast .t2{margin-top:3px}" +
+      "#tjToast .t3{margin-top:5px;font-size:11px;color:var(--dim);font-weight:600}" +
       /* ---- v4.6: What-if tab — read-only calculator ---- */
       "#wiOut{margin-top:10px;background:rgba(255,255,255,.02);border:1px solid var(--bd);border-radius:12px;padding:4px 12px;min-height:40px}" +
       "body.light #wiOut{background:rgba(15,23,42,.03)}" +
@@ -161,6 +171,8 @@
         ".enRow input{font-size:16px;width:110px}" +
         ".enRow .b{padding:9px 12px}" +
         ".btn{min-height:48px}" +
+        ".fchip{padding:10px 16px;font-size:14px}" + /* v5.5: thumb-sized fraction chips */
+        "#tjToast{left:12px;right:12px;bottom:calc(96px + env(safe-area-inset-bottom,0px));max-width:none}" + /* v5.5: toast clears the tab bar */
       "}";
     document.head.appendChild(st);
 
@@ -239,7 +251,7 @@
     ov.className = "overlay"; ov.id = "entryModal";
     ov.innerHTML =
       '<div class="modal">' +
-      '<h2>Add to journal</h2>' +
+      '<h2 id="enTitle">Add to journal</h2>' +
       '<div class="enTabs">' +
       '<button class="chip on" data-en="T" id="enTabT">Trade</button>' +
       '<button class="chip" data-en="D" id="enTabD">Daily equity</button>' +
@@ -254,6 +266,10 @@
       '<div><label>Ticker</label><input type="text" id="enTicker" list="enTickers" placeholder="AMD" autocapitalize="characters" autocomplete="off"><datalist id="enTickers"></datalist></div>' +
       '<div><label>Action</label><select id="enAction"><option>Buy</option><option>Sell</option></select></div>' +
       '<div><label>Shares</label><input type="number" id="enShares" inputmode="decimal" step="any" min="0" placeholder="10"></div>' +
+      /* v5.5: fraction chips — visible only when the side is Sell and the ticker is an open position */
+      '<div class="full" id="enFracRow" style="display:none"><span class="flbl">of <span id="enFracN" class="num"></span> held:</span>' +
+      '<button type="button" class="fchip" data-f="f13">⅓</button><button type="button" class="fchip" data-f="f12">½</button>' +
+      '<button type="button" class="fchip" data-f="f23">⅔</button><button type="button" class="fchip" data-f="all">ALL</button></div>' +
       '<div><label>Price</label><input type="number" id="enPrice" inputmode="decimal" step="any" min="0" placeholder="538.50"></div>' +
       '<div><label>Stop (col F)</label><input type="number" id="enStop" inputmode="decimal" step="any" min="0" placeholder="optional"></div>' +
       '<div><label>Pivot</label><input type="number" id="enPivot" inputmode="decimal" step="any" min="0" placeholder="optional"></div>' +
@@ -310,13 +326,18 @@
       o.textContent = ok || ""; o.style.display = ok ? "block" : "none";
     }
 
+    var noteAuto = null; // v5.5: the exact note the stopped-out prefill wrote — cleared on the next fresh open unless the user edited it
     function openModal() {
       msg();
+      $("enTitle").textContent = "Add to journal"; // v5.5: the stopped-out prefill retitles — every normal open resets it
+      if (noteAuto !== null && $("enNote").value === noteAuto) $("enNote").value = ""; // untouched machine note never leaks into the next trade
+      noteAuto = null;
       $("enDate").value = todayISO(); $("dnDate").value = todayISO();
       refreshTickerList();
       var sets = {}; (typeof TX!=="undefined"&&TX||[]).forEach(function (t) { if (t.set) sets[t.set] = 1; });
       $("enSetups").innerHTML = Object.keys(sets).map(function (s) { return "<option value=\"" + esc(s) + "\">"; }).join("");
       updPrev();
+      fracSync();
       ov.classList.add("show");
     }
     eb.onclick = openModal;
@@ -372,11 +393,81 @@
         if (n > 0 && !$("enShares").value) $("enShares").value = n;
       }
       updPrev();
+      fracSync();
     }
     $("enAction").onchange = prefillSell; $("enTicker").onchange = prefillSell;
-    ["enTicker", "enShares", "enPrice", "enStop"].forEach(function (id) { $(id).oninput = updPrev; });
+    ["enTicker", "enShares", "enPrice", "enStop"].forEach(function (id) {
+      $(id).oninput = function () { updPrev(); if (id === "enTicker" || id === "enShares") fracSync(); }; // v5.5: chips track the ticker + shares live
+    });
+
+    /* ---- v5.5: fraction chips — ⅓ ½ ⅔ ALL of the held shares, Sell side only ----
+       N = remaining shares from the app's POS for the typed ticker (the same live rows the
+       Holdings table shows). A chip only ever writes into the shares field — the user still
+       reviews and taps Save. Buy side or a ticker that isn't held → the row hides. The active
+       mark follows the field value, so typing 30 by hand lights ⅓ when 30 IS a third. */
+    var FRACS = { f13: 1 / 3, f12: 1 / 2, f23: 2 / 3, all: 1 };
+    function fracPos() {
+      if ($("enAction").value !== "Sell") return null;
+      var tk = ($("enTicker").value || "").trim().toUpperCase(); if (!tk) return null;
+      return (typeof POS !== "undefined" && POS || []).find(function (q) { return q.sym === tk; }) || null;
+    }
+    function fracVal(n, f) { return f === 1 ? n : Math.max(1, Math.floor(n * f)); } // ALL = the exact remainder; fractions floor, never 0
+    function fracSync() {
+      var row = $("enFracRow"); if (!row) return;
+      var p = fracPos();
+      if (!p || !(p.sh > 0)) { row.style.display = "none"; return; }
+      row.style.display = "";
+      $("enFracN").textContent = Math.round(p.sh * 100) / 100;
+      var cur = parseFloat($("enShares").value);
+      row.querySelectorAll(".fchip").forEach(function (b) {
+        b.classList.toggle("on", isFinite(cur) && cur > 0 && Math.abs(fracVal(p.sh, FRACS[b.dataset.f]) - cur) < 1e-9);
+      });
+    }
+    ov.querySelectorAll("#enFracRow .fchip").forEach(function (b) {
+      b.onclick = function () {
+        var p = fracPos(); if (!p) return;
+        $("enShares").value = fracVal(p.sh, FRACS[b.dataset.f]);
+        updPrev(); fracSync();
+      };
+    });
 
     function busy(btn, on, txt) { btn.disabled = on; btn.textContent = on ? "Saving…" : txt; btn.style.opacity = on ? ".6" : "1"; }
+
+    /* ---- v5.5: post-save result toast — after a SELL lands, a small card shows what was
+       sold and the realized result vs basis. FIFO consumes the oldest open lots' cost when
+       S.lots is FIFO; AVG uses the blended basis — the same numbers the Holdings table runs
+       on. Basis unknown (ticker not among the open positions) → the realized line is simply
+       omitted. Fixed-position, tap or ~7s to dismiss; never blocks the modal or the refresh. */
+    function sellToast(p, snap) {
+      try {
+        var old = document.getElementById("tjToast"); if (old) old.remove();
+        var line2 = "";
+        if (snap && snap.basis > 0) {
+          var mlt = snap.mlt || 1, left = p.shares, cost = 0;
+          if (S.lots === "AVG") cost = p.shares * snap.basis;
+          else { // FIFO: the sold shares take the oldest open lots' cost, oldest first
+            for (var i = 0; i < snap.lots.length && left > 1e-9; i++) {
+              var k = Math.min(snap.lots[i].sh, left); cost += k * snap.lots[i].px; left -= k;
+            }
+            if (left > 1e-9) cost += left * snap.basis; // past the open lots (the oversell guard already blocks this) — blended basis for the rest
+          }
+          if (cost > 0) {
+            var real = (p.shares * p.price - cost) * mlt, pct = 100 * (p.shares * p.price - cost) / cost;
+            line2 = "<div class='t2'>realized <b class='num " + (real >= 0 ? "g-grn" : "g-red") + "'>" +
+              (real >= 0 ? "+" : "−") + "$" + Math.abs(real).toFixed(2) + " · " +
+              (pct >= 0 ? "+" : "−") + Math.abs(pct).toFixed(1) + "%</b></div>";
+          }
+        }
+        var el = document.createElement("div");
+        el.id = "tjToast"; el.setAttribute("role", "status");
+        el.innerHTML = "<div class='t1'>SOLD " + p.shares + " " + esc(p.ticker) + " @ " + (+p.price).toFixed(2) + "</div>" +
+          line2 + "<div class='t3'>account value updates automatically</div>";
+        document.body.appendChild(el);
+        var gone = function () { if (!el.parentNode) return; el.classList.add("hide"); setTimeout(function () { if (el.parentNode) el.remove(); }, 380); };
+        el.addEventListener("click", gone);
+        setTimeout(gone, 7000);
+      } catch (_) {}
+    }
 
     var lastSig = null, lastSigT = 0, dupOk = false;
     async function submitTrade(btn, keep) {
@@ -392,6 +483,16 @@
       if (!p.ticker) return msg("Ticker is required.");
       if (!(p.shares > 0)) return msg("Shares must be a positive number.");
       if (!(p.price > 0)) return msg("Price must be a positive number.");
+      /* v5.5: oversell guard + basis snapshot — POS is read BEFORE the save, so the toast's
+         realized math uses the position exactly as it stood at the moment of the sale. */
+      var snap = null;
+      if (p.side === "Sell") {
+        var sp = (typeof POS !== "undefined" && POS || []).find(function (q) { return q.sym === p.ticker; });
+        if (sp) {
+          if (p.shares > sp.sh + 1e-9) return msg("only " + (Math.round(sp.sh * 100) / 100) + " held — selling more would go short");
+          snap = { basis: sp.basis, mlt: sp.mlt || 1, lots: (sp.lots || []).map(function (L) { return { sh: L.sh, px: L.px }; }) };
+        }
+      }
       var ca = commAdj(p.side, p.shares, p.price); // v4.5: save the commission-inclusive price (Buy up / Sell down, 2dp)
       if (ca) p.price = ca.eff;
       var sig = [p.date, p.ticker, p.side, p.shares, p.price].join("|");
@@ -406,9 +507,11 @@
         await postAPI("addTrade", p);
         lastSig = sig; lastSigT = Date.now(); dupOk = false;
         msg("", p.side + " " + p.shares + " " + p.ticker + " @ " + p.price + " saved ✓" + (keep ? " — next one:" : ""));
+        if (p.side === "Sell") sellToast(p, snap); // v5.5: realized-result toast — non-blocking, sells only
         $("enShares").value = ""; $("enPrice").value = ""; $("enNote").value = "";
         if (!keep) { $("enTicker").value = ""; $("enStop").value = ""; $("enPivot").value = ""; $("enSetup").value = ""; }
         $("enPrev").textContent = "";
+        fracSync(); // v5.5: shares just cleared — drop the active chip mark (row hides with the ticker on a full clear)
         window.loadSheet && loadSheet();
       } catch (e) { msg(e.message); }
       busy(btn, false, keep ? "Save + another" : "Save trade");
@@ -418,10 +521,13 @@
     $("enSubmitA").onclick = function () { return submitTrade(this, true); };
 
     /* ---------- v4.5: quick-sell prefill hook — Holdings rows (index.html qsell) call this.
-       Opens the Trade tab prefilled; the user reviews and taps Save — nothing auto-submits. ---------- */
+       Opens the Trade tab prefilled; the user reviews and taps Save — nothing auto-submits.
+       v5.5: o.stopped (index.html qstop) marks a stopped-out exit — the header says so and the
+       note starts as "stop hit" (anything the user types after it is kept); the saved row is
+       otherwise a completely normal Sell (price = the stop, commission applies as usual). ---------- */
     window.openTradePrefill = function (o) {
       o = o || {};
-      openModal(); // date=today, ticker/setup datalists refreshed
+      openModal(); // date=today, ticker/setup datalists refreshed, title reset
       enTab("T");
       $("enTicker").value = o.ticker ? String(o.ticker).trim().toUpperCase() : "";
       $("enAction").value = o.side === "Sell" ? "Sell" : "Buy";
@@ -429,7 +535,14 @@
       $("enShares").value = o.shares != null && isFinite(o.shares) ? o.shares : "";
       $("enPrice").value = o.price != null && isFinite(o.price) && o.price > 0 ? Math.round(o.price * 100) / 100 : "";
       $("enStop").value = ""; $("enPivot").value = ""; $("enSetup").value = ""; $("enNote").value = "";
+      if (o.stopped) {
+        var nv = $("enNote").value;
+        $("enNote").value = nv ? nv + " — stop hit" : "stop hit";
+        noteAuto = $("enNote").value; // remembered so an unsaved close doesn't leak "stop hit" into the next open
+        $("enTitle").textContent = "SELL — stopped out";
+      }
       updPrev();
+      fracSync(); // v5.5: held ticker on the Sell side → the fraction row appears (ALL lights when shares = the full position)
       setTimeout(function () { var el = $("enShares"); try { el.focus(); el.select(); } catch (_) {} }, 60); // focus lands on shares
     };
 

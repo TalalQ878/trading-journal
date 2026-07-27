@@ -4,7 +4,7 @@
    which keeps its own localStorage fallback for offline viewing).
    Google Fonts: cached after first use so typography works offline. */
 "use strict";
-const VERSION = "tj-v5s"; /* v5s: equity curve auto-extends from holdings' closes when Daily isn't logged */
+const VERSION = "tj-v5u"; /* v5u: one-tap sells + 3-4wk leader test on holdings */
 const SHELL = [
   "./",
   "./index.html",
