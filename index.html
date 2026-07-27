@@ -448,7 +448,7 @@ body.light [style*="fill:#7d8590"]{fill:#5c6676!important}
 body.light [style*="fill:#1fb51f"]{fill:#128a12!important}
 body.light [style*="fill:#f06a6a"]{fill:#c24444!important}
 body.light [style*="fill:#8b93a1"]{fill:#5c6676!important}
-/* ---- v4: lot ladder (Holdings expander), stale / earnings chips, add-gate chip, matrix meaning column ---- */
+/* ---- v4: lot ladder (Holdings expander), earnings chip, add-gate chip, matrix meaning column (v5.7: the STALE badge is retired — leader trio + 3-EMA + breakeven own the not-working signal) ---- */
 .expTg{display:inline-block;width:16px;color:var(--dim);cursor:pointer;user-select:none;font-size:11px;margin-right:2px}
 .expTg:hover{color:var(--tx)}
 tr.lotrow td{background:rgba(255,255,255,.018);font-size:11.4px;padding:4.5px 8px;color:var(--dim);border-bottom:1px solid rgba(255,255,255,.03)}
@@ -459,9 +459,9 @@ tr.lothead td:first-child{padding-left:26px}
 .lotTg{display:inline-flex;gap:3px;background:var(--card2);border:1px solid var(--edge);border-radius:7px;padding:2px;font-size:9.5px;letter-spacing:.02em;text-transform:none;vertical-align:middle}
 .lotTg span{padding:2px 8px;border-radius:5px;color:var(--dim);cursor:pointer;font-weight:700}
 .lotTg span.on{background:#1d3a30;color:#8ff0cf}
-.badge.stale{background:var(--critBg);color:var(--critT);cursor:help}
-/* ---- v5.5: 3-4wk leader-test badges — hold rule (good) · in-window (warn) · failed (crit); token-only so light mode just works ---- */
+/* ---- v5.5: 3-4wk leader-test badges — hold rule (good) · in-window (warn) · failed (crit); token-only so light mode just works. v5.7 adds the WINNER phase (good tokens, slightly muted) ---- */
 .badge.ldrG{background:var(--goodBg);color:var(--goodT);cursor:help}
+.badge.ldrW{background:var(--goodBg);color:var(--goodT);opacity:.88;cursor:help}
 .badge.ldrA{background:var(--warnBg);color:var(--warn);cursor:help}
 .badge.ldrR{background:var(--critBg);color:var(--critT);cursor:help}
 /* ---- v5.6: breakeven nudge (warn) · 3-EMA exit — armed (warn) / fired (crit) / post-buy line-in-sand (muted hold note, deliberately NOT a warn) — token-only so light mode just works ---- */
@@ -2162,8 +2162,9 @@ function drawSmall(T,Wn,L,wr,aw,al){
      const sg8=v=>(v>=0?"+":"−")+Math.abs(v).toFixed(1)+"%",ldr8=[];
      (POS||[]).forEach(p8=>{const lt8=window.leaderTest?leaderTest(p8):null;if(!lt8)return;
       if(lt8.st==="G")ldr8.push([0,`<div style="font-size:11.5px;margin-top:3px"><span class="vgood">${p8.sym}: hold rule ✓ +20% in ${lt8.k}wk — hold ≥8 wks (through ${lt8.thru.getMonth()+1}/${lt8.thru.getDate()})</span></div>`,0]);
-      else if(lt8.st==="A")ldr8.push([1,`<div style="font-size:11.5px;margin-top:3px"><span class="vwarn">${p8.sym}: 3-4wk leader test — ${sg8(lt8.cur)} vs 20% bar</span></div>`,0]);
-      else ldr8.push([2,`<div style="font-size:11.5px;margin-top:3px"><span class="vcrit">${p8.sym}: failed the 4-week leader test (&lt;15%) → raise stop or exit</span></div>`,1]);});
+      else if(lt8.st==="W")ldr8.push([1,`<div style="font-size:11.5px;margin-top:3px" data-ltw="${p8.sym}"><span class="vgood">${p8.sym}: winner past its 8-wk hold — exits on strength only</span></div>`,0]); // v5.7 phase 2
+      else if(lt8.st==="A")ldr8.push([2,`<div style="font-size:11.5px;margin-top:3px"><span class="vwarn">${p8.sym}: 3-4wk leader test — ${sg8(lt8.cur)} vs 20% bar</span></div>`,0]);
+      else ldr8.push([3,`<div style="font-size:11.5px;margin-top:3px"><span class="vcrit">${p8.sym}: failed the 4-week leader test (&lt;15%) → raise stop or exit</span></div>`,1]);});
      ldr8.sort((a8,b8)=>a8[0]-b8[0]);
      ldr8.forEach(x8=>{rungs+=x8[1];if(x8[2])redL+=x8[1];});}
     { // v5.6: per-position course action lines — 3-EMA exit fired (crit, joins the collapsed-state
@@ -2302,8 +2303,10 @@ pbDetUI(); // restore the saved open/closed state at boot (default: collapsed)
    Anchor = the FIRST buy of the open campaign (px0 · din) — the initial entry, never the average.
    peak = best close/px0 − 1 over PRICES closes with din ≤ date ≤ din+28d; the live quote joins
    the max while today is still inside that window. Options are skipped (no daily marks).
-   States: hit +20% inside the 28 days → HOLD RULE triggered — badge from that day through
-   day 56 (hold ≥8 weeks), then it retires quietly. Day 21-28 with no trigger → in-window amber.
+   States: hit +20% inside the 28 days → HOLD RULE triggered — three phases from din (v5.7):
+   phase 1 (trigger → day 56) green hold badge; phase 2 (day 57 → day 182, ~26 weeks — the
+   course's big winners run ~6 months) WINNER — exits into strength only, never harvested;
+   phase 3 (past day 182) retires, nothing shows. Day 21-28 with no trigger → in-window amber.
    Past day 28: peak under 15% → failed (raise stop / exit); 15-20% → neutral judgment zone,
    no badge (the relative-strength-relaxed variant we can't measure reliably). */
 function leaderTest(p){
@@ -2316,8 +2319,9 @@ function leaderTest(p){
   if(hitT==null&&g>=.20)hitT=t;}
  if(ageD<=28){var gl=p.px/p.px0-1;if(peak==null||gl>peak)peak=gl;if(hitT==null&&gl>=.20)hitT=now;}
  if(hitT!=null){ // hold rule triggered — potential monster; count the weeks it took
-  if(ageD>56)return null; // the 8-week hold window has run its course — badge retires
+  if(ageD>182)return null; // v5.7: 26 weeks from entry the winner judgment retires entirely
   var k=Math.max(1,Math.ceil(((hitT-d0)/864e5)/7));
+  if(ageD>56)return{st:"W",k:k}; // v5.7: 8-wk hold served → WINNER phase (day 57-182): exits into strength only
   return{st:"G",k:k,thru:new Date(d0+56*864e5)};}
  if(ageD<21||peak==null)return null; // too young to judge, or no measurable window
  if(ageD<=28)return{st:"A",cur:100*(p.px/p.px0-1)}; // week 3-4, bar not hit yet
@@ -2392,8 +2396,9 @@ function ema3Sig(p){
  window._ema3[p.sym]=out;return out;}
 /* ---------- v5.6: 3-4R HARVEST LINE (course rule) ----------
    Up 3-4× the initial risk WITHOUT leader confirmation — the amber in-window state or the
-   neutral judgment zone, NEVER the green hold-rule state (a confirmed leader is held, not
-   harvested — explicit in the course) — and ≥15 sessions old → harvest ⅓ into strength.
+   neutral judgment zone, NEVER the green hold-rule or WINNER phases (a confirmed winner is
+   held / sold into strength, not harvested — explicit in the course) — and ≥15 sessions old
+   → harvest ⅓ into strength.
    A failed-test (red) position keeps its own raise-stop/exit action, so no chip there either.
    Needs a measured initial risk (first-lot entry stop). Sessions = price bars after din when
    the ticker has close history, else weekday-approximated calendar days (×5/7). */
@@ -2402,7 +2407,7 @@ function harvestSig(p){
  var gain=100*(p.px/p.basis-1);
  if(gain<3*p.risk0)return null;
  var lt=window.leaderTest?leaderTest(p):null;
- if(lt&&(lt.st==="G"||lt.st==="R"))return null;
+ if(lt&&(lt.st==="G"||lt.st==="W"||lt.st==="R"))return null; // v5.7: the WINNER phase (day 57-182) is exempt too — confirmed winners are never harvest-nagged
  var arr=PRICES[p.sym],d0=+p.din,age=0;
  if(arr&&arr.length){for(var i=0;i<arr.length;i++)if(+arr[i][0]>d0)age++;}
  else age=Math.floor((Date.now()-d0)/864e5*5/7);
@@ -2445,11 +2450,11 @@ function renderHold(){var hEl=document.getElementById("holdList");if(!hEl)return
   return '<td class="num" style="color:'+cl2+'" title="(live − stop) ÷ live'+(st!=null?' · stop '+st.toFixed(2):'')+(dv<0?' — stop above price: exit signal already given':'')+'">'+(dv>=0?'−':'+')+Math.abs(dv).toFixed(1)+'%</td>';};
  var sg5=function(v){return (v>=0?"+":"−")+Math.abs(v).toFixed(1)+"%";};
  var chips=function(r){var c2='';
-  var lt=r.pref?leaderTest(r.pref):null; // v5.5: the leader verdict subsumes staleness — one judgment per row
+  var lt=r.pref?leaderTest(r.pref):null; // one leader judgment per row (v5.7: the STALE badge is gone — the leader trio + 3-EMA + breakeven carry the not-working signal now)
   if(lt&&lt.st==="G")c2+=' <span class="badge ldrG" title="'+window._ldrTip+'">HOLD RULE ✓ +20% in '+lt.k+'wk — hold ≥8 wks</span>';
+  else if(lt&&lt.st==="W")c2+=' <span class="badge ldrW" title="the 8-week hold is done — from here exit only into strength (3-EMA shake-in, climax run) or your raised stop — not on ordinary pullbacks.">WINNER — sell into strength only</span>'; // v5.7 phase 2 (day 57-182)
   else if(lt&&lt.st==="A")c2+=' <span class="badge ldrA" title="'+window._ldrTip+'">LEADER TEST — '+sg5(lt.cur)+' vs 20%-in-3wk bar</span>';
   else if(lt&&lt.st==="R")c2+=' <span class="badge ldrR" title="'+window._ldrTip+'">FAILED 4-WK TEST (&lt;15%) — raise stop / exit</span>';
-  else if(r.pnl!=null&&r.pnl<0&&r.days!=null&&r.days>10)c2+=' <span class="badge stale" title="your winners run ~29d; losers should be gone in ~9d">STALE — '+r.days+'d underwater</span>';
   // v5.6: breakeven nudge — coexists with the leader badges (different concern; at 390px they wrap)
   var be6=r.pref&&window.beNudge?beNudge(r.pref):null;
   if(be6)c2+=' <span class="badge bev" title="up ~4-5× your risk — move the stop to breakeven: this can no longer be a losing trade. If it comes back and takes you out at flat, it wasn\'t the leader anyway.">RAISE STOP → breakeven ($'+be6.bas.toFixed(2)+')</span>';
