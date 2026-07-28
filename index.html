@@ -1427,7 +1427,12 @@ function eqPanes(pl,pr,w,X,i0,i1,to){
  return s;
 }
 function render(){
- if(EQX.length<3){$("errBox").textContent="Not enough data yet — log a few days of equity (Daily tab) or a few closed trades.";$("errBox").classList.add("show");return;}
+ /* v5.9b: while the FIRST sync of this open is still in flight, an early render (tap, page restore)
+    has no equity yet — say "syncing", not "log some trades" (wrong advice for a full journal). */
+ if(EQX.length<3){$("errBox").textContent=(S.id&&!window._lastSync)?"Syncing your journal — the first load can take up to a minute…":"Not enough data yet — log a few days of equity (Daily tab) or a few closed trades.";$("errBox").classList.add("show");return;}
+ /* v5.9b: and once real data renders, clear OUR banner at once (never the offline/API-error ones) —
+    before this it lingered over good data until the next 60-s refresh wiped it. */
+ {const _e=$("errBox");if(_e&&_e.classList.contains("show")&&/Not enough data yet|Syncing your journal/.test(_e.textContent))err();}
  const[i0,i1,from,to]=win(),n=i1-i0+1;
  const AUT=EQABS?DAILY.slice(i0,i1+1).map(x=>x.auto?1:0):null; // v5.4: per-point synthetic markers for the crosshair (EQD ≡ DAILY dates when EQABS)
  const effCurve=(S.curve==="REAL"&&S.gmode==="$")?"REALD":S.curve; // one Realized chip — its unit follows the global $/% toggle
