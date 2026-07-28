@@ -3165,7 +3165,15 @@ window.performancePage=performancePage;
  if(!/^(dark|light|auto)$/.test(S.theme||""))S.theme="dark"; // stale/garbage stored value → safe default
  if($("themeSel"))$("themeSel").value=S.theme;
  applyTheme();
- if(S.id){if($("sheetUrl"))$("sheetUrl").value=S.id==="api"?"":"https://docs.google.com/spreadsheets/d/"+S.id;loadSheet();}
+ if(S.id){if($("sheetUrl"))$("sheetUrl").value=S.id==="api"?"":"https://docs.google.com/spreadsheets/d/"+S.id;
+  /* v5.9: instant paint — the API can take 15-45s, so hydrate from the last synced copy first
+     (fetchTab already caches every tab in localStorage) and render at once; loadSheet() then
+     fetches fresh data and re-renders over it. First-ever open (no cache) behaves as before. */
+  try{const c=t=>localStorage.getItem(LS+"_"+t);
+   if(c("Transactions")&&c("Daily")&&c("Prices")){
+    loadSheetData(c("Transactions"),c("Daily"),c("Prices"),c("Live")||"Ticker,Price",c("Signals")||"",c("Leaders")||"",c("Yields")||"",c("Macro")||"",c("Earnings")||"");
+    S.src="sheet";setPill();render();}}catch(e){} /* loadSheet() below immediately shows "⟳ Refreshing…" over this paint */
+  loadSheet();}
  else if(S.src==="demo"){demo();setPill();render();}
  else{$("setup").classList.add("show");demo();setPill();render();}})();
 </script>
