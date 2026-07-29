@@ -470,6 +470,24 @@
     }
 
     var lastSig = null, lastSigT = 0, dupOk = false;
+    /* v5.9c: local echo — append the saved trade to the cached Transactions so the v5.9
+       instant paint can never show a position you already sold (or miss a buy), even if
+       the refresh below never completes (app closed, dead network). The next successful
+       sync overwrites the whole cache with the sheet's truth, so the echo is temporary. */
+    function echoTrade(p) {
+      try {
+        var k = LS + "_Transactions", cur = localStorage.getItem(k);
+        if (!cur) return;
+        var cell = function (v) { return String(v == null ? "" : v).replace(/[,\r\n]+/g, " "); };
+        var line = [p.date, p.ticker, p.side, p.shares, p.price, p.stop, p.pivot, p.setup, p.lot || "", "", "", "", p.notes || ""].map(cell).join(",");
+        localStorage.setItem(k, cur.replace(/\n+$/, "") + "\n" + line);
+        var c = function (t) { return localStorage.getItem(LS + "_" + t); };
+        if (window.loadSheetData && c("Daily") && c("Prices")) {
+          loadSheetData(c("Transactions"), c("Daily"), c("Prices"), c("Live") || "Ticker,Price", c("Signals") || "", c("Leaders") || "", c("Yields") || "", c("Macro") || "", c("Earnings") || "");
+          if (window.render) render();
+        }
+      } catch (e) {}
+    }
     async function submitTrade(btn, keep) {
       msg();
       var p = {
@@ -505,6 +523,7 @@
       busy(btn, true, lbl);
       try {
         await postAPI("addTrade", p);
+        echoTrade(p); /* v5.9c: holdings update this second — no waiting on the slow refetch */
         lastSig = sig; lastSigT = Date.now(); dupOk = false;
         msg("", p.side + " " + p.shares + " " + p.ticker + " @ " + p.price + " saved ✓" + (keep ? " — next one:" : ""));
         if (p.side === "Sell") sellToast(p, snap); // v5.5: realized-result toast — non-blocking, sells only
