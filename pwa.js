@@ -8,6 +8,7 @@
 "use strict";
 (function () {
   window.__pwa = 1;
+  var APP_VERSION = "v5.9d"; /* shown in ⚙ settings — bump with every release (ties to sw.js VERSION) */
 
   /* ---------- one-tap setup via URL hash: #api=<encoded exec url>&key=<key> ---------- */
   try {
@@ -207,7 +208,10 @@
         '<div class="enGrid" id="commCust" style="display:none">' +
         '<div><label>Per-share rate ($)</label><input type="number" id="commRate" inputmode="decimal" step="any" min="0" placeholder="0.005"></div>' +
         '<div><label>Minimum per order ($)</label><input type="number" id="commMin" inputmode="decimal" step="any" min="0" placeholder="1.00"></div></div>' +
-        '<div id="commState" style="font-size:11.5px;color:var(--dim);margin-top:8px"></div>';
+        '<div id="commState" style="font-size:11.5px;color:var(--dim);margin-top:8px"></div>' +
+        /* v5.9d: visible version label — bumped every release so "am I on the latest?" is one tap away */
+        '<div style="border-top:1px solid var(--bd);margin:16px 0 10px"></div>' +
+        '<div id="appVer" style="font-size:11.5px;color:var(--dim)">Journal <b>' + APP_VERSION + '</b> · checks for updates every time you open it</div>';
       sm.appendChild(sec);
       var stateLine = function () {
         $("apiState").textContent = S.api ? ("Connected: …" + S.api.slice(-30) + (S.key ? " · key •••" + String(S.key).slice(-4) : "")) : "Not connected.";
