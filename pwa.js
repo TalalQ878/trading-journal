@@ -8,7 +8,7 @@
 "use strict";
 (function () {
   window.__pwa = 1;
-  var APP_VERSION = "v5.9d"; /* shown in ⚙ settings — bump with every release (ties to sw.js VERSION) */
+  var APP_VERSION = "v5.9e"; /* shown in ⚙ settings — bump with every release (ties to sw.js VERSION) */
 
   /* ---------- one-tap setup via URL hash: #api=<encoded exec url>&key=<key> ---------- */
   try {
@@ -279,6 +279,10 @@
       '<div><label>Pivot</label><input type="number" id="enPivot" inputmode="decimal" step="any" min="0" placeholder="optional"></div>' +
       '<div><label>Setup</label><input type="text" id="enSetup" list="enSetups" placeholder="optional" autocomplete="off"><datalist id="enSetups"></datalist></div>' +
       '<div class="full"><label>Note</label><input type="text" id="enNote" placeholder="optional" autocomplete="off"></div>' +
+      /* v5.9e: per-trade commission tick — defaults to the ⚙ setting on every open; untick when the
+         typed price ALREADY includes commission (e.g. statement "avg price incl. commission"). */
+      '<div class="full" style="display:flex;align-items:center;gap:8px;margin-top:6px"><input type="checkbox" id="commTick" style="width:auto;margin:0;accent-color:var(--acc,#2dd4a0)">' +
+      '<label for="commTick" style="margin:0;text-transform:none;letter-spacing:0;font-size:12px;color:var(--mut);cursor:pointer">Add commission automatically <span id="commTickSub" style="color:var(--dim)"></span></label></div>' +
       "</div>" +
       '<div id="enPrev" class="num"></div>' +
       '<div class="btnrow"><button class="btn pri" id="enSubmit">Save trade</button><button class="btn sec" id="enSubmitA" style="flex:0;min-width:118px">Save + another</button><button class="btn sec" id="enClose1" style="flex:0;min-width:70px">Close</button></div>' +
@@ -340,6 +344,7 @@
       refreshTickerList();
       var sets = {}; (typeof TX!=="undefined"&&TX||[]).forEach(function (t) { if (t.set) sets[t.set] = 1; });
       $("enSetups").innerHTML = Object.keys(sets).map(function (s) { return "<option value=\"" + esc(s) + "\">"; }).join("");
+      commTickSync(); // v5.9e: tick resets to the ⚙ setting every open
       updPrev();
       fracSync();
       ov.classList.add("show");
@@ -367,6 +372,18 @@
         $("enTickers").innerHTML = Object.keys(tks).slice(0, 40).map(function (s) { return "<option value=\"" + esc(s) + "\">"; }).join("");
       }
     }
+    /* v5.9e: reset the tick to the ⚙ setting on every modal open (deliberately not sticky —
+       a forgotten override would silently mis-price every later trade). */
+    function commTickSync() {
+      var ct = $("commTick"); if (!ct) return;
+      var m = commMode();
+      ct.checked = m !== "OFF"; ct.disabled = m === "OFF";
+      var sub = $("commTickSub");
+      if (sub) sub.textContent = m === "OFF" ? "(enable in ⚙ Commission)" :
+        m === "CUSTOM" ? "($" + (parseFloat(S.commRate) >= 0 ? S.commRate : 0.005) + "/sh · $" + (parseFloat(S.commMin) >= 0 ? S.commMin : 1) + " min)" :
+        "($0.005/sh · $1 min)";
+    }
+    function commOn() { var ct = $("commTick"); return !ct || ct.checked; } // no checkbox rendered → old behavior
     function updPrev() {
       var a = $("enAction").value, tk = ($("enTicker").value || "").trim().toUpperCase();
       var sh = parseFloat($("enShares").value), px = parseFloat($("enPrice").value), st = parseFloat($("enStop").value);
@@ -378,7 +395,7 @@
         var lb = lastBuyOf(tk);
         if (lb) { if (!$("enStop").value && lb.stop) $("enStop").value = lb.stop; if (!$("enPivot").value && lb.pivot) $("enPivot").value = lb.pivot; if (!$("enSetup").value && lb.set) $("enSetup").value = lb.set; }
       } else $("enSubmit").textContent = "Save trade";
-      var ca = commAdj(a, sh, px), ex = ca ? ca.eff : px; // v4.5: commission-inclusive effective price drives the risk math
+      var ca = commOn() ? commAdj(a, sh, px) : null, ex = ca ? ca.eff : px; // v4.5 effective price; v5.9e: per-trade tick can suppress it
       if (a === "Buy" && sh > 0 && px > 0 && st > 0 && st < ex) {
         var r = sh * (ex - st);
         out.push("RISK $" + Math.round(r).toLocaleString() + (eq ? " · " + (100 * r / eq).toFixed(2) + "% NAV" : "") + " · stop " + (100 * (ex - st) / ex).toFixed(1) + "% away");
@@ -388,6 +405,7 @@
         out.push("HOLDING " + net + (sh > 0 ? " → " + after + " after (" + (100 * Math.min(sh, net) / net).toFixed(0) + "% reduced)" : " shares"));
       }
       if (ca) out.push("comm $" + ca.comm.toFixed(2) + " → eff " + ca.eff.toFixed(2));
+      else if (!commOn() && commMode() !== "OFF" && sh > 0 && px > 0) out.push("commission off for this trade — saves exactly as typed");
       $("enPrev").textContent = out.join("  ·  ");
     }
     function prefillSell() {
@@ -403,6 +421,7 @@
     ["enTicker", "enShares", "enPrice", "enStop"].forEach(function (id) {
       $(id).oninput = function () { updPrev(); if (id === "enTicker" || id === "enShares") fracSync(); }; // v5.5: chips track the ticker + shares live
     });
+    { var _ct = $("commTick"); if (_ct) _ct.onchange = updPrev; } // v5.9e: preview follows the tick live
 
     /* ---- v5.5: fraction chips — ⅓ ½ ⅔ ALL of the held shares, Sell side only ----
        N = remaining shares from the app's POS for the typed ticker (the same live rows the
@@ -515,7 +534,7 @@
           snap = { basis: sp.basis, mlt: sp.mlt || 1, lots: (sp.lots || []).map(function (L) { return { sh: L.sh, px: L.px }; }) };
         }
       }
-      var ca = commAdj(p.side, p.shares, p.price); // v4.5: save the commission-inclusive price (Buy up / Sell down, 2dp)
+      var ca = commOn() ? commAdj(p.side, p.shares, p.price) : null; // v4.5 commission-inclusive save; v5.9e: tick off → save exactly as typed
       if (ca) p.price = ca.eff;
       var sig = [p.date, p.ticker, p.side, p.shares, p.price].join("|");
       if (sig === lastSig && Date.now() - lastSigT < 30000 && !dupOk) {
