@@ -8,7 +8,7 @@
 "use strict";
 (function () {
   window.__pwa = 1;
-  var APP_VERSION = "v5.9e"; /* shown in ⚙ settings — bump with every release (ties to sw.js VERSION) */
+  var APP_VERSION = "v5.9f"; /* shown in ⚙ settings — bump with every release (ties to sw.js VERSION) */
 
   /* ---------- one-tap setup via URL hash: #api=<encoded exec url>&key=<key> ---------- */
   try {
@@ -497,6 +497,15 @@
        instant paint can never show a position you already sold (or miss a buy), even if
        the refresh below never completes (app closed, dead network). The next successful
        sync overwrites the whole cache with the sheet's truth, so the echo is temporary. */
+    /* v5.9f: one shared cache-repaint — every write echoes into localStorage, then this
+       repaints the whole app from the caches so no screen can show a pre-write snapshot. */
+    function reRenderFromCache() {
+      var c = function (t) { return localStorage.getItem(LS + "_" + t); };
+      if (window.loadSheetData && c("Transactions") && c("Daily") && c("Prices")) {
+        loadSheetData(c("Transactions"), c("Daily"), c("Prices"), c("Live") || "Ticker,Price", c("Signals") || "", c("Leaders") || "", c("Yields") || "", c("Macro") || "", c("Earnings") || "");
+        if (window.render) render();
+      }
+    }
     function echoTrade(p) {
       try {
         var k = LS + "_Transactions", cur = localStorage.getItem(k);
@@ -504,11 +513,47 @@
         var cell = function (v) { return String(v == null ? "" : v).replace(/[,\r\n]+/g, " "); };
         var line = [p.date, p.ticker, p.side, p.shares, p.price, p.stop, p.pivot, p.setup, p.lot || "", "", "", "", p.notes || ""].map(cell).join(",");
         localStorage.setItem(k, cur.replace(/\n+$/, "") + "\n" + line);
-        var c = function (t) { return localStorage.getItem(LS + "_" + t); };
-        if (window.loadSheetData && c("Daily") && c("Prices")) {
-          loadSheetData(c("Transactions"), c("Daily"), c("Prices"), c("Live") || "Ticker,Price", c("Signals") || "", c("Leaders") || "", c("Yields") || "", c("Macro") || "", c("Earnings") || "");
-          if (window.render) render();
+        reRenderFromCache();
+      } catch (e) {}
+    }
+    /* v5.9f: find the cached Transactions line for a Fix-rows match {date,ticker,side,shares,price}
+       — same fields the server matches on. Matching only reads cols 0-4, so quoted notes are safe. */
+    function cacheRowIndex(m) {
+      var cur = localStorage.getItem(LS + "_Transactions");
+      if (!cur) return { lines: null, idx: -1 };
+      var lines = cur.split("\n"), want = /^s/i.test(m.side) ? "S" : "B";
+      for (var i = 1; i < lines.length; i++) {
+        var c = lines[i].split(",");
+        if ((c[0] || "").slice(0, 10) === m.date &&
+            (c[1] || "").trim().toUpperCase() === m.ticker &&
+            ((c[2] || "").trim().charAt(0).toUpperCase() === want) &&
+            parseFloat(c[3]) === m.shares && parseFloat(c[4]) === m.price) return { lines: lines, idx: i };
+      }
+      return { lines: lines, idx: -1 };
+    }
+    function echoDelete(m) { /* v5.9f: deleted rows vanish from Holdings + Fix list instantly */
+      try {
+        var f = cacheRowIndex(m);
+        if (f.idx > -1) { f.lines.splice(f.idx, 1); localStorage.setItem(LS + "_Transactions", f.lines.join("\n")); reRenderFromCache(); }
+      } catch (e) {}
+    }
+    function echoStop(m, v) { /* v5.9f: stop edits show instantly (skips quoted lines — sync fixes those) */
+      try {
+        var f = cacheRowIndex(m);
+        if (f.idx > -1 && f.lines[f.idx].indexOf('"') === -1) {
+          var c = f.lines[f.idx].split(","); c[5] = v; f.lines[f.idx] = c.join(",");
+          localStorage.setItem(LS + "_Transactions", f.lines.join("\n")); reRenderFromCache();
         }
+      } catch (e) {}
+    }
+    function echoDaily(d, eq, fl) { /* v5.9f: equity saves paint instantly (append/replace, in-order only) */
+      try {
+        var k = LS + "_Daily", cur = localStorage.getItem(k);
+        if (!cur) return;
+        var lines = cur.replace(/\n+$/, "").split("\n"), done = false;
+        for (var i = 1; i < lines.length; i++) { if ((lines[i] || "").slice(0, 10) === d) { lines[i] = d + "," + eq + "," + (fl || 0); done = true; break; } }
+        if (!done) { var last = (lines[lines.length - 1] || "").slice(0, 10); if (d >= last) lines.push(d + "," + eq + "," + (fl || 0)); else return; }
+        localStorage.setItem(k, lines.join("\n")); reRenderFromCache();
       } catch (e) {}
     }
     async function submitTrade(btn, keep) {
@@ -727,6 +772,7 @@
       busy(this, true, "Save equity");
       try {
         var r = await postAPI("addDaily", { date: d, equity: eq, flow: fl });
+        echoDaily(d, eq, fl); /* v5.9f: the curve updates this second */
         msg("", (r.updated ? "Updated" : "Added") + " Daily " + d + " = " + eq.toLocaleString() + " ✓");
         window.loadSheet && loadSheet();
       } catch (e) { msg(e.message); }
@@ -755,7 +801,7 @@
           var i = +b.dataset.del, t = rows[i];
           if (!b.classList.contains("arm")) { b.classList.add("arm"); b.textContent = "Confirm delete"; setTimeout(function () { b.classList.remove("arm"); b.textContent = "Delete"; }, 4000); return; }
           msg(); b.disabled = true; b.textContent = "Deleting…";
-          try { await postAPI("deleteRow", rowMatch(t)); msg("", "Deleted " + t.disp + " row ✓"); window.loadSheet && loadSheet(); setTimeout(renderRows, 1500); }
+          try { await postAPI("deleteRow", rowMatch(t)); echoDelete(rowMatch(t)); msg("", "Deleted " + t.disp + " row ✓"); renderRows(); window.loadSheet && loadSheet(); } /* v5.9f: echo first — the list + Holdings update this second, the slow sync just confirms */
           catch (e) { msg(e.message); b.disabled = false; b.classList.remove("arm"); b.textContent = "Delete"; }
         };
       });
@@ -772,7 +818,7 @@
             var v = parseFloat(inp.value);
             if (!(v > 0)) return msg("Stop must be a positive number.");
             msg(); sv.disabled = true; sv.textContent = "…";
-            try { await postAPI("setStop", Object.assign(rowMatch(t), { stop: v })); msg("", t.sym + " stop → " + v + " ✓"); window.loadSheet && loadSheet(); setTimeout(renderRows, 1500); }
+            try { await postAPI("setStop", Object.assign(rowMatch(t), { stop: v })); echoStop(rowMatch(t), v); msg("", t.sym + " stop → " + v + " ✓"); renderRows(); window.loadSheet && loadSheet(); } /* v5.9f: instant echo */
             catch (e) { msg(e.message); sv.disabled = false; sv.textContent = "Save"; }
           };
         };
