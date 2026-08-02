@@ -8,7 +8,7 @@
 "use strict";
 (function () {
   window.__pwa = 1;
-  var APP_VERSION = "v5.9f"; /* shown in ⚙ settings — bump with every release (ties to sw.js VERSION) */
+  var APP_VERSION = "v5.9g"; /* shown in ⚙ settings — bump with every release (ties to sw.js VERSION) */
 
   /* ---------- one-tap setup via URL hash: #api=<encoded exec url>&key=<key> ---------- */
   try {
@@ -80,6 +80,10 @@
     return Math.min(Math.max(rate * shares, min), 0.01 * shares * price); // max stays IBKR's 1%-of-value cap
   }
   function r2c(v) { return Math.round((v + 1e-9) * 100) / 100; } // half-up at 2dp; epsilon absorbs FP dust (100.004999… → 100.01)
+  window.commPerShare = function (shares, price) { /* v5.9g: exit-commission per share — the sell-plan ladder + breakeven nudge price their targets commission-true with this */
+    var c = commFor(shares, price);
+    return c == null ? 0 : c / shares;
+  };
   function commAdj(side, shares, price) { // → {comm, eff} or null (OFF / fields empty)
     var c = commFor(shares, price);
     if (c == null) return null;
