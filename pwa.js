@@ -8,7 +8,7 @@
 "use strict";
 (function () {
   window.__pwa = 1;
-  var APP_VERSION = "v5.9g"; /* shown in ⚙ settings — bump with every release (ties to sw.js VERSION) */
+  var APP_VERSION = "v5.9h"; /* shown in ⚙ settings — bump with every release (ties to sw.js VERSION) */
 
   /* ---------- one-tap setup via URL hash: #api=<encoded exec url>&key=<key> ---------- */
   try {
@@ -295,10 +295,17 @@
 
       '<div id="enPaneD" style="display:none">' +
       '<div class="enGrid">' +
+      /* v5.9h: entry mode — NET LIQ (type the broker's account value) or CASH + POSITIONS
+         (type settled cash; the app adds open positions at live/last prices and saves the sum).
+         The Daily tab always stores EQUITY either way — curve, MAs and RS are untouched. */
+      '<div class="full"><div class="enTabs" id="dnMode" style="max-width:380px;margin-bottom:2px">' +
+      '<button type="button" class="chip" data-dn="NAV">NET LIQ</button>' +
+      '<button type="button" class="chip" data-dn="CASH">CASH + POSITIONS</button></div></div>' +
       '<div><label>Date</label><input type="date" id="dnDate"></div>' +
-      '<div><label>Equity (account NAV)</label><input type="number" id="dnEq" inputmode="decimal" step="any" min="0" placeholder="52678.42"></div>' +
+      '<div><label id="dnEqLbl">Equity (account NAV)</label><input type="number" id="dnEq" inputmode="decimal" step="any" min="0" placeholder="52678.42"></div>' +
       '<div><label>Deposit / withdrawal today</label><input type="number" id="dnFl" inputmode="decimal" step="any" placeholder="0"></div>' +
       "</div>" +
+      '<div id="dnPrev" class="num" style="font-size:11.5px;color:var(--dim);margin-top:6px"></div>' +
       '<div class="btnrow"><button class="btn pri" id="dnSubmit">Save equity</button><button class="btn sec" id="enClose2">Close</button></div>' +
       '<p style="font-size:11px;color:var(--dim);margin-top:10px">Adds or updates that date’s row in the <b>Daily</b> tab (powers the equity curve). Positive flow = deposit, negative = withdrawal.</p>' +
       "</div>" +
@@ -767,17 +774,56 @@
       setTimeout(function () { var el = $("wiShares"); try { el.focus(); el.select(); } catch (_) {} }, 60);
     };
 
+    /* ----- v5.9h: CASH + POSITIONS entry mode (persisted per device on S.dnMode) ----- */
+    function dnModeGet() { return S.dnMode === "CASH" ? "CASH" : "NAV"; }
+    function dnPosVal() {
+      var tot = 0, parts = [], bad = false;
+      (typeof POS !== "undefined" && POS || []).forEach(function (p) {
+        var px = (p.px > 0 ? p.px : wiLivePx(p.sym));
+        if (!(px > 0)) { parts.push(p.sym + ": no price"); bad = true; return; }
+        tot += p.sh * px; parts.push(p.sym + " " + (Math.round(p.sh * 100) / 100) + "×" + px.toFixed(2));
+      });
+      return { tot: tot, parts: parts, bad: bad };
+    }
+    function dnPrevUI() {
+      var el = $("dnPrev"); if (!el) return;
+      if (dnModeGet() !== "CASH") { el.textContent = ""; return; }
+      var c = parseFloat($("dnEq").value), pv = dnPosVal();
+      if (pv.bad) { el.textContent = "⚠ missing a price (" + pv.parts.join(" · ") + ") — use NET LIQ today"; return; }
+      if (!(c >= 0) || $("dnEq").value === "") { el.textContent = pv.parts.length ? "open positions now: $" + Math.round(pv.tot).toLocaleString() + " (" + pv.parts.join(" · ") + ")" : "no open positions — cash IS the equity"; return; }
+      el.textContent = "cash " + Math.round(c).toLocaleString() + (pv.parts.length ? " + positions " + Math.round(pv.tot).toLocaleString() + " (" + pv.parts.join(" · ") + ")" : "") + " → saves equity " + Math.round(c + pv.tot).toLocaleString();
+    }
+    function dnModeUI() {
+      var m = dnModeGet();
+      document.querySelectorAll("#dnMode .chip").forEach(function (b) { b.classList.toggle("on", b.dataset.dn === m); });
+      var lbl = $("dnEqLbl"); if (lbl) lbl.textContent = m === "CASH" ? "Cash left (settled)" : "Equity (account NAV)";
+      var inp = $("dnEq"); if (inp) inp.placeholder = m === "CASH" ? "45824.31" : "52678.42";
+      dnPrevUI();
+    }
+    document.querySelectorAll("#dnMode .chip").forEach(function (b) { b.onclick = function () { S.dnMode = b.dataset.dn; save(); dnModeUI(); }; });
+    { var _de = $("dnEq"); if (_de) _de.addEventListener("input", dnPrevUI); }
+    { var _td = $("enTabD"); if (_td) _td.addEventListener("click", function () { setTimeout(dnModeUI, 30); }); }
+    dnModeUI();
+
     $("dnSubmit").onclick = async function () {
       msg();
-      var d = $("dnDate").value, eq = parseFloat($("dnEq").value), fl = $("dnFl").value === "" ? 0 : parseFloat($("dnFl").value);
+      var d = $("dnDate").value, typed = parseFloat($("dnEq").value), fl = $("dnFl").value === "" ? 0 : parseFloat($("dnFl").value);
       if (!d) return msg("Pick a date.");
-      if (!(eq > 0)) return msg("Equity must be a positive number.");
+      var cashMode = dnModeGet() === "CASH";
+      if (cashMode ? !(typed >= 0) : !(typed > 0)) return msg(cashMode ? "Cash must be zero or a positive number." : "Equity must be a positive number.");
       if (isNaN(fl)) return msg("Flow must be a number (0 if none).");
+      var eq = typed;
+      if (cashMode) { /* v5.9h: equity = typed settled cash + open positions at live/last prices */
+        var pv = dnPosVal();
+        if (pv.bad) return msg("Missing a live price for an open position — switch to NET LIQ for today.");
+        eq = Math.round((typed + pv.tot) * 100) / 100;
+        if (!(eq > 0)) return msg("Computed equity is zero — check the cash amount.");
+      }
       busy(this, true, "Save equity");
       try {
         var r = await postAPI("addDaily", { date: d, equity: eq, flow: fl });
         echoDaily(d, eq, fl); /* v5.9f: the curve updates this second */
-        msg("", (r.updated ? "Updated" : "Added") + " Daily " + d + " = " + eq.toLocaleString() + " ✓");
+        msg("", (r.updated ? "Updated" : "Added") + " Daily " + d + " = " + eq.toLocaleString() + (cashMode ? " ✓ (cash " + typed.toLocaleString() + " + positions)" : " ✓"));
         window.loadSheet && loadSheet();
       } catch (e) { msg(e.message); }
       busy(this, false, "Save equity");
