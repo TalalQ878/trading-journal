@@ -1173,18 +1173,31 @@ function deriveAll(){
    const rem=shB-shS;let basis;
    // FIFO with optional Lot targeting — always computed (feeds the lot ladder); global AVG only changes the blended basis
    const lots=c.buys.map(b=>({sh:b.sh,px:b.px,lot:b.lot,stop:b.stop,d:b.d}));
+   let soldCost=0; // v6.1: exact cost of the shares the sells consumed (FIFO / lot-targeted — mirrors the consumption below)
    for(const s of c.sells){let left=s.sh;
-    if(s.lot)for(const L of lots){if(L.lot===s.lot&&left>0){const k=Math.min(L.sh,left);L.sh-=k;left-=k;}}
-    for(const L of lots){if(left<=0)break;const k=Math.min(L.sh,left);L.sh-=k;left-=k;}}
+    if(s.lot)for(const L of lots){if(L.lot===s.lot&&left>0){const k=Math.min(L.sh,left);L.sh-=k;left-=k;soldCost+=k*L.px;}}
+    for(const L of lots){if(left<=0)break;const k=Math.min(L.sh,left);L.sh-=k;left-=k;soldCost+=k*L.px;}}
    const rsh=lots.reduce((a,L)=>a+L.sh,0)||1;
    if(S.lots==="AVG")basis=cost/shB;
    else basis=lots.reduce((a,L)=>a+L.sh*L.px,0)/rsh;
    const openLots=lots.filter(L=>L.sh>1e-9);
    const stop=[...c.buys].reverse().find(b=>b.stop!=null)?.stop??null;
    const live=LIVE[c.sym]??c.buys[c.buys.length-1].px;
+   /* ---- v6.1: banked profit + whole-trade breakeven after partial sells (initial avg cost above is never touched) ----
+      banked = proceeds − cost of the sold shares (mode-consistent: FIFO-consumed cost, or the all-buys average in AVG mode) − sell commissions paid.
+      tradeBE = the price the REMAINING shares must fetch for the ENTIRE trade to net $0, commissions included
+      (total buy cost + buy comms − net proceeds so far) ÷ remaining, + the exit commission on the remainder.
+      ≤0 ⇒ the banked profit already covers the whole remaining cost — shown as "paid off". Options rows skip (stock commission model). */
+   let bk61=null,be61=null;
+   if(shS>1e-9&&rem>1e-9&&!c.opt){const cps=window.commPerShare||function(){return 0;};
+    const sellC=c.sells.reduce((a,s)=>a+cps(s.sh,s.px)*s.sh,0),buyC=c.buys.reduce((a,b)=>a+cps(b.sh,b.px)*b.sh,0);
+    const sc=S.lots==="AVG"?shS*cost/shB:soldCost;
+    bk61=(proc-sc)*c.m-sellC;
+    const raw61=(cost+buyC-(proc-sellC))/rem;be61=raw61>0?raw61+cps(rem,raw61):raw61;}
    POS.push({sym:c.sym,disp:c.disp,opt:c.opt,mlt:c.m,set:c.set,din:c.din,sh:rem,basis,px:live,est:LIVE[c.sym]==null,stop,lots:openLots,
     px0:b0.px, // v5.5: the FIRST buy's price — the 3-4wk leader test measures from the initial entry, never the average
     risk0:c.riskp, // v5.6: the FIRST buy's entry-stop distance % ((px0−stop0)/px0×100) — the initial risk the breakeven/harvest rules multiply; null when the first lot carried no stop at entry
+    banked:bk61,tradeBE:be61,soldSh:shS>1e-9?shS:0, // v6.1
     val:rem*live*c.m,pnl:(live/basis-1)*100,real:(proc-shS*basis)*c.m});}
  });
  EQABS=DAILY.length>2;
@@ -2440,7 +2453,7 @@ function renderHold(){var hEl=document.getElementById("holdList");if(!hEl)return
   var stopped=lots.filter(function(L){return L.stop!=null;});
   var nearStop=stopped.length?Math.max.apply(null,stopped.map(function(L){return L.stop;})):(p.stop!=null?p.stop:null);
   var dist=(nearStop!=null&&p.px>0)?100*(p.px-nearStop)/p.px:null; // nearest-stop lot's distance
-  return{sym:p.disp||p.sym,tk:p.sym,opt:p.opt,din:p.din,days:p.din?Math.max(0,Math.round((now-p.din)/864e5)):null,sh:p.sh,basis:p.basis,px:p.px,est:p.est,stop:p.stop,wt:wt,pnl:pnl,up:up,port:port,th:cls(p.sym)[1],lots:lots,missStop:missStop,nearStop:nearStop,dist:dist,pref:p};});
+  return{sym:p.disp||p.sym,tk:p.sym,opt:p.opt,din:p.din,days:p.din?Math.max(0,Math.round((now-p.din)/864e5)):null,sh:p.sh,basis:p.basis,px:p.px,est:p.est,stop:p.stop,wt:wt,pnl:pnl,up:up,port:port,th:cls(p.sym)[1],lots:lots,missStop:missStop,nearStop:nearStop,dist:dist,banked:p.banked,tbe:p.tradeBE,soldSh:p.soldSh,pref:p};});
  var s=window._holdSort,dir=s.dir;
  var v=function(r){switch(s.key){case "sym":return r.sym;case "th":return r.th;case "din":return r.din?+r.din:0;case "sh":return r.sh;case "basis":return r.basis;case "px":return r.px;case "stop":return r.stop==null?-1e12:r.stop;case "dist":return r.dist==null?-1e12:r.dist;case "wt":return r.wt==null?-1e12:r.wt;case "pnl":return r.pnl==null?-1e12:r.pnl;case "port":return r.port==null?-1e12:r.port;default:return 0;}};
  rows.sort(function(a,b){var x=v(a),y=v(b);if(typeof x==="string")return dir*String(x).localeCompare(String(y));return dir*(x-y);});
@@ -2504,7 +2517,8 @@ function renderHold(){var hEl=document.getElementById("holdList");if(!hEl)return
    +'<td style="text-align:left" class="num">'+fd(r.din)+'</td>'
    +'<td class="num">'+(r.days==null?"—":r.days)+'</td>'
    +'<td class="num">'+r.sh+(r.opt?" ct":"")+'</td>'
-   +'<td class="num" title="blended average cost of the shares still held">'+r.basis.toFixed(2)+'</td>'
+   +'<td class="num" title="blended average cost of the shares still held — a SELL never changes this number (it answers: what did I pay for what I still own?); only new buys move it. Your broker\'s avg-cost column works the same way. The whole-trade view after partial sells is the small line below.">'+r.basis.toFixed(2)
+   +(r.banked!=null?'<div style="font-size:9px;font-weight:600;white-space:nowrap;line-height:1.5;color:'+(r.banked>=0?'var(--goodT)':'var(--critT)')+'" title="'+(Math.round(r.soldSh*100)/100)+' share'+(r.soldSh>1?'s':'')+' already sold: '+(r.banked>=0?'+':'−')+'$'+Math.abs(r.banked).toFixed(2)+' banked, net of sell commissions. '+(r.tbe>0?'Whole-trade breakeven: sell the remaining '+(Math.round(r.sh*100)/100)+' at $'+r.tbe.toFixed(2)+' and the ENTIRE trade nets $0, commissions included — anything above is pure profit.':'The banked profit already exceeds the remaining cost — the whole trade stays green even if the rest went to $0.')+' The avg cost above stays at what you actually paid.">banked '+(r.banked>=0?'+':'−')+'$'+Math.abs(r.banked).toFixed(0)+' · '+(r.tbe>0?'trade b/e '+r.tbe.toFixed(2):'paid off ✓')+'</div>':'')+'</td>'
    +'<td class="num"><b>'+r.px.toFixed(2)+'</b> '+(r.est?'<span class="badge sample" title="no live quote yet — showing last transaction price">est</span>':'<span class="livep">↻1m</span>')+'</td>'
    +'<td>'+stopCell+'</td>'
    +distCell(r.dist,r.nearStop)
