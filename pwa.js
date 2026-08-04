@@ -8,7 +8,8 @@
 "use strict";
 (function () {
   window.__pwa = 1;
-  var APP_VERSION = "v5.9h"; /* shown in ⚙ settings — bump with every release (ties to sw.js VERSION) */
+  var APP_VERSION = "v5.9i"; /* shown in ⚙ settings — bump with every release (ties to sw.js VERSION) */
+  window.APP_VERSION = APP_VERSION;
 
   /* ---------- one-tap setup via URL hash: #api=<encoded exec url>&key=<key> ---------- */
   try {
@@ -186,6 +187,16 @@
     var eb = document.createElement("span");
     eb.className = "pill btn live"; eb.id = "entryBtn"; eb.textContent = "＋ Add";
     if (rb && rb.parentNode) rb.parentNode.insertBefore(eb, rb); else document.querySelector("header").appendChild(eb);
+
+    /* ----- v5.9i: version visible in the QUICK ⚙ panel too (he shouldn't dig for it) ----- */
+    { var co = $("connOpen");
+      if (co && co.parentNode && !$("appVerQ")) {
+        var vq = document.createElement("div");
+        vq.id = "appVerQ";
+        vq.style.cssText = "font-size:10.5px;color:var(--dim);margin-top:8px;text-align:center";
+        vq.textContent = "Journal " + APP_VERSION;
+        co.parentNode.appendChild(vq);
+      } }
 
     /* ----- setup modal: live-API section ----- */
     var sm = document.querySelector("#setup .modal");
