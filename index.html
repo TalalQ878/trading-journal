@@ -650,7 +650,7 @@ if(_t0==="light"||(_t0==="auto"&&window.matchMedia&&matchMedia("(prefers-color-s
       <div class="vpRow"><button class="chip on" id="hlmNET" title="one bar per day: new highs minus new lows">NET</button><button class="chip" id="hlmSPLIT" title="TradingView-style: plot new highs and lows separately — highs up in green, lows down in red, raw counts, no netting">SPLIT</button></div>
     </div>
     <div class="chartbox"><svg id="svgEq" viewBox="0 0 1060 500" preserveAspectRatio="none" style="height:500px"></svg></div>
-    <div class="kv" style="margin-top:6px">FOMO = % of Nasdaq stocks above their 5-day average (<b style="color:var(--mut)">$NCFD</b>, from the Signals tab). Bands: <span class="vcrit">&gt;85 don't chase — trim extended laggards</span> · <span class="vgood">&lt;15 fear — hunt entries in resilient leaders</span>. % above 50-SMA (<b style="color:var(--mut)">$NCFI</b>) and % above 20-day (<b style="color:var(--mut)">$NCTW</b>) = participation, slow and fast — above 50 healthy, under 50 repair. Net highs/lows = the liquidity gauge. Point anywhere (mouse or finger) to read any date.</div>
+    <div class="kv" style="margin-top:6px">FOMO = % of Nasdaq stocks above their 5-day average (<b style="color:var(--mut)">$NCFD</b>, from the Signals tab). Bands: <span class="vcrit">&gt;85 don't chase — trim extended laggards</span> · <span class="vgood">&lt;10 fear — hunt entries in resilient leaders</span>. % above 50-SMA (<b style="color:var(--mut)">$NCFI</b>) and % above 20-day (<b style="color:var(--mut)">$NCTW</b>) = participation, slow and fast — above 50 healthy, under 50 repair. Net highs/lows = the liquidity gauge. Point anywhere (mouse or finger) to read any date.</div>
   </div>
 
   <div class="card c4">
@@ -789,7 +789,7 @@ if(_t0==="light"||(_t0==="auto"&&window.matchMedia&&matchMedia("(prefers-color-s
     <div class="head"><h3>If / Then rules</h3><span class="rt">yours · fixed</span></div>
     <div class="facts">
       <div class="f"><span class="nbadge w">1</span><span><b>If FOMO &gt; 85 while indexes sit at highs</b> → tighten &amp; trim extended <b>laggards</b> (never leaders), no new breakout buys.</span></div>
-      <div class="f"><span class="nbadge g">2</span><span><b>If FOMO &lt; 15</b> → fear washout: hunt entries in the leaders that refused to break down.</span></div>
+      <div class="f"><span class="nbadge g">2</span><span><b>If FOMO &lt; 10</b> → fear washout: hunt entries in the leaders that refused to break down.</span></div>
       <div class="f"><span class="nbadge r">3</span><span><b>New-lows tripwire (hidden until it fires):</b> if NYSE new lows exceed 4% of issues traded, a red banner takes over the top of the Journal — defense regardless of how charts feel.</span></div>
     </div>
   </div>
@@ -823,7 +823,7 @@ if(_t0==="light"||(_t0==="auto"&&window.matchMedia&&matchMedia("(prefers-color-s
     </div>
     <div id="fomoHist" style="margin:2px 0 8px"></div>
     <div class="rowline"><span>Net highs vs lows — one day</span><span class="rt" id="brOne">—</span></div>
-    <div class="rowline"><span>Up/Down volume ratio (50d)</span><span class="rt num" id="brUD">—</span></div>
+    <div class="rowline"><span>Up/Down volume ratio (20d)</span><span class="rt num" id="brUD">—</span></div>
     <div style="height:8px"></div>
     <div class="kv" style="margin-bottom:4px">New-lows tripwire — NYSE new lows ÷ issues traded · now <b style="color:var(--tx)" id="lwNow">—</b> <span class="vmut">· banner fires &gt; 4% (this meter is the only place it shows until then)</span></div>
     <div class="lwbar"><div class="fill" id="lwFill" style="width:0%"></div><div class="limit" style="left:40%"></div><span class="lab" style="left:41.5%">4% — defense line</span></div>
@@ -955,7 +955,7 @@ if(_t0==="light"||(_t0==="auto"&&window.matchMedia&&matchMedia("(prefers-color-s
     <div class="facts">
       <div class="f"><span class="dot w"></span><span>No new size the day before FOMC — obey the sizing throttle.</span></div>
       <div class="f"><span class="dot g"></span><span>Dovish spike at highs → strength to sell laggards into, not a chase.</span></div>
-      <div class="f"><span class="dot g"></span><span>Hawkish dip → watch the 4% tripwire + FOMO &lt;15; leaders holding their lows are the buy list.</span></div>
+      <div class="f"><span class="dot g"></span><span>Hawkish dip → watch the 4% tripwire + FOMO &lt;10; leaders holding their lows are the buy list.</span></div>
       <div class="f"><span class="dot r"></span><span>Either way — obey the exposure tier the model prints same-day, not the narrative.</span></div>
     </div>
   </div>
@@ -1367,7 +1367,7 @@ function eqPanes(pl,pr,w,X,i0,i1,to){
  } else if(f!=null){const fc=Math.max(0,Math.min(100,f));
   s+=`<line x1="${x0}" x2="${x1}" y1="${fy(fc)}" y2="${fy(fc)}" stroke="#9085e9" stroke-width="1.6" opacity=".8"/>`;
   s+=`<circle cx="${x1}" cy="${fy(fc)}" r="3.4" fill="#9085e9"/><text x="${x1+6}" y="${fy(fc)+4}" font-size="11" font-weight="700" fill="#9085e9">${f.toFixed(1)}</text>`;
-  const zone=f>85?["in the trim zone — don't chase","#f06a6a"]:f<15?["fear climax — hunt entries in leaders","#1fb51f"]:["neutral — no extreme either way","#a9b2bc"];
+  const zone=f>85?["in the trim zone — don't chase","#f06a6a"]:f<10?["fear climax — hunt entries in leaders","#1fb51f"]:["neutral — no extreme either way","#a9b2bc"];
   s+=`<text x="${x0+4}" y="${fy(fc)+(fc>50?14:-6)}" font-size="9.5" fill="${zone[1]}">latest ${f.toFixed(1)} — ${zone[0]}</text>`;
  } else s+=`<text x="${(x0+x1)/2}" y="${(fT+fB)/2+3}" font-size="10" text-anchor="middle" fill="#7d8590">set a FOMO value in the Signals tab</text>`;
  const fLabY=fPts?fy(fPts[fPts.length-1][1])+4:(f!=null?fy(Math.max(0,Math.min(100,f)))+4:null); // wherever the FOMO value label ended up (polyline or flat-latest fallback)
@@ -1673,7 +1673,7 @@ function ftdAuto(cl){const q=cl("QQQ"),v=cl("QQQVOL");if(q.length<30||v.length<1
  for(let i=li+1;i<n;i++){
   if(Q[i]<Q[li]){li=i;d1=-1;continue;}
   if(d1<0&&Q[i]>Q[i-1])d1=i;
-  if(d1>0&&i-d1>=3&&i<=li+25&&Q[i]/Q[i-1]-1>=.01&&V[i]>V[i-1])return{ago:n-1-i};}
+  if(d1>0&&i-d1>=3&&i<=li+25&&Q[i]/Q[i-1]-1>=.012&&V[i]>V[i-1])return{ago:n-1-i};} /* v6.0: FTD gain ≥1.2% */
  return{ago:null};}
 function gapAuto(cl){const so=cl("SPYO"),sc=cl("SPY");if(so.length<10||sc.length<10)return null;
  const n=Math.min(so.length,sc.length),O=so.slice(-n),C=sc.slice(-n);
@@ -1684,9 +1684,9 @@ function marketModel(){
  const box=$("mmSigs");if(!box)return;
  const cl=k=>(PRICES[k]||[]).map(x=>x[1]);
  const q=cl("QQQ"),j=cl("JNK"),v=cl("QQQVOL"),xp=cl("XLP");
- let ud=null;
- if(q.length>52&&v.length>52){const n=Math.min(q.length,v.length),qc=q.slice(-n),vv=v.slice(-n);
-  let up=0,dn=0;for(let i=n-50;i<n;i++)qc[i]>qc[i-1]?up+=vv[i]:dn+=vv[i];ud=dn?up/dn:null;}
+ let ud=null; // v6.0: 20-day window (workshop-taught for general-market trend; 50d is the classic default)
+ if(q.length>22&&v.length>22){const n=Math.min(q.length,v.length),qc=q.slice(-n),vv=v.slice(-n);
+  let up=0,dn=0;for(let i=n-20;i<n;i++)qc[i]>qc[i-1]?up+=vv[i]:dn+=vv[i];ud=dn?up/dn:null;}
  // ---- v5.0: O'Neil distribution days — QQQ closed down ≥0.2% on volume above the prior session,
  // counted over the rolling last 25 sessions (older ones age out of the window by construction) ----
  {let dd=null;
@@ -1744,13 +1744,13 @@ function marketModel(){
  const rowsHtml=shd("TREND / LIQUIDITY")
   +mk("Net new highs vs lows — one day","±10% — one day where net new highs clearly beat net new lows (+10) or the reverse (−10). Auto from the latest daily counts in the Signals side table; manual High/Low fallback.",oneD2,one?(one+(EF.aO?aDim("auto"):"")):null)
   +mk("Net highs/lows trend — 3+ days","±20% — three or more consecutive days of net new highs (+20) or net new lows (−20). Auto from the daily counts in the Signals side table when ≥3 rows exist; manual Up/Down fallback.",trD,hasT?((upT?"HIGHS":nlTrend?"LOWS":"none")+(EF.aT?aDim("auto from daily counts"):"")):null)
-  +mk("Up/Down Volume Ratio (50d)","±20% — QQQ volume on up-days ÷ volume on down-days over the last 50 sessions. Above 1.0 = accumulation (+20), below = distribution (−20). Auto from the Prices tab.",udD,ud==null?null:ud.toFixed(2))
+  +mk("Up/Down Volume Ratio (20d)","±20% — QQQ volume on up-days ÷ volume on down-days over the last 20 sessions (20d reads general-market trend faster than the classic 50d). Above 1.0 = accumulation (+20), below = distribution (−20). Auto from the Prices tab.",udD,ud==null?null:ud.toFixed(2))
   +mk("Higher lows formation","+20% — three rising 15-session swing lows on QQQ. Auto.",hlD,hl==null?null:hl?"YES":"no")
   +mk("Credit — NFCI/JNK proxy","±10% — JNK÷IEI vs its 21-EMA. Ratio above a rising EMA = improving (+10); below = tightening (−10). Auto.",jnD,jn==null?null:jn>0?"IMPROVING":jn<0?"TIGHTENING":"FLAT")
   +mk("Net-lows trend without FOMO under 20","−20% — a net-lows trend while the FOMO gauge is still at or above 20 (no fear washout yet). Auto from the FOMO value in Signals.",fomoD,fomoShow)
   +mk("FOMO late-stage penalty","−10% — only while the FOMO gauge sits at 85 or above: late-stage froth subtracts from the score (added per method — froth subtracts). 0% otherwise; arms at 85. Auto from the FOMO value in Signals.",lateD,lateShow)
   +shd("MARKET TURNAROUND")
-  +mk("Follow-through day (FTD)","+20% — a 1%+ gain on higher volume, day 4 or later of a rally attempt (IBD). Manual in Signals, else auto-detected.",ftdD,ftdShow)
+  +mk("Follow-through day (FTD)","+20% — a 1.2%+ gain on higher volume, day 4 or later of a rally attempt. Manual in Signals, else auto-detected.",ftdD,ftdShow)
   +mk("VIX divergence","+10% bottom (price new low + VIX lower high = fear climax) / −20% top (price new high + VIX higher low = complacency). Manual in Signals, else auto over 20 days.",vd,vdShow)
   +mk("Gap-down reversal (climax bottom)","+10% — SPY gaps down 1.5%+ and closes up 1%+. Auto from SPY open/close.",gapD,gapShow);
  box.innerHTML=`<div style="grid-column:1/-1">${rowsHtml}</div>`;
@@ -1767,15 +1767,15 @@ function marketModel(){
  const tile=(vId,sId,vv,cl2,ss)=>{const e=$(vId);if(e){e.textContent=vv;e.className="v "+cl2;}const e2=$(sId);if(e2)e2.innerHTML=ss||"";};
  {const upT2=tr(EF.naz)>0||tr(EF.nyse)>0,dnT2=nlTrend,hasT2=hasT;
   tile("frBrV","frBrS",!hasT2?"—":upT2&&!dnT2?"POSITIVE":dnT2&&!upT2?"NEGATIVE":"MIXED",!hasT2?"vmut":upT2&&!dnT2?"vgood":dnT2&&!upT2?"vcrit":"vwarn",hasT2?("Nasdaq "+(EF.naz||"—")+" · NYSE "+(EF.nyse||"—")+(EF.aT?" · auto from daily counts":"")):"set trend words in the Signals tab");}
- tile("frVmV","frVmS",ud==null?"—":ud>1?"ACCUMULATION":"DISTRIBUTION",ud==null?"vmut":ud>1?"vgood":"vcrit",ud==null?"—  · add QQQVOL to Prices":"U/D vol 50d "+ud.toFixed(2)+(ftdShow?" · FTD "+ftdShow:""));
+ tile("frVmV","frVmS",ud==null?"—":ud>1?"ACCUMULATION":"DISTRIBUTION",ud==null?"vmut":ud>1?"vgood":"vcrit",ud==null?"—  · add QQQVOL to Prices":"U/D vol 20d "+ud.toFixed(2)+(ftdShow?" · FTD "+ftdShow:""));
  {const dd2=window._distDays; // v5.0: 0–3 normal churn · 4–5 caution · ≥6 danger (the classic 5–6 threshold)
   tile("frDdV","frDdS",dd2==null?"—":String(dd2.n),dd2==null?"vmut":"num "+(dd2.n<=3?"g-grn":dd2.n<=5?"g-amb":"g-red"),dd2==null?"add QQQVOL to Prices":dd2.n<=3?"QQQ 25d — normal churn":dd2.n<=5?"QQQ 25d — selling clustering":"QQQ 25d — heavy institutional selling");}
- tile("frFoV","frFoS",fomo==null?"—":fomo.toFixed(0)+(fomo>85?" FOMO":fomo<15?" FEAR":" NEUTRAL"),fomo==null?"vmut":fomo>85?"vcrit":fomo<15?"vgood":"vwarn",fomo==null?"set FOMO in the Signals tab":fomo>85?"trim zone — don't chase":fomo<15?"buy zone — leaders only":"no extreme either way");
+ tile("frFoV","frFoS",fomo==null?"—":fomo.toFixed(0)+(fomo>85?" FOMO":fomo<10?" FEAR":" NEUTRAL"),fomo==null?"vmut":fomo>85?"vcrit":fomo<10?"vgood":"vwarn",fomo==null?"set FOMO in the Signals tab":fomo>85?"trim zone — don't chase":fomo<10?"buy zone — leaders only":"no extreme either way");
  // ---- breadth & sentiment card ----
  const wrd=v2=>/^u/i.test(v2||"")?["POSITIVE — net highs persist","g-grn"]:/^d/i.test(v2||"")?["NEGATIVE — net lows persist","g-red"]:v2?[String(v2).toUpperCase(),"g-amb"]:["—","g-mut"];
  const hlL=(SIG.hlHist&&SIG.hlHist.length)?SIG.hlHist[SIG.hlHist.length-1]:null; // latest dated counts from the Signals side table
  const sgN=v2=>(v2>=0?"+":"−")+Math.abs(Math.round(v2));
- {const a=wrd(EF.naz);setR("brNaz",a[0]+(hlL&&hlL.nz!=null?" · 1d "+sgN(hlL.nz):""),a[1]);} // v4.4: computed trend words here too
+ {const a=wrd(EF.naz);const lw9=(hlL&&hlL.lq!=null&&hlL.lq>=110)?' · <span class="g-red">⚠ '+Math.round(hlL.lq)+' abs lows</span>':"";setR("brNaz",a[0]+(hlL&&hlL.nz!=null?" · 1d "+sgN(hlL.nz):"")+lw9,a[1]);} // v4.4 computed trend words · v6.0: 110+ absolute Nasdaq new lows = stress under the hood even when the tape looks fine
  {const a=wrd(EF.nyse);setR("brNyse",a[0]+(hlL&&hlL.ny!=null?" · 1d "+sgN(hlL.ny):""),a[1]);}
  if(hlL&&hlL.nz!=null&&hlL.ny!=null)setR("brOne","NAZ "+sgN(hlL.nz)+" · NYSE "+sgN(hlL.ny),hlL.nz>0&&hlL.ny>0?"g-grn":hlL.nz<0&&hlL.ny<0?"g-red":"g-amb");
  else setR("brOne",one?one.toUpperCase():"—",one?(/^h/i.test(one)?"g-grn":/^l/i.test(one)?"g-red":"g-amb"):"g-mut");
@@ -2298,9 +2298,9 @@ window.renderPbSum=function(){var el=$("pbSum");if(!el)return;var V=window._pbVa
   var mid9=[];
   if(tell9)mid9.push(tell9[0]==="ALIGNED"?'SPY–VIX <b class="g-grn">aligned</b>':'SPY–VIX <b class="'+tell9[1]+'">diverging</b>');
   if(cr9)mid9.push(cr9==="CLIMBING"?'credit <b class="g-grn">climbing</b>':cr9==="TIGHTENING"?'credit <b class="g-red">tightening</b>':'credit <b class="g-amb">flat</b>');
-  if(p9!=null)mid9.push('<b class="num">'+p9.toFixed(0)+'%</b> of stocks above their 50-day'+(q9!=null?' · <b class="num">'+q9.toFixed(0)+'%</b> above their 20-day':'')); // v5.3: both participation numbers when the 20-day column exists; absent ⇒ the sentence reads exactly as v5.2
+  if(p9!=null)mid9.push('<b class="num">'+p9.toFixed(0)+'%</b> of stocks above their 50-day'+(p9<=15?' <span class="g-grn">(bear-market-bottom zone)</span>':p9<=40?' <span class="g-grn">(correction-bottom zone)</span>':'')+(q9!=null?' · <b class="num">'+q9.toFixed(0)+'%</b> above their 20-day':'')); // v5.3 both numbers · v6.0: ≤15% = bear-bottom zone, ≤40% = correction-bottom zone (downside markers only — high readings carry no signal)
   else if(q9!=null)mid9.push('<b class="num">'+q9.toFixed(0)+'%</b> of stocks above their 20-day');
-  if(f9!=null)mid9.push(f9>85?'FOMO in the <b class="g-red">trim zone</b>':f9<15?'FOMO in the <b class="g-grn">buy zone</b>':'FOMO <b class="g-mut">neutral</b>');
+  if(f9!=null)mid9.push(f9>85?'FOMO in the <b class="g-red">trim zone</b>':f9<10?'FOMO in the <b class="g-grn">buy zone</b>':'FOMO <b class="g-mut">neutral</b>');
   if(dd9)mid9.push('<b class="num '+(dd9.n<=3?"g-grn":dd9.n<=5?"g-amb":"g-red")+'">'+dd9.n+'</b> distribution day'+(dd9.n===1?"":"s"));
   var tail9=MT9?'model says <b class="g-'+MT9.cc+'">'+MT9.lab.replace(/ —.*/,"")+" "+MT9.b0+"–"+MT9.b1+"%</b>":"";
   var core9=[lead9,mid9.join(", ")].filter(function(x){return x;}).join(" — ");
@@ -3274,7 +3274,7 @@ function mDaily(){
   var fv=null;
   if(H){var back=n-1-i;if(back<H.length)fv=H[H.length-1-back];}
   else if(i===n-1)fv=fomoNow;
-  var foC=fv==null?["—","vmut"]:[fv.toFixed(0)+(fv>85?" FOMO":fv<15?" FEAR":" NEUTRAL"),fv>85?"vcrit":fv<15?"vgood":"vwarn"];
+  var foC=fv==null?["—","vmut"]:[fv.toFixed(0)+(fv>85?" FOMO":fv<10?" FEAR":" NEUTRAL"),fv>85?"vcrit":fv<10?"vgood":"vwarn"];
   var exC=(i===n-1&&tier)?[tier.lab.replace(/ —.*/,"")+" ("+tier.b0+"–"+tier.b1+"%)",tier.cc==="grn"?"vgood":tier.cc==="amb"?"vwarn":"vcrit"]:["—","vmut"];
   var ch5=i>=5?100*(spv[i]/spv[i-5]-1):null; // S&P 5-session change (B9)
   var c5=ch5==null?['—','vmut']:ch5>0.05?['▲','vgood']:ch5<-0.05?['▼','vcrit']:['→','vmut'];
@@ -3296,14 +3296,14 @@ function renderFomoGauge(f){
   return '<path d="M'+p0[0].toFixed(1)+' '+p0[1].toFixed(1)+' A'+R+' '+R+' 0 '+lg+' 1 '+p1[0].toFixed(1)+' '+p1[1].toFixed(1)+'" fill="none" stroke="'+col+'" stroke-width="'+W+'" opacity="'+op+'" stroke-linecap="'+(cap||"round")+'"/>';}
  var has=f!=null&&isFinite(f);
  var fc=has?Math.max(0,Math.min(100,f)):null;
- var zone=!has?2:fc>=85?0:fc<=15?1:2; /* 0 trim · 1 fear · 2 normal */
+ var zone=!has?2:fc>=85?0:fc<=10?1:2; /* 0 trim · 1 fear · 2 normal */
  var fill=zone===0?"#e14b4b":zone===1?"#1fb51f":"#2dd4a0";
  var s=seg(0,100,"#20252c",1);        /* track */
  s+=seg(0,100,fill,.07);              /* same-ramp tint so state reads across the whole arc */
  s+=seg(85,100,"#e14b4b",.28,"butt"); /* trim zone hint */
- s+=seg(0,15,"#1fb51f",.28,"butt");   /* fear zone hint */
+ s+=seg(0,10,"#1fb51f",.28,"butt");   /* fear zone hint */
  if(has&&fc>0.5)s+=seg(0,fc,fill,1);  /* value fill */
- [15,85].forEach(function(v){var a=A0-SW*v/100,u=P2(a,R-W/2-1),w3=P2(a,R+W/2+1);
+ [10,85].forEach(function(v){var a=A0-SW*v/100,u=P2(a,R-W/2-1),w3=P2(a,R+W/2+1);
   s+='<line x1="'+u[0].toFixed(1)+'" y1="'+u[1].toFixed(1)+'" x2="'+w3[0].toFixed(1)+'" y2="'+w3[1].toFixed(1)+'" stroke="#0c0e11" stroke-width="2"/>';});
  if(has){var an=A0-SW*fc/100,n1=P2(an,R-W/2-8),n2=P2(an,R+W/2+8);
   s+='<line x1="'+n1[0].toFixed(1)+'" y1="'+n1[1].toFixed(1)+'" x2="'+n2[0].toFixed(1)+'" y2="'+n2[1].toFixed(1)+'" stroke="#eef1f4" stroke-width="2.4" stroke-linecap="round"/>';}
@@ -3433,9 +3433,10 @@ function mktStory(){
  // v5.3: participation clause — only while the Pct20 column exists (both numbers together, or the 20-day alone if Pct50 is somehow missing); no Pct20 ⇒ the story reads exactly as v5.2
  var p5s=(typeof SIG!=="undefined"&&SIG&&SIG.p50HistD&&SIG.p50HistD.length)?SIG.p50HistD[SIG.p50HistD.length-1].v:null;
  var p2s=(typeof SIG!=="undefined"&&SIG&&SIG.p20HistD&&SIG.p20HistD.length)?SIG.p20HistD[SIG.p20HistD.length-1].v:null;
- var part=p2s!=null?((p5s!=null?"<b>"+p5s.toFixed(0)+"%</b> of stocks above their 50-day · ":"")+"<b>"+p2s.toFixed(0)+"%</b> above their 20-day"):null;
- if(nzW||nyW)s+="Breadth: Nasdaq net H/L "+(nzW||"—").toLowerCase()+" · NYSE "+(nyW||"—").toLowerCase()+(part?", "+part:"")+(f!=null?", FOMO <b>"+f.toFixed(0)+"</b>"+(f>85?" — the trim zone":f<15?" — fear climax, the buy zone":" — neither greed nor fear"):"")+". ";
- else if(f!=null)s+=(part?"Breadth: "+part+", FOMO":"FOMO")+" <b>"+f.toFixed(0)+"</b>"+(f>85?" — the trim zone. ":f<15?" — fear climax, the buy zone. ":" — neither greed nor fear. ");
+ var z5s=p5s==null?"":p5s<=15?" (bear-market-bottom zone)":p5s<=40?" (correction-bottom zone)":""; // v6.0: downside markers only
+ var part=p2s!=null?((p5s!=null?"<b>"+p5s.toFixed(0)+"%</b> of stocks above their 50-day"+z5s+" · ":"")+"<b>"+p2s.toFixed(0)+"%</b> above their 20-day"):null;
+ if(nzW||nyW)s+="Breadth: Nasdaq net H/L "+(nzW||"—").toLowerCase()+" · NYSE "+(nyW||"—").toLowerCase()+(part?", "+part:"")+(f!=null?", FOMO <b>"+f.toFixed(0)+"</b>"+(f>85?" — the trim zone":f<10?" — fear climax, the buy zone":" — neither greed nor fear"):"")+". ";
+ else if(f!=null)s+=(part?"Breadth: "+part+", FOMO":"FOMO")+" <b>"+f.toFixed(0)+"</b>"+(f>85?" — the trim zone. ":f<10?" — fear climax, the buy zone. ":" — neither greed nor fear. ");
  else if(part)s+="Breadth: "+part+". ";
  if(ud!=null)s+="Up/down volume at <b>"+ud.toFixed(2)+"</b> says "+(ud>1?"accumulation under the surface":"distribution — moves without follow-through, size smaller")+". ";
  var play=window._sigW?window._sigW[0]:null;
@@ -3558,7 +3559,7 @@ function fedPage(){
   o+='<div class="f"><span class="dot g"></span><span><b>For your system:</b> follow the exposure model into the meeting — don\'t front-run the decision; obey the tier the model prints same-day.</span></div>';
   o+='<div class="f"><span class="dot w"></span><span><b>Methodology watch:</b> BEA\'s Sep 30 annual revision may rewrite core-PCE history by a few tenths — treat it as statistics, not fresh disinflation.</span></div>';
   var vp=window._vixPct;
-  o+='<div class="f"><span class="dot r"></span><span><b>Risk scenario:</b> a hawkish surprise into '+(vp!=null?(vp<=20?"a complacent VIX ("+vp+"th %ile)":"the current VIX ("+vp+"th %ile)"):"a quiet VIX")+' = air-pocket risk. If it hits, expect a FOMO washout toward the &lt;15 fear zone — that\'s a buy zone, in leaders only.</span></div>';
+  o+='<div class="f"><span class="dot r"></span><span><b>Risk scenario:</b> a hawkish surprise into '+(vp!=null?(vp<=20?"a complacent VIX ("+vp+"th %ile)":"the current VIX ("+vp+"th %ile)"):"a quiet VIX")+' = air-pocket risk. If it hits, expect a FOMO washout toward the &lt;10 fear zone — that\'s a buy zone, in leaders only.</span></div>';
   fx.innerHTML=o;}
  if($("fcSrcNote"))$("fcSrcNote").innerHTML=live?("Macro tab connected — "+Object.keys(MAC).length+" keys loaded · missing keys show “—”."):('Add the <b>Macro</b> tab + Apps Script snippet to go live — values marked '+SMPB+' are placeholders from the approved design.');
  var od=$("fcOdds");
