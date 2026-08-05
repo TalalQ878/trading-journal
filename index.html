@@ -2214,7 +2214,8 @@ function drawSmall(T,Wn,L,wr,aw,al){
       else if(e6&&e6.state==="armed"&&e6.ctx==="shake")act6.push([1,`<div style="font-size:11.5px;margin-top:3px" data-ema3="${p6.sym}"><span class="vwarn">${p6.sym}: 3-EMA exit — armed at $${e6.low.toFixed(2)}, exit if it breaks</span></div>`,0]);
       const b6=window.beNudge?beNudge(p6):null;
       if(b6){const beC=(window.commPerShare&&p6.sh>0)?commPerShare(p6.sh,b6.bas):0; /* v5.9g: true breakeven = basis + exit commission, so a stop-out nets ~$0 */
-       act6.push([2,`<div style="font-size:11.5px;margin-top:3px" data-be="${p6.sym}"><span class="vwarn">${p6.sym}: up +${b6.gain.toFixed(1)}% — raise stop to breakeven ($${(b6.bas+beC).toFixed(2)})</span></div>`,0]);}
+       const lk6=(p6.banked!=null&&p6.banked>0)?` — locks the banked +$${Math.abs(p6.banked).toFixed(0)}`:""; /* v6.4: after a partial sell, say WHY */
+       act6.push([2,`<div style="font-size:11.5px;margin-top:3px" data-be="${p6.sym}"><span class="vwarn">${p6.sym}: up +${b6.gain.toFixed(1)}% — raise stop to your entry ($${(b6.bas+beC).toFixed(2)})${lk6}</span></div>`,0]);}
       const h6=window.harvestSig?harvestSig(p6):null;
       if(h6)act6.push([3,`<div style="font-size:11.5px;margin-top:3px" data-hv="${p6.sym}"><span class="vwarn">${p6.sym}: up 3-4× your risk without leader confirmation — harvest ⅓ into strength</span></div>`,0]);
      });
@@ -2492,9 +2493,11 @@ function renderHold(){var hEl=document.getElementById("holdList");if(!hEl)return
   else if(lt&&lt.st==="W")c2+=' <span class="badge ldrW" title="the 8-week hold is done — from here exit only into strength (3-EMA shake-in, climax run) or your raised stop — not on ordinary pullbacks.">WINNER — sell into strength only</span>'; // v5.7 phase 2 (day 57-182)
   else if(lt&&lt.st==="A")c2+=' <span class="badge ldrA" title="'+window._ldrTip+'">LEADER TEST — '+sg5(lt.cur)+' vs 20%-in-3wk bar</span>';
   else if(lt&&lt.st==="R")c2+=' <span class="badge ldrR" title="'+window._ldrTip+'">FAILED 4-WK TEST (&lt;15%) — raise stop / exit</span>';
-  // v5.6: breakeven nudge — coexists with the leader badges (different concern; at 390px they wrap)
+  // v5.6 breakeven nudge · v6.4: commission-true target, "entry" wording (breakeven of the REMAINING shares — never the NET whole-trade floor), banked-aware
   var be6=r.pref&&window.beNudge?beNudge(r.pref):null;
-  if(be6)c2+=' <span class="badge bev" title="up ~4-5× your risk — move the stop to breakeven: this can no longer be a losing trade. If it comes back and takes you out at flat, it wasn\'t the leader anyway.">RAISE STOP → breakeven ($'+be6.bas.toFixed(2)+')</span>';
+  if(be6){var beC4=(window.commPerShare&&r.sh>0)?commPerShare(r.sh,be6.bas):0;
+   var bk4=(r.banked!=null&&r.banked>0)?Math.abs(r.banked).toFixed(0):null;
+   c2+=' <span class="badge bev" title="up ~4-5× your risk — move the stop to your entry price'+(beC4>0?' (+ exit commission)':'')+': the remaining shares then cannot lose a cent'+(bk4?', so the +$'+bk4+' you already banked is locked in for good. The NET number in the Avg-cost cell is the whole-trade floor — where a stop-out would hand ALL of that banked profit back to the market. It is information, never a stop level.':'. If it comes back and takes you out at flat, it wasn\'t the leader anyway.')+'">RAISE STOP → entry ($'+(be6.bas+beC4).toFixed(2)+')'+(bk4?' — locks +$'+bk4:'')+'</span>';}
   // v5.6: 3-EMA exit — fired (crit) beats armed; the post-buy armed state is a muted hold note, not a sell nag
   var e6=r.pref&&window.ema3Sig?ema3Sig(r.pref):null;
   if(e6&&e6.state==="fired")c2+=' <span class="badge ema3f" title="the armed low broke — the 3-EMA exit is live: sell into any strength">3-EMA EXIT — $'+e6.low.toFixed(2)+' broke</span>';

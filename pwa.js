@@ -8,7 +8,7 @@
 "use strict";
 (function () {
   window.__pwa = 1;
-  var APP_VERSION = "v6.3"; /* shown in ⚙ settings — bump with every release (ties to sw.js VERSION) */
+  var APP_VERSION = "v6.4"; /* shown in ⚙ settings — bump with every release (ties to sw.js VERSION) */
   window.APP_VERSION = APP_VERSION;
 
   /* ---------- one-tap setup via URL hash: #api=<encoded exec url>&key=<key> ---------- */
