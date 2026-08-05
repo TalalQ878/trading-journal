@@ -2668,14 +2668,30 @@ async function loadSheet(){
  ch9.style.display="";ch9.style.color="#a9b2bc";ch9.textContent="↻ syncing…";
  const tk9=setInterval(()=>{ch9.textContent="↻ syncing… "+Math.round((Date.now()-t9)/1000)+"s — keep the app open";},1000);
  try{const[tx,dy,pr,lv,sn,ld,yl,mc,er]=await Promise.all([fetchTab("Transactions"),fetchTab("Daily"),fetchTab("Prices"),fetchTab("Live"),fetchTab("Signals").catch(()=>""),fetchTab("Leaders").catch(()=>""),fetchTab("Yields").catch(()=>""),fetchTab("Macro").catch(()=>""),fetchTab("Earnings").catch(()=>"")]);
-  loadSheetData(tx,dy,pr,lv,sn,ld,yl,mc,er);S.src="sheet";save();setPill();window._lastSync=new Date();render();
+  loadSheetData(tx,dy,pr,lv,sn,ld,yl,mc,er);S.src="sheet";save();setPill();window._lastSync=new Date();window._syncFails=0;render();
   clearInterval(tk9);ch9.textContent="✓ synced";ch9.style.color="#1fb51f";setTimeout(()=>{ch9.style.display="none";},2500);
   if(rb){rb.textContent="⟳ Updated "+new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});setTimeout(()=>{rb.textContent="⟳ Refresh";},6000);}}
- catch(ex){clearInterval(tk9);ch9.style.display="none";const c=t=>localStorage.getItem(LS+"_"+t);
+ catch(ex){clearInterval(tk9);
+  /* v6.6: a failed download retries ITSELF — up to 3 attempts with 8/16/24s backoff, only while the app is
+     visible (the return-to-app retry covers the hidden case). "Open the journal and wait" is now sufficient. */
+  window._syncFails=(window._syncFails||0)+1;
+  if(window._syncFails<=3){const w9=8000*window._syncFails;
+   ch9.style.display="";ch9.style.color="#fab219";ch9.textContent="⚠ sync failed — retrying in "+Math.round(w9/1000)+"s";
+   setTimeout(()=>{if(!window._syncing&&document.visibilityState==="visible"&&window.loadSheet)loadSheet();},w9);
+   setTimeout(()=>{if(!window._syncing)ch9.style.display="none";},w9+500);}
+  else ch9.style.display="none";
+  const c=t=>localStorage.getItem(LS+"_"+t);
   if(c("Transactions")&&c("Daily")&&c("Prices")){loadSheetData(c("Transactions"),c("Daily"),c("Prices"),c("Live")||"Ticker,Price",c("Signals")||"",c("Leaders")||"",c("Yields")||"",c("Macro")||"",c("Earnings")||"");setPill();render();
    err("Offline — showing last synced data. ("+ex.message+")");if(rb)rb.textContent="⟳ Refresh";}
   else{err("Couldn't load the sheet — "+ex.message+" — most common cause: the file is still .XLSX (fix: File > Save as Google Sheets, use the NEW link) or sharing is not Anyone-with-the-link Viewer.");$("setup").classList.add("show");if(rb)rb.textContent="⟳ Refresh";}}
  finally{window._syncing=false;clearInterval(tk9);try{if(window._wl9){window._wl9.release();window._wl9=null;}}catch(e9){}}}
+/* v6.6: freshness heartbeat — an OPEN journal re-syncs itself when its data is older than 10 minutes
+   (visible + not already syncing). Covers "left it open all day" and picks up trades made on other devices. */
+setInterval(function(){try{
+ if(document.visibilityState==="visible"&&!window._syncing&&window.loadSheet&&(S.api||S.id)){
+  var a9=window._lastSync?Date.now()-(+window._lastSync):Infinity;
+  if(a9>10*60e3)loadSheet();}
+}catch(e9){}},60000);
 function reAll(){render();}
 document.querySelectorAll("#tf .chip").forEach(b=>b.onclick=()=>{
  document.querySelectorAll("#tf .chip").forEach(x=>x.classList.remove("on"));b.classList.add("on");
