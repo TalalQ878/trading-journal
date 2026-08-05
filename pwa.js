@@ -8,7 +8,7 @@
 "use strict";
 (function () {
   window.__pwa = 1;
-  var APP_VERSION = "v6.2"; /* shown in ⚙ settings — bump with every release (ties to sw.js VERSION) */
+  var APP_VERSION = "v6.3"; /* shown in ⚙ settings — bump with every release (ties to sw.js VERSION) */
   window.APP_VERSION = APP_VERSION;
 
   /* ---------- one-tap setup via URL hash: #api=<encoded exec url>&key=<key> ---------- */
@@ -879,6 +879,13 @@
             var v = parseFloat(inp.value);
             if (!(v > 0)) return msg("Stop must be a positive number.");
             msg(); sv.disabled = true; sv.textContent = "…";
+            try { /* v6.3: before a raise overwrites the stop, remember the campaign's initial risk — the R-ladder anchors to it */
+              if (t.act === "B" && t.stop != null && t.px > 0 && t.stop < t.px) {
+                var M0 = {}; try { M0 = JSON.parse(localStorage.getItem(LS + "_r0") || "{}"); } catch (e0) {}
+                var k0 = t.sym + "|" + iso(t.d) + "|" + t.px;
+                if (!(M0[k0] > 0)) { M0[k0] = t.stop; localStorage.setItem(LS + "_r0", JSON.stringify(M0)); }
+              }
+            } catch (e9) {}
             try { await postAPI("setStop", Object.assign(rowMatch(t), { stop: v })); echoStop(rowMatch(t), v); msg("", t.sym + " stop → " + v + " ✓"); renderRows(); window.loadSheet && loadSheet(); } /* v5.9f: instant echo */
             catch (e) { msg(e.message); sv.disabled = false; sv.textContent = "Save"; }
           };

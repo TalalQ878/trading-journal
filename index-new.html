@@ -866,7 +866,7 @@ if(_t0==="light"||(_t0==="auto"&&window.matchMedia&&matchMedia("(prefers-color-s
 
 <div class="grid">
   <div class="card c12">
-    <div class="head"><h3>Credit — JNK ÷ IEI vs 21-EMA</h3><span class="rt">above a rising EMA = risk appetite · hover/touch</span></div>
+    <div class="head"><h3>Credit context — JNK ÷ IEI vs 21-EMA</h3><span class="rt">context chart · the signal reads raw JNK vs its own 21-EMA · hover/touch</span></div>
     <div class="chartbox"><svg id="svgBond" viewBox="0 0 1500 300" preserveAspectRatio="none" style="height:300px"></svg></div>
   </div>
 </div>
@@ -1710,10 +1710,11 @@ function marketModel(){
   window._distDays=dd;}
  let hl=null; // three rising 15-session swing lows on QQQ
  if(q.length>50){const w=15,L1=Math.min(...q.slice(-w)),L2=Math.min(...q.slice(-2*w,-w)),L3=Math.min(...q.slice(-3*w,-2*w));hl=L1>L2&&L2>L3;}
- const ie=cl("IEI");let jn=null,ratio=false,jr=j; // credit: JNK (÷IEI = dividend-drift adjusted) vs 21-EMA
- if(ie.length>30&&j.length>30){const n4=Math.min(j.length,ie.length);jr=[];
-  for(let i=0;i<n4;i++)jr.push(j[j.length-n4+i]/ie[ie.length-n4+i]);ratio=true;}
- if(jr.length>30){const e=ema(jr,21);jn=(jr[jr.length-1]>e[e.length-1]&&e[e.length-1]>e[e.length-6])?1:(jr[jr.length-1]<e[e.length-1]?-1:0);}
+ // v6.3: credit signal = RAW JNK vs its OWN 21-EMA — above = improving (+10), below = tightening (−10).
+ // (Was JNK÷IEI ratio + a rising-EMA slope gate — it could read FLAT/TIGHTENING while JNK itself sat above its 21-EMA,
+ //  which contradicted the primary credit card and the taught construction. The ratio chart stays as context only.)
+ let jn=null;
+ if(j.length>30){const e=ema(j,21);jn=j[j.length-1]>e[e.length-1]?1:(j[j.length-1]<e[e.length-1]?-1:0);}
  let xr=null;
  if(xp.length>60&&q.length>60){const n2=Math.min(xp.length,q.length),ra=[];
   for(let i=0;i<n2;i++)ra.push(xp[xp.length-n2+i]/q[q.length-n2+i]);
@@ -1759,7 +1760,7 @@ function marketModel(){
   +mk("Net highs/lows trend — 3+ days","±20% — three or more consecutive days of net new highs (+20) or net new lows (−20). Auto from the daily counts in the Signals side table when ≥3 rows exist; manual Up/Down fallback.",trD,hasT?((upT?"HIGHS":nlTrend?"LOWS":"none")+(EF.aT?aDim("auto from daily counts"):"")):null)
   +mk("Up/Down Volume Ratio (20d)","±20% — QQQ volume on up-days ÷ volume on down-days over the last 20 sessions (20d reads general-market trend faster than the classic 50d). Above 1.0 = accumulation (+20), below = distribution (−20). Auto from the Prices tab.",udD,ud==null?null:ud.toFixed(2))
   +mk("Higher lows formation","+20% — three rising 15-session swing lows on QQQ. Auto.",hlD,hl==null?null:hl?"YES":"no")
-  +mk("Credit — NFCI/JNK proxy","±10% — JNK÷IEI vs its 21-EMA. Ratio above a rising EMA = improving (+10); below = tightening (−10). Auto.",jnD,jn==null?null:jn>0?"IMPROVING":jn<0?"TIGHTENING":"FLAT")
+  +mk("Credit — NFCI/JNK proxy","±10% — JNK vs its own 21-EMA. Above = improving (+10); below = tightening (−10). Auto from the Prices tab (the JNK÷IEI ratio chart is context only).",jnD,jn==null?null:jn>0?"IMPROVING":jn<0?"TIGHTENING":"FLAT")
   +mk("Net-lows trend without FOMO under 20","−20% — a net-lows trend while the FOMO gauge is still at or above 20 (no fear washout yet). Auto from the FOMO value in Signals.",fomoD,fomoShow)
   +mk("FOMO late-stage penalty","−10% — only while the FOMO gauge sits at 85 or above: late-stage froth subtracts from the score (added per method — froth subtracts). 0% otherwise; arms at 85. Auto from the FOMO value in Signals.",lateD,lateShow)
   +shd("MARKET TURNAROUND")
@@ -2167,14 +2168,27 @@ function drawSmall(T,Wn,L,wr,aw,al){
     const posBy9={};(POS||[]).forEach(p=>{posBy9[p.sym]=p;});
     for(const c2 of opens){const b0=c2.buys[0],pp9=posBy9[c2.sym];
      const locked9=pp9?posUnmeasured(pp9):(b0.stop==null); // v4.4: the ladder locks by the same per-lot rule as the add gate
-     let seed9=b0;
-     if(!locked9&&!(seed9.stop!=null&&seed9.stop<seed9.px)&&pp9&&pp9.lots)seed9=pp9.lots.find(L9=>L9.stop!=null&&L9.stop<L9.px)||seed9; // seed lot fully sold — fall back to the oldest open lot with a usable stop
-     if(!locked9&&seed9.stop!=null&&seed9.stop<seed9.px){const rps=seed9.px-seed9.stop,sh9=(pp9&&pp9.sh)||0;
+     /* ---- v6.3: R levels anchor to the campaign's INITIAL risk — raising the stop (even past entry) never moves or hides them.
+        Anchor chain: "R0:<price>" in the first buy's Notes → the entry stop while it's still below entry →
+        the initial stop captured at raise time (talalTJ3_r0) → oldest open lot with a stop under its price. ---- */
+     let seed9=b0,r0=null;
+     {const m0=b0.note?/R0[:\s]*\$?(\d+(?:\.\d+)?)/i.exec(b0.note):null;
+      if(m0){const nv=parseFloat(m0[1]);if(nv>0&&nv<b0.px)r0=nv;}}
+     if(r0==null&&b0.stop!=null&&b0.stop<b0.px)r0=b0.stop;
+     const k9=c2.sym+"|"+(c2.din?new Date(c2.din).toISOString().slice(0,10):"")+"|"+b0.px;
+     if(r0==null){try{const M9=JSON.parse(localStorage.getItem("talalTJ3_r0")||"{}");if(M9[k9]>0&&M9[k9]<b0.px)r0=M9[k9];}catch(e9){}}
+     if(r0==null&&pp9&&pp9.lots){const L0=pp9.lots.find(L9=>L9.stop!=null&&L9.stop<L9.px);if(L0){seed9=L0;r0=L0.stop;}}
+     const curS9=(pp9&&pp9.stop!=null)?pp9.stop:b0.stop;
+     if(!locked9&&r0!=null&&r0<seed9.px){const rps=seed9.px-r0,sh9=(pp9&&pp9.sh)||0;
+      try{const M9=JSON.parse(localStorage.getItem("talalTJ3_r0")||"{}");if(M9[k9]!==r0){M9[k9]=r0;localStorage.setItem("talalTJ3_r0",JSON.stringify(M9));}}catch(e9){} // remember — survives future raises on this device
       /* v5.9g: sell targets are what he types into limit orders — price each rung so the NET fill (after
          the exit commission on that rung's share count) banks the full +NR. Zero when commission is OFF. */
       const cps9=x=>(window.commPerShare&&sh9>0)?commPerShare(Math.max(1,Math.round(x[0]*sh9)),seed9.px+x[1]*rps):0;
       const hasC9=(window.commPerShare&&sh9>0)?commPerShare(sh9,seed9.px)>0:false;
-      rungs+=`<div class="kv num" style="margin-top:3px">${c2.sym}: ${SP.lad.map(x=>"+"+x[1]+"R ≈ $"+(seed9.px+x[1]*rps+cps9(x)).toFixed(2)).join(" · ")} <span style="color:var(--dim)">(from seed entry ${seed9.px} / stop ${seed9.stop}${hasC9?" · targets incl. sell commission":""})</span></div>`;}
+      rungs+=`<div class="kv num" style="margin-top:3px">${c2.sym}: ${SP.lad.map(x=>"+"+x[1]+"R ≈ $"+(seed9.px+x[1]*rps+cps9(x)).toFixed(2)).join(" · ")} <span style="color:var(--dim)">(from entry ${seed9.px} / initial stop ${r0}${curS9!=null&&curS9!==r0?" · stop now "+curS9:""}${hasC9?" · targets incl. sell commission":""})</span></div>`;}
+     else if(!locked9&&curS9!=null){ // a stop EXISTS but sits at/above entry and no initial anchor is known — never nag "set a stop" here
+      const amb9=`<div class="kv" style="margin-top:3px"><span class="vwarn">${c2.sym}: stop ${curS9} is at/above entry — risk is closed, but the R levels need the campaign's first stop. Add "R0:&lt;initial stop&gt;" to that buy row's Notes and they come back.</span></div>`;
+      rungs+=amb9;}
      else{const g9=pp9?lotStopGaps(pp9):[1,0];
       const red9=`<div style="font-size:11.5px;margin-top:3px"><span class="vcrit">${c2.sym}: set a stop${g9[1]&&g9[0]&&g9[0]<g9[1]?" on every lot ("+g9[0]+" of "+g9[1]+" missing)":""} to unlock its sell levels.</span></div>`;
       rungs+=red9;redL+=red9;}}
@@ -3566,7 +3580,7 @@ function fedPage(){
  if(pceY.v!=="—")s+="The committee's own gauge — core PCE — runs <b>"+pceY.v+"%</b> y/y"+(pce3.v!=="—"?" (3-mo annualized ≈"+pce3.v+"%"+(pce6.v!=="—"?" · 6-mo ≈"+pce6.v+"%":"")+")":"")+(pceM.v!=="—"?" · "+pceM.v+"% m/m":"")+". ";
  if(cpiC.v!=="—")s+="CPI, the earlier monthly read, says <b>core "+cpiC.v+"%</b>"+(cpiH.v!=="—"?" · headline "+cpiH.v+"%":"")+(cpiM.v!=="—"?" · "+cpiM.v+"% m/m":"")+" — the open question is how these components map into the next core-PCE estimate (the official June PCE prints only after the meeting). ";
  if(pj.v!=="—")s+="Jobs: <b>"+pj.v+"</b> last month"+(p3.v!=="—"?" · 3-mo avg "+p3.v:"")+(un.v!=="—"?" · unemployment "+un.v+"%":"")+". ";
- if(fci.v!=="—")s+="Financial conditions read <b>"+fci.v.toLowerCase()+"</b> — your JNK÷IEI credit gauge is the live cross-check. ";
+ if(fci.v!=="—")s+="Financial conditions read <b>"+fci.v.toLowerCase()+"</b> — your JNK vs 21-EMA credit gauge is the live cross-check. ";
  if(iex.v!=="—")s+="5y5y inflation expectations sit at <b>"+iex.v+"%</b> — “anchored” is the single word that matters. ";
  if(m2y.v!=="—")s+="M2 grows <b>"+m2y.v+"%</b> y/y — a cross-check on nominal demand, hawkish or dovish only with confirmation from velocity, credit and spending. ";
  if(bc.v!=="—")s+="<b>Base case: "+bc.v+".</b>";
@@ -3646,7 +3660,7 @@ function fedPage(){
    +'<div class="fed"><div class="l">Financial conditions</div>'
    +vline(fci,(fci.v!=="—"?vw(fci,{w:"EASY",g:"SUPPORTIVE",r:"TIGHT",m:"—"}):"—"))
    +vtbl([vcell("Board staff FCI-G"+(fcig.asof?" ("+fcig.asof+")":""),fcig.v,fcig.v!=="—"?"negative = growth tailwind":"add fci_g"),vcell("SLOOS standards",slS.v,""),vcell("SLOOS demand",slD.v,"")])
-   +'<div class="m num">'+(fci.sub||"FCI-G")+" — your JNK÷IEI read: "+(window._credW||"—")+'</div>'
+   +'<div class="m num">'+(fci.sub||"FCI-G")+" — your JNK vs 21-EMA read: "+(window._credW||"—")+'</div>'
    +how("<b>Board staff FCI-G</b> (a research index, not a policy target; positive = growth headwind, negative = tailwind) + credit spreads + the SLOOS bank-lending survey. Cuts both ways: easy conditions = less urgency to cut, but they can also undo the Fed's restraint and keep inflation hot.")+'</div>';
  }
  var fgC=$("fedGridC");
