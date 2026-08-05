@@ -2654,14 +2654,28 @@ function err(m){const e=$("errBox"),s2=$("setupErr");
  if(!m){e.classList.remove("show");if(s2)s2.style.display="none";return;}
  e.textContent=m;e.classList.add("show");
  if(s2){s2.textContent=m;s2.style.display="block";}}
-async function loadSheet(){err();const rb=$("reloadBtn");if(rb)rb.textContent="⟳ Refreshing…";
+async function loadSheet(){
+ if(window._syncing)return; // v6.5: one sync at a time — boot, the return-to-app retry and manual refresh can stack
+ window._syncing=true;
+ err();const rb=$("reloadBtn");if(rb)rb.textContent="⟳ Refreshing…";
+ /* v6.5: phone-proof syncing — the backend can take 10–45 s and iOS kills the download the moment the
+    screen locks or the app leaves the foreground. So: hold a screen wake-lock for the duration (iOS 16.4+,
+    silently skipped elsewhere) and show a live counter so it's visible that the sync is still working. */
+ try{if(navigator.wakeLock&&navigator.wakeLock.request)window._wl9=await navigator.wakeLock.request("screen");}catch(e9){}
+ const t9=Date.now();
+ let ch9=document.getElementById("syncChip9");
+ if(!ch9){ch9=document.createElement("div");ch9.id="syncChip9";ch9.style.cssText="position:fixed;top:10px;right:10px;z-index:9999;background:#101418;border:1px solid #2a3038;color:#a9b2bc;font:600 10.5px/1.7 system-ui,sans-serif;padding:2px 10px;border-radius:999px;pointer-events:none;opacity:.93";document.body.appendChild(ch9);}
+ ch9.style.display="";ch9.style.color="#a9b2bc";ch9.textContent="↻ syncing…";
+ const tk9=setInterval(()=>{ch9.textContent="↻ syncing… "+Math.round((Date.now()-t9)/1000)+"s — keep the app open";},1000);
  try{const[tx,dy,pr,lv,sn,ld,yl,mc,er]=await Promise.all([fetchTab("Transactions"),fetchTab("Daily"),fetchTab("Prices"),fetchTab("Live"),fetchTab("Signals").catch(()=>""),fetchTab("Leaders").catch(()=>""),fetchTab("Yields").catch(()=>""),fetchTab("Macro").catch(()=>""),fetchTab("Earnings").catch(()=>"")]);
   loadSheetData(tx,dy,pr,lv,sn,ld,yl,mc,er);S.src="sheet";save();setPill();window._lastSync=new Date();render();
+  clearInterval(tk9);ch9.textContent="✓ synced";ch9.style.color="#1fb51f";setTimeout(()=>{ch9.style.display="none";},2500);
   if(rb){rb.textContent="⟳ Updated "+new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});setTimeout(()=>{rb.textContent="⟳ Refresh";},6000);}}
- catch(ex){const c=t=>localStorage.getItem(LS+"_"+t);
+ catch(ex){clearInterval(tk9);ch9.style.display="none";const c=t=>localStorage.getItem(LS+"_"+t);
   if(c("Transactions")&&c("Daily")&&c("Prices")){loadSheetData(c("Transactions"),c("Daily"),c("Prices"),c("Live")||"Ticker,Price",c("Signals")||"",c("Leaders")||"",c("Yields")||"",c("Macro")||"",c("Earnings")||"");setPill();render();
    err("Offline — showing last synced data. ("+ex.message+")");if(rb)rb.textContent="⟳ Refresh";}
-  else{err("Couldn't load the sheet — "+ex.message+" — most common cause: the file is still .XLSX (fix: File > Save as Google Sheets, use the NEW link) or sharing is not Anyone-with-the-link Viewer.");$("setup").classList.add("show");if(rb)rb.textContent="⟳ Refresh";}}}
+  else{err("Couldn't load the sheet — "+ex.message+" — most common cause: the file is still .XLSX (fix: File > Save as Google Sheets, use the NEW link) or sharing is not Anyone-with-the-link Viewer.");$("setup").classList.add("show");if(rb)rb.textContent="⟳ Refresh";}}
+ finally{window._syncing=false;clearInterval(tk9);try{if(window._wl9){window._wl9.release();window._wl9=null;}}catch(e9){}}}
 function reAll(){render();}
 document.querySelectorAll("#tf .chip").forEach(b=>b.onclick=()=>{
  document.querySelectorAll("#tf .chip").forEach(x=>x.classList.remove("on"));b.classList.add("on");

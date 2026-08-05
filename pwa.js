@@ -8,7 +8,7 @@
 "use strict";
 (function () {
   window.__pwa = 1;
-  var APP_VERSION = "v6.4"; /* shown in ⚙ settings — bump with every release (ties to sw.js VERSION) */
+  var APP_VERSION = "v6.5"; /* shown in ⚙ settings — bump with every release (ties to sw.js VERSION) */
   window.APP_VERSION = APP_VERSION;
 
   /* ---------- one-tap setup via URL hash: #api=<encoded exec url>&key=<key> ---------- */
@@ -995,7 +995,12 @@
       window.loadSheet = async function () { try { return await _ls.apply(this, arguments); } finally { window.__lastLoad = Date.now(); } };
     }
     document.addEventListener("visibilitychange", function () {
-      if (document.visibilityState === "visible" && S.api && Date.now() - (window.__lastLoad || 0) > 10 * 60e3) { window.loadSheet && loadSheet(); }
+      /* v6.5: retry gates on the last SUCCESSFUL sync, not the last attempt — a download the phone killed
+         (screen lock / app switch) used to stamp __lastLoad and block retries for 10 minutes. Now: back in
+         the foreground with no completed sync in the last 3 minutes ⇒ try again (loadSheet self-guards). */
+      if (document.visibilityState !== "visible" || !S.api || window._syncing) return;
+      var okAge = window._lastSync ? Date.now() - (+window._lastSync) : Infinity;
+      if (okAge > 3 * 60e3) { window.loadSheet && loadSheet(); }
     });
   }
 
