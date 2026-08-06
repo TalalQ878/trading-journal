@@ -1208,7 +1208,7 @@ function deriveAll(){
   if(EQ.length<3){EQD=[new Date()];EQ=[100];}EQX=EQ.slice();}
  const eqAt=d=>{let e=null;for(const x of DAILY){if(x.d<=d)e=x.eq;else break;}return e;};
  TRADES.forEach(c=>{const b0=c.buys[0],ea=EQABS?eqAt(b0.d):null;c.size0=ea?100*b0.sh*b0.px*c.m/ea:null;});
- const YK=window._yieldKeys||[];const bl=Object.keys(PRICES).filter(b=>!["JNK","QQQVOL","NFCI","XLP","VIX","IEI","SPYO"].includes(b)&&!YK.includes(b)&&!(/LOW$/.test(b)&&b.length>3&&PRICES[b.slice(0,-3)])); /* v5.6: "<SYM>LOW" daily-low columns feed the 3-EMA exit, not the bench list (only a low-series when the base symbol also has closes) */ if(bl.length&&!bl.includes(S.bench))S.bench=bl.includes("QQQ")?"QQQ":bl.includes("SPY")?"SPY":bl[0];
+ const YK=window._yieldKeys||[];const bl=Object.keys(PRICES).filter(b=>!["JNK","JNKADJ","QQQVOL","NFCI","XLP","VIX","IEI","SPYO"].includes(b)&&!YK.includes(b)&&!(/LOW$/.test(b)&&b.length>3&&PRICES[b.slice(0,-3)])); /* v5.6: "<SYM>LOW" daily-low columns feed the 3-EMA exit, not the bench list (only a low-series when the base symbol also has closes) */ if(bl.length&&!bl.includes(S.bench))S.bench=bl.includes("QQQ")?"QQQ":bl.includes("SPY")?"SPY":bl[0];
  $("bench").innerHTML=bl.map(b=>`<option ${b===S.bench?"selected":""}>${b}</option>`).join("");
  if(EQD.length){$("d1").value=EQD[0].toISOString().slice(0,10);$("d2").value=EQD[EQD.length-1].toISOString().slice(0,10);}}
 function benchAt(tk){const arr=PRICES[tk]||[];let j=0;return EQD.map(d=>{
@@ -1710,11 +1710,11 @@ function marketModel(){
   window._distDays=dd;}
  let hl=null; // three rising 15-session swing lows on QQQ
  if(q.length>50){const w=15,L1=Math.min(...q.slice(-w)),L2=Math.min(...q.slice(-2*w,-w)),L3=Math.min(...q.slice(-3*w,-2*w));hl=L1>L2&&L2>L3;}
- // v6.3: credit signal = RAW JNK vs its OWN 21-EMA — above = improving (+10), below = tightening (−10).
- // (Was JNK÷IEI ratio + a rising-EMA slope gate — it could read FLAT/TIGHTENING while JNK itself sat above its 21-EMA,
- //  which contradicted the primary credit card and the taught construction. The ratio chart stays as context only.)
+ // v6.3 raw JNK · v6.7: prefers the dividend-ADJUSTED series (Prices!JNKADJ, nightly puller) so the read matches
+ // TradingView's adjusted view — JNK pays monthly dividends and the unadjusted EMA sits a few cents high.
+ const jA7=cl("JNKADJ"),jS7=jA7.length>30?jA7:j;window._jnAdj=jA7.length>30;
  let jn=null;
- if(j.length>30){const e=ema(j,21);jn=j[j.length-1]>e[e.length-1]?1:(j[j.length-1]<e[e.length-1]?-1:0);}
+ if(jS7.length>30){const e=ema(jS7,21);jn=jS7[jS7.length-1]>e[e.length-1]?1:(jS7[jS7.length-1]<e[e.length-1]?-1:0);}
  let xr=null;
  if(xp.length>60&&q.length>60){const n2=Math.min(xp.length,q.length),ra=[];
   for(let i=0;i<n2;i++)ra.push(xp[xp.length-n2+i]/q[q.length-n2+i]);
@@ -1760,7 +1760,7 @@ function marketModel(){
   +mk("Net highs/lows trend — 3+ days","±20% — three or more consecutive days of net new highs (+20) or net new lows (−20). Auto from the daily counts in the Signals side table when ≥3 rows exist; manual Up/Down fallback.",trD,hasT?((upT?"HIGHS":nlTrend?"LOWS":"none")+(EF.aT?aDim("auto from daily counts"):"")):null)
   +mk("Up/Down Volume Ratio (20d)","±20% — QQQ volume on up-days ÷ volume on down-days over the last 20 sessions (20d reads general-market trend faster than the classic 50d). Above 1.0 = accumulation (+20), below = distribution (−20). Auto from the Prices tab.",udD,ud==null?null:ud.toFixed(2))
   +mk("Higher lows formation","+20% — three rising 15-session swing lows on QQQ. Auto.",hlD,hl==null?null:hl?"YES":"no")
-  +mk("Credit — NFCI/JNK proxy","±10% — JNK vs its own 21-EMA. Above = improving (+10); below = tightening (−10). Auto from the Prices tab (the JNK÷IEI ratio chart is context only).",jnD,jn==null?null:jn>0?"IMPROVING":jn<0?"TIGHTENING":"FLAT")
+  +mk("Credit — NFCI/JNK proxy","±10% — "+(window._jnAdj?"dividend-ADJUSTED JNK (JNKADJ column)":"JNK")+" vs its own 21-EMA. Above = improving (+10); below = tightening (−10). Auto from the Prices tab (the JNK÷IEI ratio chart is context only).",jnD,jn==null?null:jn>0?"IMPROVING":jn<0?"TIGHTENING":"FLAT")
   +mk("Net-lows trend without FOMO under 20","−20% — a net-lows trend while the FOMO gauge is still at or above 20 (no fear washout yet). Auto from the FOMO value in Signals.",fomoD,fomoShow)
   +mk("FOMO late-stage penalty","−10% — only while the FOMO gauge sits at 85 or above: late-stage froth subtracts from the score (added per method — froth subtracts). 0% otherwise; arms at 85. Auto from the FOMO value in Signals.",lateD,lateShow)
   +shd("MARKET TURNAROUND")
@@ -3415,23 +3415,24 @@ function bondsPage(){
  const Jf=perF(J2,180),If=perF(I2,180),n=Math.min(Jf.length,If.length);
  const jd=Jf.slice(-n),iv=If.slice(-n).map(x=>x[1]),jv=jd.map(x=>x[1]);
  const ra=jv.map((v,i)=>v/iv[i]);
- const e21=ema(ra,21);
- const rising=e21[e21.length-1]>e21[Math.max(0,e21.length-6)],above=ra[n-1]>e21[e21.length-1];
- const state=above&&rising?["CLIMBING — risk appetite intact","g-grn","CLIMBING"]:!above?["TIGHTENING — credit stress building","g-red","TIGHTENING"]:["FLAT — no edge from credit","g-amb","FLAT"];
+ const e21=ema(ra,21); // ratio + its EMA drawn as CONTEXT below — the state words no longer come from it
+ /* ---- v6.7: ONE credit rule everywhere — (dividend-adjusted when Prices!JNKADJ exists) JNK vs its OWN 21-EMA,
+    full series, no slope gate — identical to the exposure model's ±10 signal, so card, tile, matrix and model
+    can never disagree again. ---- */
+ const JA7=(PRICES.JNKADJ||[]),jFull=JA7.length>40?JA7:J2,adj7=JA7.length>40;
+ const fv7=jFull.map(x=>x[1]),eF7=ema(fv7,21),nF7=fv7.length;
+ const ab7=fv7[nF7-1]>eF7[eF7.length-1],be7=fv7[nF7-1]<eF7[eF7.length-1];
+ const state=ab7?["CLIMBING — risk appetite intact","g-grn","CLIMBING"]:be7?["TIGHTENING — credit stress building","g-red","TIGHTENING"]:["FLAT — no edge from credit","g-amb","FLAT"];
  window._credW=state[2];
- {const cd2={},lim2=Math.min(n,15); // per-day credit words for the Daily Conditions matrix — same thresholds as the headline state
-  for(let i3=Math.max(0,n-lim2);i3<n;i3++){const ab2=ra[i3]>e21[i3],ri2=e21[i3]>e21[Math.max(0,i3-5)];
-   const w3=ab2&&ri2?["CLIMBING","vgood"]:!ab2?["TIGHTENING","vcrit"]:["FLAT","vwarn"];
-   const dd2=jd[i3][0];cd2[dd2.getFullYear()+"-"+dd2.getMonth()+"-"+dd2.getDate()]=w3;}
+ {const cd2={},lim2=Math.min(nF7,15); // per-day credit words for the Daily Conditions matrix — same rule per day
+  for(let i3=Math.max(0,nF7-lim2);i3<nF7;i3++){const ab2=fv7[i3]>eF7[i3],be2=fv7[i3]<eF7[i3];
+   const w3=ab2?["CLIMBING","vgood"]:be2?["TIGHTENING","vcrit"]:["FLAT","vwarn"];
+   const dd2=jFull[i3][0];cd2[dd2.getFullYear()+"-"+dd2.getMonth()+"-"+dd2.getDate()]=w3;}
   window._credDaily=cd2;}
  setRow("crCred",state[0],state[1]);
- { // ---- primary credit read (B8): JNK vs its OWN 21-EMA — the ratio above stays as context ----
-  const eJ=ema(jv,21);
-  const rJ=eJ[eJ.length-1]>eJ[Math.max(0,eJ.length-6)],aJ=jv[n-1]>eJ[eJ.length-1];
-  const stJ=aJ&&rJ?["CLIMBING — risk appetite intact","g-grn"]:!aJ?["TIGHTENING — credit stress building","g-red"]:["FLAT — no edge from credit","g-amb"];
-  setRow("crJnk",stJ[0],stJ[1]);}
- const sm=$("crCredS");if(sm)sm.textContent="JNK "+jv[n-1].toFixed(2)+" · IEI "+iv[n-1].toFixed(2)+" · ratio "+sg(100*(ra[n-1]/ra[Math.max(0,n-22)]-1))+"% /21d — the ratio is what matters, raw prices kept small";
- tile("frCrV","frCrS",state[2],v2v(state[1]),state[2]==="CLIMBING"?"JNK > 21-EMA = risk appetite intact":state[2]==="TIGHTENING"?"JNK < 21-EMA — early warning":"no edge from credit");
+ setRow("crJnk",(adj7?"ADJ · ":"")+state[0],state[1]); // primary read = the same rule; ADJ tag = dividend-adjusted series driving it
+ const sm=$("crCredS");if(sm)sm.textContent=(adj7?"JNKADJ "+fv7[nF7-1].toFixed(2)+" vs 21-EMA "+eF7[eF7.length-1].toFixed(2)+" · raw ":"JNK "+jv[n-1].toFixed(2)+" vs 21-EMA "+eF7[eF7.length-1].toFixed(2)+" · ")+"JNK "+jv[n-1].toFixed(2)+" · IEI "+iv[n-1].toFixed(2)+" · ratio chart below is context";
+ tile("frCrV","frCrS",state[2],v2v(state[1]),(state[2]==="CLIMBING"?"JNK > 21-EMA = risk appetite intact":state[2]==="TIGHTENING"?"JNK < 21-EMA — early warning":"no edge from credit")+(adj7?" · dividend-adj":""));
  const w=1500,h=300,pl=14,pr=64,pt=12,pb2=34,cw=w-pl-pr,chh=h-pt-pb2;
  const lo=Math.min(...ra,...e21)*.998,hi=Math.max(...ra,...e21)*1.002;
  const X=i=>pl+i*cw/(n-1),Y=v=>pt+chh-(v-lo)/(hi-lo)*chh;
