@@ -1710,9 +1710,13 @@ function marketModel(){
   window._distDays=dd;}
  let hl=null; // three rising 15-session swing lows on QQQ
  if(q.length>50){const w=15,L1=Math.min(...q.slice(-w)),L2=Math.min(...q.slice(-2*w,-w)),L3=Math.min(...q.slice(-3*w,-2*w));hl=L1>L2&&L2>L3;}
- // v6.3 raw JNK · v6.7: prefers the dividend-ADJUSTED series (Prices!JNKADJ, nightly puller) so the read matches
- // TradingView's adjusted view — JNK pays monthly dividends and the unadjusted EMA sits a few cents high.
- const jA7=cl("JNKADJ"),jS7=jA7.length>30?jA7:j;window._jnAdj=jA7.length>30;
+ // v6.3 raw JNK · v6.7 prefers dividend-ADJUSTED Prices!JNKADJ · v6.8 SELF-MONITORING: the adjusted series
+ // is only trusted while FRESH (its last date within ~8 days of raw JNK's). If the nightly puller ever dies
+ // on both sources, the app falls back to raw automatically and SAYS so — stale data can never drive the signal.
+ const jaArr8=PRICES.JNKADJ||[],jArr8=PRICES.JNK||[];
+ const adjFresh8=jaArr8.length>30&&(!jArr8.length||((+jArr8[jArr8.length-1][0])-(+jaArr8[jaArr8.length-1][0]))<8*864e5);
+ const jS7=adjFresh8?jaArr8.map(x=>x[1]):j;
+ window._jnAdj=adjFresh8;window._jnAdjStale=jaArr8.length>30&&!adjFresh8;
  let jn=null;
  if(jS7.length>30){const e=ema(jS7,21);jn=jS7[jS7.length-1]>e[e.length-1]?1:(jS7[jS7.length-1]<e[e.length-1]?-1:0);}
  let xr=null;
@@ -1760,7 +1764,7 @@ function marketModel(){
   +mk("Net highs/lows trend — 3+ days","±20% — three or more consecutive days of net new highs (+20) or net new lows (−20). Auto from the daily counts in the Signals side table when ≥3 rows exist; manual Up/Down fallback.",trD,hasT?((upT?"HIGHS":nlTrend?"LOWS":"none")+(EF.aT?aDim("auto from daily counts"):"")):null)
   +mk("Up/Down Volume Ratio (20d)","±20% — QQQ volume on up-days ÷ volume on down-days over the last 20 sessions (20d reads general-market trend faster than the classic 50d). Above 1.0 = accumulation (+20), below = distribution (−20). Auto from the Prices tab.",udD,ud==null?null:ud.toFixed(2))
   +mk("Higher lows formation","+20% — three rising 15-session swing lows on QQQ. Auto.",hlD,hl==null?null:hl?"YES":"no")
-  +mk("Credit — NFCI/JNK proxy","±10% — "+(window._jnAdj?"dividend-ADJUSTED JNK (JNKADJ column)":"JNK")+" vs its own 21-EMA. Above = improving (+10); below = tightening (−10). Auto from the Prices tab (the JNK÷IEI ratio chart is context only).",jnD,jn==null?null:jn>0?"IMPROVING":jn<0?"TIGHTENING":"FLAT")
+  +mk("Credit — NFCI/JNK proxy","±10% — "+(window._jnAdj?"dividend-ADJUSTED JNK (JNKADJ column)":window._jnAdjStale?"JNK (RAW — the adjusted feed went stale, auto-fallback; check the nightly updateJnkAdj trigger)":"JNK")+" vs its own 21-EMA. Above = improving (+10); below = tightening (−10). Auto from the Prices tab (the JNK÷IEI ratio chart is context only).",jnD,jn==null?null:jn>0?"IMPROVING":jn<0?"TIGHTENING":"FLAT")
   +mk("Net-lows trend without FOMO under 20","−20% — a net-lows trend while the FOMO gauge is still at or above 20 (no fear washout yet). Auto from the FOMO value in Signals.",fomoD,fomoShow)
   +mk("FOMO late-stage penalty","−10% — only while the FOMO gauge sits at 85 or above: late-stage froth subtracts from the score (added per method — froth subtracts). 0% otherwise; arms at 85. Auto from the FOMO value in Signals.",lateD,lateShow)
   +shd("MARKET TURNAROUND")
@@ -3419,7 +3423,9 @@ function bondsPage(){
  /* ---- v6.7: ONE credit rule everywhere — (dividend-adjusted when Prices!JNKADJ exists) JNK vs its OWN 21-EMA,
     full series, no slope gate — identical to the exposure model's ±10 signal, so card, tile, matrix and model
     can never disagree again. ---- */
- const JA7=(PRICES.JNKADJ||[]),jFull=JA7.length>40?JA7:J2,adj7=JA7.length>40;
+ const JA7=(PRICES.JNKADJ||[]);
+ const fresh7=JA7.length>40&&(!J2.length||((+J2[J2.length-1][0])-(+JA7[JA7.length-1][0]))<8*864e5); // v6.8 freshness guard — same rule as the model
+ const jFull=fresh7?JA7:J2,adj7=fresh7,stale7=JA7.length>40&&!fresh7;
  const fv7=jFull.map(x=>x[1]),eF7=ema(fv7,21),nF7=fv7.length;
  const ab7=fv7[nF7-1]>eF7[eF7.length-1],be7=fv7[nF7-1]<eF7[eF7.length-1];
  const state=ab7?["CLIMBING — risk appetite intact","g-grn","CLIMBING"]:be7?["TIGHTENING — credit stress building","g-red","TIGHTENING"]:["FLAT — no edge from credit","g-amb","FLAT"];
@@ -3430,7 +3436,7 @@ function bondsPage(){
    const dd2=jFull[i3][0];cd2[dd2.getFullYear()+"-"+dd2.getMonth()+"-"+dd2.getDate()]=w3;}
   window._credDaily=cd2;}
  setRow("crCred",state[0],state[1]);
- setRow("crJnk",(adj7?"ADJ · ":"")+state[0],state[1]); // primary read = the same rule; ADJ tag = dividend-adjusted series driving it
+ setRow("crJnk",(adj7?"ADJ · ":stale7?"⚠ ADJ STALE → raw · ":"")+state[0],state[1]); // ADJ = adjusted series live · stale = auto-fallback to raw + visible flag (v6.8)
  const sm=$("crCredS");if(sm)sm.textContent=(adj7?"JNKADJ "+fv7[nF7-1].toFixed(2)+" vs 21-EMA "+eF7[eF7.length-1].toFixed(2)+" · raw ":"JNK "+jv[n-1].toFixed(2)+" vs 21-EMA "+eF7[eF7.length-1].toFixed(2)+" · ")+"JNK "+jv[n-1].toFixed(2)+" · IEI "+iv[n-1].toFixed(2)+" · ratio chart below is context";
  tile("frCrV","frCrS",state[2],v2v(state[1]),(state[2]==="CLIMBING"?"JNK > 21-EMA = risk appetite intact":state[2]==="TIGHTENING"?"JNK < 21-EMA — early warning":"no edge from credit")+(adj7?" · dividend-adj":""));
  const w=1500,h=300,pl=14,pr=64,pt=12,pb2=34,cw=w-pl-pr,chh=h-pt-pb2;
