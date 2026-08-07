@@ -1208,7 +1208,7 @@ function deriveAll(){
   if(EQ.length<3){EQD=[new Date()];EQ=[100];}EQX=EQ.slice();}
  const eqAt=d=>{let e=null;for(const x of DAILY){if(x.d<=d)e=x.eq;else break;}return e;};
  TRADES.forEach(c=>{const b0=c.buys[0],ea=EQABS?eqAt(b0.d):null;c.size0=ea?100*b0.sh*b0.px*c.m/ea:null;});
- const YK=window._yieldKeys||[];const bl=Object.keys(PRICES).filter(b=>!["JNK","JNKADJ","QQQVOL","NFCI","XLP","VIX","IEI","SPYO"].includes(b)&&!YK.includes(b)&&!(/LOW$/.test(b)&&b.length>3&&PRICES[b.slice(0,-3)])); /* v5.6: "<SYM>LOW" daily-low columns feed the 3-EMA exit, not the bench list (only a low-series when the base symbol also has closes) */ if(bl.length&&!bl.includes(S.bench))S.bench=bl.includes("QQQ")?"QQQ":bl.includes("SPY")?"SPY":bl[0];
+ const YK=window._yieldKeys||[];const bl=Object.keys(PRICES).filter(b=>!["JNK","JNKADJ","QQQVOL","NFCI","XLP","VIX","IEI","SPYO","SPYC","SPYH","SPYL","SPYVOL"].includes(b)&&!YK.includes(b)&&!(/LOW$/.test(b)&&b.length>3&&PRICES[b.slice(0,-3)])); /* v5.6: "<SYM>LOW" daily-low columns feed the 3-EMA exit, not the bench list (only a low-series when the base symbol also has closes) */ if(bl.length&&!bl.includes(S.bench))S.bench=bl.includes("QQQ")?"QQQ":bl.includes("SPY")?"SPY":bl[0];
  $("bench").innerHTML=bl.map(b=>`<option ${b===S.bench?"selected":""}>${b}</option>`).join("");
  if(EQD.length){$("d1").value=EQD[0].toISOString().slice(0,10);$("d2").value=EQD[EQD.length-1].toISOString().slice(0,10);}}
 function benchAt(tk){const arr=PRICES[tk]||[];let j=0;return EQD.map(d=>{
@@ -1688,6 +1688,33 @@ function ftdAuto(cl){const q=cl("QQQ"),v=cl("QQQVOL");if(q.length<30||v.length<1
   if(d1<0&&Q[i]>Q[i-1])d1=i;
   if(d1>0&&i-d1>=3&&i<=li+25&&Q[i]/Q[i-1]-1>=.012&&V[i]>V[i-1])return{ago:n-1-i};} /* v6.0: FTD gain ≥1.2% */
  return{ago:null};}
+/* ---- v6.9: REVERSE-FTD WATCH — awareness ONLY, never touches the score (his call after the 23-yr SPY study:
+   both patterns historically preceded bounces more often than declines, so they inform, they don't act).
+   4-DAY: mirror of ftdAuto — decline attempt off a 50-session closing high, day 4+, ≤−1.2% on higher volume (QQQ+QQQVOL).
+   3-BAR (his rule): D1 closes in the bottom 25% of its true range on above-50d-avg volume · D2's high stays under D1's high ·
+   D3 falls ≥1% on volume above D2. Needs real SPY candles — activates when the nightly puller writes SPYC/SPYH/SPYL/SPYVOL. ---- */
+function revFtdAuto(cl){const q=cl("QQQ"),v=cl("QQQVOL");if(q.length<30||v.length<15)return null;
+ const n=Math.min(q.length,v.length),Q=q.slice(-n),V=v.slice(-n);
+ let hi=n-1;for(let i=Math.max(0,n-50);i<n;i++)if(Q[i]>=Q[hi])hi=i;
+ if(hi>=n-1)return{ago:null};
+ let d1=-1;
+ for(let i=hi+1;i<n;i++){
+  if(Q[i]>Q[hi]){hi=i;d1=-1;continue;}
+  if(d1<0&&Q[i]<Q[i-1])d1=i;
+  if(d1>0&&i-d1>=3&&i<=hi+25&&Q[i]/Q[i-1]-1<=-.012&&V[i]>V[i-1])return{ago:n-1-i};}
+ return{ago:null};}
+function revFtd3Auto(){const A=k=>PRICES[k]||[];
+ const Cc=A("SPYC"),Hh=A("SPYH"),Ll=A("SPYL"),Vv=A("SPYVOL");
+ if(Cc.length<60||Hh.length<60||Ll.length<60||Vv.length<60)return null; // waits for the SPY candle columns
+ const n=Math.min(Cc.length,Hh.length,Ll.length,Vv.length);
+ const C9=Cc.slice(-n).map(x=>x[1]),H9=Hh.slice(-n).map(x=>x[1]),L9=Ll.slice(-n).map(x=>x[1]),V9=Vv.slice(-n).map(x=>x[1]);
+ for(let k=n-1;k>=Math.max(53,n-10);k--){const i=k-2;
+  let av=0;for(let a=i-49;a<=i;a++)av+=V9[a];av/=50;
+  const rng=H9[i]-L9[i];if(rng<=0)continue;
+  if((C9[i]-L9[i])/rng>0.25||V9[i]<=av)continue;
+  if(H9[i+1]>H9[i])continue;
+  if(C9[k]/C9[k-1]-1<=-0.01&&V9[k]>V9[k-1])return{ago:n-1-k};}
+ return{ago:null};}
 function gapAuto(cl){const so=cl("SPYO"),sc=cl("SPY");if(so.length<10||sc.length<10)return null;
  const n=Math.min(so.length,sc.length),O=so.slice(-n),C=sc.slice(-n);
  for(let i=n-1;i>=Math.max(1,n-10);i--){const gap=O[i]/C[i-1]-1,rev=C[i]/O[i]-1;
@@ -1730,6 +1757,7 @@ function marketModel(){
  const one=(EF.one||"").trim(),fomo=SIG.fomo!=null&&SIG.fomo!==""?num(SIG.fomo):null;
  const oneD=one?(/^h/i.test(one)?10:/^l/i.test(one)?-10:0):null;
  const ftdA=ftdAuto(cl),gapA=gapAuto(cl);
+ window._revFtd4=revFtdAuto(cl);window._revFtd3=revFtd3Auto(); // v6.9 awareness watch — informational, zero weight
  const ftdManual=!!(SIG.ftd&&SIG.ftd.trim());
  const ftdD=ftdA?(ftdA.ago!=null?20:0):(ftdManual?(yn(SIG.ftd)?20:0):null); // v4.4: the computed FTD event leads; the manual word is the fallback
  const ftdShow=ftdA?(ftdA.ago!=null?"YES · "+ftdA.ago+"d ago":"NO"):(ftdManual?SIG.ftd:null);
@@ -1769,6 +1797,9 @@ function marketModel(){
   +mk("FOMO late-stage penalty","−10% — only while the FOMO gauge sits at 85 or above: late-stage froth subtracts from the score (added per method — froth subtracts). 0% otherwise; arms at 85. Auto from the FOMO value in Signals.",lateD,lateShow)
   +shd("MARKET TURNAROUND")
   +mk("Follow-through day (FTD)","+20% — a 1.2%+ gain on higher volume, day 4 or later of a rally attempt. Manual in Signals, else auto-detected.",ftdD,ftdShow)
+  +mk("Reverse-FTD watch (awareness)","0% — NEVER moves the score, by design: tested on 23 years of SPY, both reverse patterns preceded BOUNCES more often than declines (selling washouts). Shown so you can tighten stops or stay alert when one fires. 4-DAY = mirror of the FTD (decline attempt off the highs, day 4+, −1.2%+ on higher volume). 3-BAR = day1 closes in the bottom 25% of its range on above-average volume, day2 holds under day1's high, day3 −1%+ on volume above day2 (needs the SPY candle columns from the nightly puller).",null,(function(){const r4=window._revFtd4,r3=window._revFtd3;
+   const p9=[];if(r3&&r3.ago!=null&&r3.ago<=10)p9.push("3-BAR · "+r3.ago+"d ago");if(r4&&r4.ago!=null&&r4.ago<=10)p9.push("4-DAY · "+r4.ago+"d ago");
+   return p9.length?p9.join(" + "):"none (10d)";})())
   +mk("VIX divergence","+10% bottom (price new low + VIX lower high = fear climax) / −20% top (price new high + VIX higher low = complacency). Manual in Signals, else auto over 20 days.",vd,vdShow)
   +mk("Gap-down reversal (climax bottom)","+10% — SPY gaps down 1.5%+ and closes up 1%+. Auto from SPY open/close.",gapD,gapShow);
  box.innerHTML=`<div style="grid-column:1/-1">${rowsHtml}</div>`;
@@ -3511,6 +3542,11 @@ function mktStory(){
  else if(f!=null)s+=(part?"Breadth: "+part+", FOMO":"FOMO")+" <b>"+f.toFixed(0)+"</b>"+(f>85?" — the trim zone. ":f<10?" — fear climax, the buy zone. ":" — neither greed nor fear. ");
  else if(part)s+="Breadth: "+part+". ";
  if(ud!=null)s+="Up/down volume at <b>"+ud.toFixed(2)+"</b> says "+(ud>1?"accumulation under the surface":"distribution — moves without follow-through, size smaller")+". ";
+ { // v6.9: reverse-FTD heads-up in the summary — awareness only, the score never moves on it
+  var rv3=window._revFtd3,rv4=window._revFtd4,rvp=[];
+  if(rv3&&rv3.ago!=null&&rv3.ago<=10)rvp.push("3-bar ("+rv3.ago+"d ago)");
+  if(rv4&&rv4.ago!=null&&rv4.ago<=10)rvp.push("4-day ("+rv4.ago+"d ago)");
+  if(rvp.length)s+="<b>Heads-up:</b> a reverse-FTD fired — "+rvp.join(" and ")+". In the 23-year test these marked selling washouts (bounce odds), not tops — so it changes nothing in the score; use it to check stops and stay alert. ";}
  var play=window._sigW?window._sigW[0]:null;
  s+="<b>Play: "+(play==="COMPLACENCY"?"hold leaders, buy pullbacks not extension, size smaller in chop, sell strength in laggards.":play==="FEAR EXTREME"?"hunt entries in the leaders that resisted the decline — fear extremes are where campaigns start.":play==="FEAR BUILDING"?"watch the leaders that hold — setups are forming, let them finish.":play==="HEALTHY"?"trend intact — trade the plan at the model's exposure tier.":tw==="DOWNTREND"?"defense — raise cash, tighten stops, no new buys until a follow-through day.":"no action — wait for alignment.")+"</b>";
  el.innerHTML=s;

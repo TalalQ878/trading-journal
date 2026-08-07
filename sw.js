@@ -4,7 +4,7 @@
    which keeps its own localStorage fallback for offline viewing).
    Google Fonts: cached after first use so typography works offline. */
 "use strict";
-const VERSION = "tj-v6o"; /* v6o: JNKADJ freshness self-monitor — stale adjusted feed auto-falls back to raw with a visible flag (v6.8) */
+const VERSION = "tj-v6p"; /* v6p: reverse-FTD awareness watch (3-bar + 4-day, zero score weight) (v6.9) */
 const SHELL = [
   "./",
   "./index.html",
