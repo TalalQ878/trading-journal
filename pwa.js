@@ -8,7 +8,7 @@
 "use strict";
 (function () {
   window.__pwa = 1;
-  var APP_VERSION = "v7.0"; /* shown in ⚙ settings — bump with every release (ties to sw.js VERSION) */
+  var APP_VERSION = "v7.1"; /* shown in ⚙ settings — bump with every release (ties to sw.js VERSION) */
   window.APP_VERSION = APP_VERSION;
 
   /* ---------- one-tap setup via URL hash: #api=<encoded exec url>&key=<key> ---------- */
@@ -363,6 +363,7 @@
       if (noteAuto !== null && $("enNote").value === noteAuto) $("enNote").value = ""; // untouched machine note never leaks into the next trade
       noteAuto = null;
       $("enDate").value = todayISO(); $("dnDate").value = todayISO();
+      $("dnEq").value = ""; $("dnFl").value = ""; // v7.1: every fresh open re-derives the carried cash — stale typed values are exactly the drift this kills
       refreshTickerList();
       var sets = {}; (typeof TX!=="undefined"&&TX||[]).forEach(function (t) { if (t.set) sets[t.set] = 1; });
       $("enSetups").innerHTML = Object.keys(sets).map(function (s) { return "<option value=\"" + esc(s) + "\">"; }).join("");
@@ -823,6 +824,15 @@
       document.querySelectorAll("#dnMode .chip").forEach(function (b) { b.classList.toggle("on", b.dataset.dn === m); });
       var lbl = $("dnEqLbl"); if (lbl) lbl.textContent = m === "CASH" ? "Cash left (settled)" : "Equity (account NAV)";
       var inp = $("dnEq"); if (inp) inp.placeholder = m === "CASH" ? "45824.31" : "52678.42";
+      /* v7.1: carried-cash prefill — on a no-trade day cash CANNOT have changed, so the box starts
+         at the derived value (last log minus positions at that date, walked through every trade
+         since; commissions ride along in eff prices). Fills only an EMPTY box (never overwrites
+         typing), CASH mode only, and skips negative/none (margin, no anchor). Interest/fees/
+         dividends do land without trades — just edit the number those days. */
+      if (m === "CASH" && inp && inp.value === "" && window.cashNow9) {
+        var c9 = window.cashNow9();
+        if (c9 != null && isFinite(c9) && c9 >= 0) { inp.value = c9; inp.title = "carried from your last log + trades since — edit if IBKR shows different"; }
+      }
       dnPrevUI();
     }
     document.querySelectorAll("#dnMode .chip").forEach(function (b) { b.onclick = function () { S.dnMode = b.dataset.dn; save(); dnModeUI(); }; });

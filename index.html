@@ -1454,6 +1454,30 @@ window.eqDue9=function(){
   return lt>ld?{t:lt,ld:ld}:null;
  }catch(e){return null;}
 };
+window.cashNow9=function(){ /* v7.1: the cash that CANNOT have changed without a trade — last real
+   log minus holdings' value AT that date, then walked through every trade since (eff prices already
+   include commission). Null when there's no anchor or no usable mark. Interest/fees/dividends do
+   land without trades — the entry box stays editable for those days. */
+ try{
+  const real=(DAILY||[]).filter(x=>!x.auto&&x.d&&isFinite(+x.d)&&x.eq!=null);
+  if(!real.length)return null;
+  const a=real[real.length-1],t0=a.d.getTime();
+  const net={},mult={},lastPx={};
+  TX.forEach(t=>{if(t.d.getTime()>t0)return;mult[t.sym]=t.mult||1;lastPx[t.sym]=t.px;
+   net[t.sym]=t.act==="B"?(net[t.sym]||0)+t.sh:Math.max(0,(net[t.sym]||0)-t.sh);});
+  let mv=0;
+  for(const s in net){if(net[s]<=1e-9)continue;
+   const arr=PRICES[s];let c=null;
+   if(arr&&arr.length)for(let i=arr.length-1;i>=0;i--){if(arr[i][0].getTime()<=t0){c=arr[i][1];break;}}
+   if(c==null)c=lastPx[s];if(c==null)return null;
+   mv+=net[s]*c*(mult[s]||1);}
+  let cash=a.eq-mv;
+  TX.forEach(t=>{if(t.d.getTime()<=t0)return;const m=t.mult||1;
+   if(t.act==="B"){cash-=t.sh*t.px*m;net[t.sym]=(net[t.sym]||0)+t.sh;}
+   else{const s5=Math.min(t.sh,net[t.sym]||0);cash+=s5*t.px*m;net[t.sym]=(net[t.sym]||0)-s5;}});
+  return Math.round(cash*100)/100;
+ }catch(e){return null;}
+};
 function eqNag9(){
  try{
   const due=window.eqDue9();let el=document.getElementById("eqNag9");
