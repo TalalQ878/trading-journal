@@ -8,7 +8,7 @@
 "use strict";
 (function () {
   window.__pwa = 1;
-  var APP_VERSION = "v6.9"; /* shown in ⚙ settings — bump with every release (ties to sw.js VERSION) */
+  var APP_VERSION = "v7.0"; /* shown in ⚙ settings — bump with every release (ties to sw.js VERSION) */
   window.APP_VERSION = APP_VERSION;
 
   /* ---------- one-tap setup via URL hash: #api=<encoded exec url>&key=<key> ---------- */
@@ -621,6 +621,15 @@
         if (!keep) { $("enTicker").value = ""; $("enStop").value = ""; $("enPivot").value = ""; $("enSetup").value = ""; }
         $("enPrev").textContent = "";
         fracSync(); // v5.5: shares just cleared — drop the active chip mark (row hides with the ticker on a full clear)
+        /* v7.0: the account just changed — force the equity step so it can't be forgotten.
+           Same-modal switch (not a popup): the Daily pane opens prefilled for today with the
+           cash/NAV chips ready. "Save + another" skips the switch (more fills coming) — the
+           sticky banner still nags on every device until a Daily row lands. */
+        if (!keep && window.eqDue9 && window.eqDue9()) {
+          enTab("D"); dnModeUI(); $("dnDate").value = todayISO();
+          msg("", p.side + " " + p.shares + " " + p.ticker + " saved ✓ — one more step: update your equity (cash or NAV) so today's record is true.");
+          setTimeout(function () { var el = $("dnEq"); try { el.focus(); } catch (_) {} }, 80);
+        }
         window.loadSheet && loadSheet();
       } catch (e) { msg(e.message); }
       busy(btn, false, keep ? "Save + another" : "Save trade");
@@ -653,6 +662,11 @@
       updPrev();
       fracSync(); // v5.5: held ticker on the Sell side → the fraction row appears (ALL lights when shares = the full position)
       setTimeout(function () { var el = $("enShares"); try { el.focus(); el.select(); } catch (_) {} }, 60); // focus lands on shares
+    };
+
+    window.openEquityEntry = function () { /* v7.0: the equity-nag banner lands HERE — straight into the Daily-equity pane, today's date, cash/NAV chips ready */
+      openModal(); enTab("D"); dnModeUI();
+      setTimeout(function () { var el = $("dnEq"); try { el.focus(); } catch (_) {} }, 80);
     };
 
     /* ---------- v4.6: What-if tab — read-only position calculator (never posts) ----------

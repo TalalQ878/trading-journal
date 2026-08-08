@@ -4,7 +4,7 @@
    which keeps its own localStorage fallback for offline viewing).
    Google Fonts: cached after first use so typography works offline. */
 "use strict";
-const VERSION = "tj-v6p"; /* v6p: reverse-FTD awareness watch (3-bar + 4-day, zero score weight) (v6.9) */
+const VERSION = "tj-v6q"; /* v6q: equity update required after every trade — post-save prompt + cross-device banner (v7.0) */
 const SHELL = [
   "./",
   "./index.html",
