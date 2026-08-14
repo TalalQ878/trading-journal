@@ -8,7 +8,7 @@
 "use strict";
 (function () {
   window.__pwa = 1;
-  var APP_VERSION = "v7.1"; /* shown in ⚙ settings — bump with every release (ties to sw.js VERSION) */
+  var APP_VERSION = "v7.6"; /* shown in ⚙ settings — bump with every release (ties to sw.js VERSION) */
   window.APP_VERSION = APP_VERSION;
 
   /* ---------- one-tap setup via URL hash: #api=<encoded exec url>&key=<key> ---------- */
@@ -215,7 +215,7 @@
         /* v4.5: commission auto-include — persisted on S like the API settings above */
         '<div style="border-top:1px solid var(--bd);margin:16px 0 10px"></div>' +
         '<h2 style="font-size:16px">Commission (IBKR)</h2>' +
-        '<p>Folds the broker commission into every saved trade — the Buy price goes up and the Sell price comes down by commission ÷ shares, so sheet P&amp;L matches the broker statement. <b>FIXED</b> = IBKR Fixed US-stock schedule: $0.005/share, $1.00 minimum, capped at 1% of trade value.</p>' +
+        '<p><b>v7.5: saves no longer auto-add commission.</b> Type the EXACT charge in the trade form (empty = price already includes it). These rates power the planning tools only — What-if, risk previews, the sell ladder, and the estimate hint. <b>FIXED</b> = IBKR Fixed US-stock schedule: $0.005/share, $1.00 minimum, capped at 1% of trade value.</p>' +
         '<div class="enTabs" id="commTabs" style="max-width:360px">' +
         '<button class="chip" data-comm="OFF">OFF</button>' +
         '<button class="chip" data-comm="FIXED">FIXED</button>' +
@@ -248,9 +248,9 @@
         $("commCust").style.display = m === "CUSTOM" ? "" : "none";
         if (m === "CUSTOM") { $("commRate").value = S.commRate != null && S.commRate !== "" ? S.commRate : 0.005; $("commMin").value = S.commMin != null && S.commMin !== "" ? S.commMin : 1; }
         $("commState").textContent =
-          m === "OFF" ? "Off — prices save exactly as entered." :
-          m === "FIXED" ? "Saving adjusts the price by $0.005/share ($1.00 min, 1% max) — e.g. Buy 5 @ 518.79 saves as 518.99." :
-          "Saving adjusts by your per-share rate with your minimum — the 1%-of-value cap still applies.";
+          m === "OFF" ? "Estimates off — planning tools show raw prices; saves always use the exact box." :
+          m === "FIXED" ? "Estimates use $0.005/share ($1.00 min, 1% max) in planning tools; saves use the exact box." :
+          "Estimates use your per-share rate + minimum in planning tools; saves use the exact box.";
       };
       sec.querySelectorAll("#commTabs .chip").forEach(function (b) {
         b.onclick = function () { S.commMode = b.dataset.comm; save(); commSync(); };
@@ -296,8 +296,11 @@
       '<div class="full"><label>Note</label><input type="text" id="enNote" placeholder="optional" autocomplete="off"></div>' +
       /* v5.9e: per-trade commission tick — defaults to the ⚙ setting on every open; untick when the
          typed price ALREADY includes commission (e.g. statement "avg price incl. commission"). */
-      '<div class="full" style="display:flex;align-items:center;gap:8px;margin-top:6px"><input type="checkbox" id="commTick" style="width:auto;margin:0;accent-color:var(--acc,#2dd4a0)">' +
-      '<label for="commTick" style="margin:0;text-transform:none;letter-spacing:0;font-size:12px;color:var(--mut);cursor:pointer">Add commission automatically <span id="commTickSub" style="color:var(--dim)"></span></label></div>' +
+      /* v7.5: EXACT commission per trade — no more auto-adding. Empty = the typed price is saved
+         untouched (he already included it); a $ amount = exactly that charge folds into the price
+         (Buy up, Sell down by comm ÷ shares). The ⚙ rates live on only as planning estimates. */
+      '<div class="full"><label>Commission ($ — exact charge from IBKR)</label><input type="number" id="enComm" inputmode="decimal" step="any" min="0" placeholder="empty = price saves exactly as typed">' +
+      '<div id="enCommHint" style="font-size:11px;color:var(--dim);margin-top:3px"></div></div>' +
       "</div>" +
       '<div id="enPrev" class="num"></div>' +
       '<div class="btnrow"><button class="btn pri" id="enSubmit">Save trade</button><button class="btn sec" id="enSubmitA" style="flex:0;min-width:118px">Save + another</button><button class="btn sec" id="enClose1" style="flex:0;min-width:70px">Close</button></div>' +
@@ -336,6 +339,7 @@
       '<div><label>Price</label><input type="number" id="wiPrice" inputmode="decimal" step="any" min="0" placeholder="live auto-fills"></div>' +
       '<div class="full"><label>Stop price (optional — risk line)</label><input type="number" id="wiStop" inputmode="decimal" step="any" min="0" placeholder="optional"></div>' +
       "</div>" +
+      '<div id="wiGuard9" style="margin:6px 0 2px"></div>' + /* v7.3: period profit guard — tick to show/hide */
       '<div id="wiOut"></div>' +
       '<div class="btnrow"><button class="btn sec" id="enClose4">Close</button></div>' +
       '<p id="wiNote">Calculator only — nothing is saved. Holdings use your live avg cost; commission follows the setting in ⚙ Commission (IBKR).</p>' +
@@ -367,7 +371,7 @@
       refreshTickerList();
       var sets = {}; (typeof TX!=="undefined"&&TX||[]).forEach(function (t) { if (t.set) sets[t.set] = 1; });
       $("enSetups").innerHTML = Object.keys(sets).map(function (s) { return "<option value=\"" + esc(s) + "\">"; }).join("");
-      commTickSync(); // v5.9e: tick resets to the ⚙ setting every open
+      $("enComm").value = ""; commHintSync(); // v7.5: exact-commission box starts empty every open; hint shows the ⚙ estimate
       updPrev();
       fracSync();
       ov.classList.add("show");
@@ -397,16 +401,13 @@
     }
     /* v5.9e: reset the tick to the ⚙ setting on every modal open (deliberately not sticky —
        a forgotten override would silently mis-price every later trade). */
-    function commTickSync() {
-      var ct = $("commTick"); if (!ct) return;
-      var m = commMode();
-      ct.checked = m !== "OFF"; ct.disabled = m === "OFF";
-      var sub = $("commTickSub");
-      if (sub) sub.textContent = m === "OFF" ? "(enable in ⚙ Commission)" :
-        m === "CUSTOM" ? "($" + (parseFloat(S.commRate) >= 0 ? S.commRate : 0.005) + "/sh · $" + (parseFloat(S.commMin) >= 0 ? S.commMin : 1) + " min)" :
-        "($0.005/sh · $1 min)";
+    function commHintSync() { /* v7.5: reference only — the ⚙ formula's estimate for the typed size, to copy when it matches the statement */
+      var el = $("enCommHint"); if (!el) return;
+      var sh = parseFloat($("enShares").value), px = parseFloat($("enPrice").value);
+      var c = commFor(sh, px);
+      el.textContent = c == null ? (commMode() === "OFF" ? "⚙ estimates are OFF — type the exact charge or leave empty" : "type shares + price to see the ⚙ estimate") :
+        "⚙ estimate for this size: $" + c.toFixed(2) + " — type the EXACT charge from the statement (or leave empty if your price already includes it)";
     }
-    function commOn() { var ct = $("commTick"); return !ct || ct.checked; } // no checkbox rendered → old behavior
     function updPrev() {
       var a = $("enAction").value, tk = ($("enTicker").value || "").trim().toUpperCase();
       var sh = parseFloat($("enShares").value), px = parseFloat($("enPrice").value), st = parseFloat($("enStop").value);
@@ -418,7 +419,10 @@
         var lb = lastBuyOf(tk);
         if (lb) { if (!$("enStop").value && lb.stop) $("enStop").value = lb.stop; if (!$("enPivot").value && lb.pivot) $("enPivot").value = lb.pivot; if (!$("enSetup").value && lb.set) $("enSetup").value = lb.set; }
       } else $("enSubmit").textContent = "Save trade";
-      var ca = commOn() ? commAdj(a, sh, px) : null, ex = ca ? ca.eff : px; // v4.5 effective price; v5.9e: per-trade tick can suppress it
+      /* v7.5: the risk preview prices off the EXACT typed commission (empty box → price as typed) */
+      var cIn = $("enComm") ? $("enComm").value : "", cAmt = cIn === "" ? null : parseFloat(cIn);
+      var ex = px;
+      if (cAmt != null && isFinite(cAmt) && cAmt >= 0 && sh > 0 && px > 0) ex = r2c(a === "Sell" ? px - cAmt / sh : px + cAmt / sh);
       if (a === "Buy" && sh > 0 && px > 0 && st > 0 && st < ex) {
         var r = sh * (ex - st);
         out.push("RISK $" + Math.round(r).toLocaleString() + (eq ? " · " + (100 * r / eq).toFixed(2) + "% NAV" : "") + " · stop " + (100 * (ex - st) / ex).toFixed(1) + "% away");
@@ -427,8 +431,9 @@
         var after = sh > 0 ? Math.max(0, net - Math.min(sh, net)) : net;
         out.push("HOLDING " + net + (sh > 0 ? " → " + after + " after (" + (100 * Math.min(sh, net) / net).toFixed(0) + "% reduced)" : " shares"));
       }
-      if (ca) out.push("comm $" + ca.comm.toFixed(2) + " → eff " + ca.eff.toFixed(2));
-      else if (!commOn() && commMode() !== "OFF" && sh > 0 && px > 0) out.push("commission off for this trade — saves exactly as typed");
+      if (cAmt != null && isFinite(cAmt) && cAmt >= 0 && sh > 0 && px > 0) out.push("comm $" + cAmt.toFixed(2) + " → eff " + ex.toFixed(2));
+      else if (sh > 0 && px > 0) out.push("no commission typed — saves exactly as typed");
+      commHintSync();
       $("enPrev").textContent = out.join("  ·  ");
     }
     function prefillSell() {
@@ -444,7 +449,7 @@
     ["enTicker", "enShares", "enPrice", "enStop"].forEach(function (id) {
       $(id).oninput = function () { updPrev(); if (id === "enTicker" || id === "enShares") fracSync(); }; // v5.5: chips track the ticker + shares live
     });
-    { var _ct = $("commTick"); if (_ct) _ct.onchange = updPrev; } // v5.9e: preview follows the tick live
+    { var _ec = $("enComm"); if (_ec) _ec.oninput = updPrev; } // v7.5: preview follows the exact amount live
 
     /* ---- v5.5: fraction chips — ⅓ ½ ⅔ ALL of the held shares, Sell side only ----
        N = remaining shares from the app's POS for the typed ticker (the same live rows the
@@ -602,8 +607,12 @@
           snap = { basis: sp.basis, mlt: sp.mlt || 1, lots: (sp.lots || []).map(function (L) { return { sh: L.sh, px: L.px }; }) };
         }
       }
-      var ca = commOn() ? commAdj(p.side, p.shares, p.price) : null; // v4.5 commission-inclusive save; v5.9e: tick off → save exactly as typed
-      if (ca) p.price = ca.eff;
+      /* v7.5: EXACT commission — the box's $ amount folds in (Buy up / Sell down by comm ÷ shares);
+         empty box = the typed price IS the saved price. No formula ever touches a save again. */
+      var cIn5 = $("enComm").value, cAmt5 = cIn5 === "" ? null : parseFloat(cIn5);
+      if (cIn5 !== "" && !(cAmt5 >= 0)) return msg("Commission must be zero or a positive amount — or leave it empty.");
+      if (cAmt5 != null && cAmt5 > 0.05 * p.shares * p.price) return msg("That commission is over 5% of the trade value — check the amount.");
+      if (cAmt5 != null && cAmt5 > 0) p.price = r2c(p.side === "Sell" ? p.price - cAmt5 / p.shares : p.price + cAmt5 / p.shares);
       var sig = [p.date, p.ticker, p.side, p.shares, p.price].join("|");
       if (sig === lastSig && Date.now() - lastSigT < 30000 && !dupOk) {
         dupOk = true;
@@ -618,7 +627,7 @@
         lastSig = sig; lastSigT = Date.now(); dupOk = false;
         msg("", p.side + " " + p.shares + " " + p.ticker + " @ " + p.price + " saved ✓" + (keep ? " — next one:" : ""));
         if (p.side === "Sell") sellToast(p, snap); // v5.5: realized-result toast — non-blocking, sells only
-        $("enShares").value = ""; $("enPrice").value = ""; $("enNote").value = "";
+        $("enShares").value = ""; $("enPrice").value = ""; $("enNote").value = ""; $("enComm").value = ""; // v7.5: exact charge never carries into the next fill
         if (!keep) { $("enTicker").value = ""; $("enStop").value = ""; $("enPivot").value = ""; $("enSetup").value = ""; }
         $("enPrev").textContent = "";
         fracSync(); // v5.5: shares just cleared — drop the active chip mark (row hides with the ticker on a full clear)
@@ -691,19 +700,49 @@
       if (lp != null) { $("wiPrice").value = Math.round(lp * 100) / 100; wiMan = false; }
       else if (!wiMan) $("wiPrice").value = "";
     }
+    function wiGuard9() { /* v7.3: profit guard — realized $ inside the journal-selected period vs this idea's stop risk.
+       "Don't risk more than the period already paid you": banked ≤ 0 → the risk is fresh capital, size accordingly. */
+      var el = $("wiGuard9"); if (!el) return;
+      var on = S.wiGuard !== "OFF";
+      var r = window.realizedWin9 ? window.realizedWin9() : null;
+      var head = '<label style="display:flex;gap:6px;align-items:center;font-size:11px;color:var(--dim);cursor:pointer"><input type="checkbox" id="wiGuardTick"' + (on ? " checked" : "") + '> profit guard <span style="opacity:.8">(period from the journal: ' + esc(S.tf || "YTD") + ')</span></label>';
+      var body = "";
+      if (on && r) {
+        var dG = function (v) { return (v < 0 ? "−$" : "+$") + Math.round(Math.abs(v)).toLocaleString(); };
+        body = "realized " + esc(S.tf || "") + ": <b class='num " + (r.sum >= 0 ? "g-grn" : "g-red") + "'>" + dG(r.sum) + "</b>" + (r.n ? " <span style='color:var(--dim)'>(" + r.n + " sell" + (r.n > 1 ? "s" : "") + ")</span>" : "");
+        var sh9 = parseFloat($("wiShares").value), px9 = parseFloat($("wiPrice").value), st9 = parseFloat($("wiStop").value);
+        if ($("wiSide").value === "Buy" && sh9 > 0 && px9 > 0 && st9 > 0) {
+          var ca9 = commAdj("Buy", sh9, px9), ef9 = ca9 ? ca9.eff : px9; // planning estimate (⚙ rates) — saves use the exact box
+          if (st9 < ef9) {
+            var rk9 = sh9 * (ef9 - st9);
+            body += " · this idea risks <b class='num'>$" + Math.round(rk9).toLocaleString() + "</b> → " +
+              (r.sum <= 0 ? "<b class='g-amb'>nothing banked this period — that risk is fresh capital</b>"
+                : rk9 <= r.sum ? "<b class='g-grn'>✓ stays under the period's profit</b>"
+                : "<b class='g-red'>⚠ exceeds it by $" + Math.round(rk9 - r.sum).toLocaleString() + "</b>");
+          } else body += " <span class='g-amb'>· stop must sit below the (effective) price to compare</span>";
+        } else body += " <span style='color:var(--dim)'>· enter shares, price and a stop to compare the risk</span>";
+      }
+      el.innerHTML = head + (body ? "<div class='wiRow' id='wiGuardLine'>" + body + "</div>" : "");
+      var tk9 = $("wiGuardTick"); if (tk9) tk9.onchange = function () { S.wiGuard = tk9.checked ? "ON" : "OFF"; save(); wiGuard9(); };
+    }
     function wiCalc() {
+      wiGuard9(); // v7.3: the guard lives above the output and re-reads on every input change
       var out = $("wiOut"); if (!out) return;
       var tk = ($("wiTicker").value || "").trim().toUpperCase();
       var side = $("wiSide").value;
       var sh = parseFloat($("wiShares").value), px = parseFloat($("wiPrice").value), st = parseFloat($("wiStop").value);
       var p = tk ? wiPos(tk) : null, mlt = p ? (p.mlt || 1) : 1;
+      /* v7.4: campaigns that already banked a piece lead with the NET break-even — "the PANW you
+         calculate the 307.12, not the original 324.47." tradeBE is the whole campaign's true
+         break-even on the saved (commission-inclusive) prices; untouched positions keep plain avg. */
+      var net4 = p && p.soldSh > 0 && p.tradeBE != null && isFinite(p.tradeBE) ? p.tradeBE : null;
       var eqL = (typeof EQABS !== "undefined" && EQABS && typeof EQ !== "undefined" && EQ.length) ? EQ[EQ.length - 1] : null;
       var inv = (typeof POS !== "undefined" && POS || []).reduce(function (a, q) { return a + q.val; }, 0);
       var row = function (id, html) { return "<div class='wiRow' id='" + id + "'>" + html + "</div>"; };
       var d$ = function (v) { return (v < 0 ? "−$" : "$") + Math.round(Math.abs(v)).toLocaleString(); };
       var L = [];
       if (!tk) { out.innerHTML = row("wiMsg", "<span style='color:var(--dim)'>Type a ticker — held positions auto-fill their live price; any other symbol works once you enter a price.</span>"); return; }
-      if (p) L.push(row("wiNow", "<b>" + esc(p.disp || tk) + "</b> — holding <span class='num'>" + (Math.round(p.sh * 100) / 100) + "</span> sh @ avg <span class='num'>" + p.basis.toFixed(2) + "</span> · live <span class='num'>" + (p.px > 0 ? p.px.toFixed(2) : "—") + "</span>" + (p.est ? " <span class='g-amb'>(est)</span>" : "")));
+      if (p) L.push(row("wiNow", "<b>" + esc(p.disp || tk) + "</b> — holding <span class='num'>" + (Math.round(p.sh * 100) / 100) + "</span> sh @ " + (net4 != null ? "<b class='num'>" + net4.toFixed(2) + "</b> <span style='color:var(--dim)'>NET</span> · initial <span class='num'>" + p.basis.toFixed(2) + "</span>" : "avg <span class='num'>" + p.basis.toFixed(2) + "</span>") + " · live <span class='num'>" + (p.px > 0 ? p.px.toFixed(2) : "—") + "</span>" + (p.est ? " <span class='g-amb'>(est)</span>" : "")));
       else L.push(row("wiNow", "<b>" + esc(tk) + "</b> — not held today" + (wiLivePx(tk) != null ? " · live <span class='num'>" + wiLivePx(tk).toFixed(2) + "</span>" : "")));
       if (!(px > 0)) { L.push(row("wiMsg", "<span class='g-amb'>enter a price</span> — no live quote for " + esc(tk) + ".")); out.innerHTML = L.join(""); return; }
       if (!(sh > 0)) { L.push(row("wiMsg", "<span style='color:var(--dim)'>enter shares to size the trade.</span>")); out.innerHTML = L.join(""); return; }
@@ -714,8 +753,12 @@
       var newSh, newAvg, real$ = null;
       if (side === "Buy") {
         newSh = (p ? p.sh : 0) + sh;
-        newAvg = p ? (p.sh * p.basis + sh * eff) / newSh : eff; // commission-inclusive effective price feeds the blend
-        L.push(row("wiAfter", "after <b class='g-grn'>BUY " + sh + "</b>: <span class='num'>" + (Math.round(newSh * 100) / 100) + "</span> sh @ new avg <b class='num'>" + newAvg.toFixed(2) + "</b>" + (p ? "" : " (new position)")));
+        /* v7.4: the blend base is the NET break-even when profit is already banked; the plain-avg
+           blend stays visible for reference. Untouched positions behave exactly as before. */
+        var base4 = p ? (net4 != null ? net4 : p.basis) : null;
+        newAvg = p ? (p.sh * base4 + sh * eff) / newSh : eff; // commission-inclusive effective price feeds the blend
+        var plain4 = (p && net4 != null) ? (p.sh * p.basis + sh * eff) / newSh : null;
+        L.push(row("wiAfter", "after <b class='g-grn'>BUY " + sh + "</b>: <span class='num'>" + (Math.round(newSh * 100) / 100) + "</span> sh @ new " + (plain4 != null ? "<b>NET</b> b/e " : "avg ") + "<b class='num'>" + newAvg.toFixed(2) + "</b>" + (plain4 != null ? " <span style='color:var(--dim)'>(banked profit counted · plain avg " + plain4.toFixed(2) + ")</span>" : "") + (p ? "" : " (new position)")));
       } else {
         newSh = p.sh - used; newAvg = p.basis;
         real$ = used * (eff - p.basis) * mlt; // sold piece vs avg — avg itself never moves on a sell
