@@ -1832,8 +1832,28 @@ function marketModel(){
    for(let i=Math.max(1,nD-25);i<nD;i++)if((qc2[i-1]-qc2[i])/qc2[i-1]>=0.002-1e-9&&vv2[i]>vv2[i-1]){c7++;dts.push(qd2[i][0]);}
    dd={n:c7,dates:dts};}
   window._distDays=dd;}
- let hl=null; // three rising 15-session swing lows on QQQ
- if(q.length>50){const w=15,L1=Math.min(...q.slice(-w)),L2=Math.min(...q.slice(-2*w,-w)),L3=Math.min(...q.slice(-3*w,-2*w));hl=L1>L2&&L2>L3;}
+ let hl=null; // v7.7: POWER TREND on QQQ (replaces the higher-lows block heuristic) — state machine replayed over the loaded window
+ if(q.length>70){
+  const qP7=PRICES.QQQ||[],qlP7=PRICES.QQQLOW||[];window._ptExactLows=qlP7.length>30;
+  const lowBy7={};qlP7.forEach(x=>{lowBy7[+x[0]]=x[1];});
+  const lo7=qP7.map(x=>lowBy7[+x[0]]!=null?lowBy7[+x[0]]:x[1]); // exact daily lows when QQQLOW exists; close = conservative fallback
+  const e21=ema(q,21),s50=sma(q,50),n7=q.length;
+  let on7=false,hi7=0;
+  for(let i7=59;i7<n7;i7++){
+   if(!on7){
+    if(s50[i7]>s50[i7-1]&&q[i7]>q[i7-1]){ // 50-SMA rising + up close
+     let a7=true;for(let j7=i7-9;j7<=i7;j7++)if(!(lo7[j7]>e21[j7])){a7=false;break;}   // daily lows above 21-EMA for 10+ sessions
+     let b7=true;for(let j7=i7-4;j7<=i7;j7++)if(!(e21[j7]>s50[j7])){b7=false;break;}   // 21-EMA above 50-SMA for 5+ sessions
+     if(a7&&b7){on7=true;hi7=q[i7];}
+    }
+   }else{
+    hi7=Math.max(hi7,q[i7]);
+    if(e21[i7]<s50[i7])on7=false;                      // natural end — 21-EMA crosses under the 50-SMA
+    else if(q[i7]<hi7*0.90&&q[i7]<s50[i7])on7=false;   // circuit breaker — close 10% off the trend high AND under the 50-SMA
+   }
+  }
+  hl=on7;
+ }
  // v6.3 raw JNK · v6.7 prefers dividend-ADJUSTED Prices!JNKADJ · v6.8 SELF-MONITORING: the adjusted series
  // is only trusted while FRESH (its last date within ~8 days of raw JNK's). If the nightly puller ever dies
  // on both sources, the app falls back to raw automatically and SAYS so — stale data can never drive the signal.
@@ -1888,7 +1908,7 @@ function marketModel(){
   +mk("Net new highs vs lows — one day","±10% — one day where net new highs clearly beat net new lows (+10) or the reverse (−10). Auto from the latest daily counts in the Signals side table; manual High/Low fallback.",oneD2,one?(one+(EF.aO?aDim("auto"):"")):null)
   +mk("Net highs/lows trend — 3+ days","±20% — three or more consecutive days of net new highs (+20) or net new lows (−20). Auto from the daily counts in the Signals side table when ≥3 rows exist; manual Up/Down fallback.",trD,hasT?((upT?"HIGHS":nlTrend?"LOWS":"none")+(EF.aT?aDim("auto from daily counts"):"")):null)
   +mk("Up/Down Volume Ratio (20d)","±20% — QQQ volume on up-days ÷ volume on down-days over the last 20 sessions (20d reads general-market trend faster than the classic 50d). Above 1.0 = accumulation (+20), below = distribution (−20). Auto from the Prices tab.",udD,ud==null?null:ud.toFixed(2))
-  +mk("Higher lows formation","+20% — three rising 15-session swing lows on QQQ. Auto.",hlD,hl==null?null:hl?"YES":"no")
+  +mk("Power trend","+20% — QQQ in a power trend: daily lows above the 21-EMA for 10+ sessions, 21-EMA above the 50-SMA for 5+ sessions, 50-SMA rising, and an up close to switch ON. Ends when the 21-EMA crosses under the 50-SMA — or instantly on the circuit breaker: a close 10% off the trend high AND under the 50-SMA. Auto"+(window._ptExactLows?".":" — using closes for now; add a QQQLOW column in Prices for exact daily lows."),hlD,hl==null?null:hl?"ON":"off")
   +mk("Credit — NFCI/JNK proxy","±10% — "+(window._jnAdj?"dividend-ADJUSTED JNK (JNKADJ column)":window._jnAdjStale?"JNK (RAW — the adjusted feed went stale, auto-fallback; check the nightly updateJnkAdj trigger)":"JNK")+" vs its own 21-EMA. Above = improving (+10); below = tightening (−10). Auto from the Prices tab (the JNK÷IEI ratio chart is context only).",jnD,jn==null?null:jn>0?"IMPROVING":jn<0?"TIGHTENING":"FLAT")
   +mk("Net-lows trend without FOMO under 20","−20% — a net-lows trend while the FOMO gauge is still at or above 20 (no fear washout yet). Auto from the FOMO value in Signals.",fomoD,fomoShow)
   +mk("FOMO late-stage penalty","−10% — only while the FOMO gauge sits at 85 or above: late-stage froth subtracts from the score (added per method — froth subtracts). 0% otherwise; arms at 85. Auto from the FOMO value in Signals.",lateD,lateShow)
