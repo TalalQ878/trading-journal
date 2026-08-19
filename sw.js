@@ -4,7 +4,7 @@
    which keeps its own localStorage fallback for offline viewing).
    Google Fonts: cached after first use so typography works offline. */
 "use strict";
-const VERSION = "tj-v6y"; /* v6y: v7.8 Power trend blue-bar fix — switch-on day counts flat-or-up closes (WRO #18 verbatim) */
+const VERSION = "tj-v6z"; /* v6z: v7.9 Offset planner — tap closed losses → target, plan partial sells + stop raises until covered; per-trade $ on the Rolling-Edge hover */
 const SHELL = [
   "./",
   "./index.html",

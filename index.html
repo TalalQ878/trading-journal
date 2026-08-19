@@ -2221,6 +2221,7 @@ function drawSmall(T,Wn,L,wr,aw,al){
  window._hvRoll=seq.length?{bar:1,pl:16,bw:15,n:seq.length,y0:16,y1:84,
   label:i=>(seq[i].disp||seq[i].sym)+" · closed "+hvDate(seq[i].dout),
   rows:i=>[["Result",sg(seq[i].pct)+"%",seq[i].w?"#1fb51f":"#f06a6a"],
+   ["Result $",seq[i].dol!=null?fmtD(seq[i].dol,true):"—",seq[i].dol!=null&&seq[i].dol<0?"#f06a6a":"#1fb51f"], // v7.9: exact dollars per trade — pairs with the Offset planner's pick-list
    ["R multiple",seq[i].R!=null&&isFinite(seq[i].R)?(seq[i].R>0?"+":"")+seq[i].R.toFixed(2)+"R":"— no stop","#a9b2bc"],
    ["Held",(seq[i].hold||0)+"d","#a9b2bc"]]}:null;
  $("rollEdge").innerHTML=`

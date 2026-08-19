@@ -8,7 +8,7 @@
 "use strict";
 (function () {
   window.__pwa = 1;
-  var APP_VERSION = "v7.8"; /* shown in ⚙ settings — bump with every release (ties to sw.js VERSION) */
+  var APP_VERSION = "v7.9"; /* shown in ⚙ settings — bump with every release (ties to sw.js VERSION) */
   window.APP_VERSION = APP_VERSION;
 
   /* ---------- one-tap setup via URL hash: #api=<encoded exec url>&key=<key> ---------- */
@@ -147,6 +147,26 @@
       ".wiRow .num{font-variant-numeric:tabular-nums}" +
       ".wiHead{padding:9px 0 3px;font-size:9.5px;font-weight:800;letter-spacing:.09em;color:var(--dim);text-transform:uppercase;border-bottom:1px solid rgba(255,255,255,.05)}" + /* v4.6b: portfolio-block header */
       "#wiNote{font-size:11px;color:var(--dim);margin-top:10px}" +
+      /* ---- v7.9: OFFSET PLANNER — pick losses, plan the cover ---- */
+      "#ofTg{margin-top:10px}" +
+      "#ofList{max-height:250px;overflow-y:auto;margin-top:8px;background:rgba(255,255,255,.02);border:1px solid var(--bd);border-radius:12px;padding:5px}" +
+      "body.light #ofList{background:rgba(15,23,42,.03)}" +
+      ".ofRow{display:flex;gap:8px;align-items:baseline;padding:6px 8px;border-radius:9px;cursor:pointer;font-size:12.2px;border:1px solid transparent;user-select:none}" +
+      ".ofRow .ck{width:15px;flex:none;color:var(--dim)}" +
+      ".ofRow.sel{background:rgba(240,106,106,.09);border-color:rgba(240,106,106,.4)}" +
+      ".ofRow.sel .ck{color:#f06a6a;font-weight:800}" +
+      ".ofRow .sym{font-weight:700;min-width:54px}" +
+      ".ofRow .dt{color:var(--dim);flex:1;font-size:11px}" +
+      ".ofChips{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}" +
+      ".ofChips .chip{min-height:34px;padding:5px 12px;font-size:11.5px}" +
+      ".ofForm{display:flex;gap:6px;align-items:center;margin-top:7px;flex-wrap:wrap}" +
+      ".ofForm select,.ofForm input{flex:1;min-width:90px}" +
+      ".ofForm .btn{padding:8px 14px;min-height:38px}" +
+      ".ofItem{display:flex;gap:8px;align-items:baseline;padding:5px 2px;font-size:12.2px;border-bottom:1px solid rgba(255,255,255,.05)}" +
+      ".ofItem:last-child{border-bottom:0}" +
+      ".ofItem .rm{cursor:pointer;color:var(--dim);font-weight:800;padding:0 6px;flex:none}" +
+      ".ofItem .rm:hover{color:#f06a6a}" +
+      ".ofItem .what{flex:1}" +
       "@media(max-width:520px){#entryModal{align-items:end;padding:0}#entryModal .modal{max-width:none;width:100%;border-radius:20px 20px 0 0;max-height:92dvh;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}}" +
       "@media(display-mode:standalone){#dataPill{display:inline-block}}" +
 
@@ -341,6 +361,14 @@
       "</div>" +
       '<div id="wiGuard9" style="margin:6px 0 2px"></div>' + /* v7.3: period profit guard — tick to show/hide */
       '<div id="wiOut"></div>' +
+      /* ---- v7.9: OFFSET PLANNER — tap real closed losses → target, then plan sells (realized now) and stop raises (locked only if filled) until it's covered. Calculator only. ---- */
+      '<button class="chip" id="ofTg" type="button">Offset planner ▸</button>' +
+      '<div id="ofBody" style="display:none">' +
+      '<p style="margin:7px 0 0;font-size:11.5px;color:var(--dim)">Tap the closed trades you want to make back — usually the losses; wins in between just stay unticked. Then add partial sells or stop raises until the target is covered. Nothing here posts or saves.</p>' +
+      '<div class="ofChips" id="ofScopeRow"></div>' +
+      '<div id="ofList"></div>' +
+      '<div id="ofPlan"></div>' +
+      "</div>" +
       '<div class="btnrow"><button class="btn sec" id="enClose4">Close</button></div>' +
       '<p id="wiNote">Calculator only — nothing is saved. Holdings use your live avg cost; commission follows the setting in ⚙ Commission (IBKR).</p>' +
       "</div>" +
@@ -350,7 +378,7 @@
     var panes = { T: "enPaneT", D: "enPaneD", R: "enPaneR", W: "enPaneW" };
     function enTab(w) {
       Object.keys(panes).forEach(function (k) { $(panes[k]).style.display = k === w ? "" : "none"; $("enTab" + k).classList.toggle("on", k === w); });
-      msg(); if (w === "R") renderRows(); if (w === "W") { wiSyms(); wiCalc(); }
+      msg(); if (w === "R") renderRows(); if (w === "W") { wiSyms(); wiCalc(); ofRender(); } // v7.9: planner re-reads the ledger on every visit
     }
     ["T", "D", "R", "W"].forEach(function (k) { $("enTab" + k).onclick = function () { enTab(k); }; });
 
@@ -841,6 +869,162 @@
       $("wiShares").value = ""; $("wiStop").value = ""; $("wiSide").value = "Buy"; // clean slate — the link prefills the ticker only
       wiMan = false; wiAutoPx(); wiCalc();
       setTimeout(function () { var el = $("wiShares"); try { el.focus(); el.select(); } catch (_) {} }, 60);
+    };
+
+    /* ---------- v7.9: OFFSET PLANNER — "which losses am I making back, and what exactly covers them?"
+       List = the same closed campaigns deriveAll posts (commission-inclusive prices, RECON rows excluded),
+       each with its exact ±$ (t.dol). Tapping rows builds the target; the plan side adds partial SELLS
+       (realized the moment you'd execute, vs your live avg basis) and STOP RAISES (locked in ONLY IF the
+       stop fills — a gap can open lower, so the two subtotals are never mixed). Plan items store intent
+       only (sym + shares / sym + stop); every dollar is re-derived from the LIVE position on each render,
+       so price moves, lot-mode changes and real fills keep the plan honest. Pure calculator: nothing
+       posts, nothing saves, selection resets on reload. ---------- */
+    var ofSel = {}, ofItems = [], ofScope = "P", ofNote = ""; // P = journal period selector · A = all history
+    function ofKey(t) { return t.sym + "|" + (+t.dout) + "|" + (+t.din); }
+    function dP9(v) { var a = Math.abs(v), s = a >= 1000 ? Math.round(a).toLocaleString() : a.toFixed(2); return (v < 0 ? "−$" : "+$") + s; }
+    function ofClosedAll() {
+      return (typeof TRADES !== "undefined" && TRADES || []).filter(function (t) { return !t.open && !t.recon && t.pct != null && t.dol != null; });
+    }
+    function ofTrades() {
+      var all = ofClosedAll();
+      if (ofScope === "P" && typeof win === "function") {
+        try { var w = win(); if (w && w[2] && w[3]) all = all.filter(function (t) { return t.dout >= w[2] && t.dout <= w[3]; }); } catch (e) {}
+      }
+      return all.sort(function (a, b) { return b.dout - a.dout; });
+    }
+    function ofSellSh(sym, skip) { // shares already claimed by planned sells of this symbol
+      var s = 0; ofItems.forEach(function (it, i) { if (it.k === "S" && it.sym === sym && i !== skip) s += it.sh; }); return s;
+    }
+    function ofRender() {
+      var body = $("ofBody"); if (!body || body.style.display === "none") return;
+      var sr = $("ofScopeRow");
+      if (sr) {
+        sr.innerHTML =
+          '<button class="chip' + (ofScope === "P" ? " on" : "") + '" id="ofScP" type="button">period · ' + esc(S.tf || "YTD") + "</button>" +
+          '<button class="chip' + (ofScope === "A" ? " on" : "") + '" id="ofScA" type="button">all history</button>' +
+          '<button class="chip" id="ofAllL" type="button">tick every loss</button>' +
+          '<button class="chip" id="ofClr" type="button">clear</button>';
+        $("ofScP").onclick = function () { ofScope = "P"; ofRender(); };
+        $("ofScA").onclick = function () { ofScope = "A"; ofRender(); };
+        $("ofAllL").onclick = function () { ofTrades().forEach(function (t) { if (t.dol < 0) ofSel[ofKey(t)] = 1; }); ofRender(); };
+        $("ofClr").onclick = function () { ofSel = {}; ofRender(); };
+      }
+      var list = $("ofList"), T9 = ofTrades();
+      if (list) {
+        if (!T9.length) list.innerHTML = '<div style="color:var(--dim);font-size:12px;padding:6px">no closed trades ' + (ofScope === "P" ? "in this period — widen the period selector (top of the journal) or switch to all history." : "yet.") + "</div>";
+        else {
+          var CAP = 60, shown = T9.slice(0, CAP);
+          list.innerHTML = shown.map(function (t) {
+            var k = ofKey(t), on = !!ofSel[k];
+            return '<div class="ofRow' + (on ? " sel" : "") + '" data-k="' + esc(k) + '"><span class="ck">' + (on ? "✓" : "○") + '</span><span class="sym">' + esc(t.disp || t.sym) + '</span><span class="dt">' + (typeof hvDate === "function" ? hvDate(t.dout) : "") + " · " + (t.pct >= 0 ? "+" : "") + t.pct.toFixed(1) + "%" + (t.R != null && isFinite(t.R) ? " · " + (t.R > 0 ? "+" : "") + t.R.toFixed(1) + "R" : "") + '</span><b class="num ' + (t.dol >= 0 ? "g-grn" : "g-red") + '">' + dP9(t.dol) + "</b></div>";
+          }).join("") + (T9.length > CAP ? '<div style="color:var(--dim);font-size:11px;padding:4px 8px">… ' + (T9.length - CAP) + " older trades hidden — narrow the period to reach them.</div>" : "");
+          list.querySelectorAll(".ofRow").forEach(function (r) {
+            r.onclick = function () { var k = r.getAttribute("data-k"); if (ofSel[k]) delete ofSel[k]; else ofSel[k] = 1; ofRender(); };
+          });
+        }
+      }
+      ofPlanUI();
+    }
+    function ofPlanUI() {
+      var el = $("ofPlan"); if (!el) return;
+      var selT = ofClosedAll().filter(function (t) { return ofSel[ofKey(t)]; }); // selection survives scope switches
+      var sum = selT.reduce(function (a, t) { return a + t.dol; }, 0);
+      var target = sum < 0 ? -sum : 0;
+      var H = [];
+      H.push('<div class="wiHead">Target</div>');
+      if (!selT.length) H.push('<div class="wiRow" style="color:var(--dim)">nothing ticked yet — tap the losses above and the target builds here.</div>');
+      else if (sum >= 0) H.push('<div class="wiRow">ticked ' + selT.length + " trade" + (selT.length > 1 ? "s" : "") + ": net <b class='num g-grn'>" + dP9(sum) + "</b> — nothing to offset. Untick the winners.</div>");
+      else H.push('<div class="wiRow">ticked ' + selT.length + " trade" + (selT.length > 1 ? "s" : "") + ": <b class='num g-red'>" + dP9(sum) + "</b> → to make back: <b class='num'>$" + (target >= 1000 ? Math.round(target).toLocaleString() : target.toFixed(2)) + "</b></div>");
+      // ---- plan forms (open positions only) ----
+      var Ps = (typeof POS !== "undefined" && POS || []);
+      H.push('<div class="wiHead">The cover</div>');
+      if (!Ps.length) H.push('<div class="wiRow" style="color:var(--dim)">no open positions to plan with.</div>');
+      else {
+        var opts = Ps.map(function (p) { return '<option value="' + esc(p.sym) + '">' + esc(p.disp || p.sym) + " · " + (Math.round(p.sh * 100) / 100) + " held</option>"; }).join("");
+        H.push('<div class="ofForm"><select id="ofSSym">' + opts + '</select><input type="number" id="ofSSh" inputmode="decimal" step="any" min="0" placeholder="shares"><button class="btn sec" id="ofSAdd" type="button">+ sell</button></div>');
+        H.push('<div class="ofForm"><select id="ofPSym">' + opts + '</select><input type="number" id="ofPStop" inputmode="decimal" step="any" min="0" placeholder="new stop $"><button class="btn sec" id="ofPAdd" type="button">+ stop raise</button></div>');
+      }
+      if (ofNote) { H.push('<div class="wiRow g-amb" style="font-size:11.5px">' + ofNote + "</div>"); ofNote = ""; }
+      // ---- items + live-derived dollars ----
+      var sellNow = 0, lockIf = 0, comm9 = 0, sold$ = 0, fullCloses = 0, rows9 = [];
+      ofItems.forEach(function (it, i) {
+        var p = wiPos(it.sym), m = p ? (p.mlt || 1) : 1, txt, val = null, cls = "g-mut";
+        if (!p) txt = "<b>" + esc(it.sym) + "</b> — no longer held; remove this line.";
+        else if (it.k === "S") {
+          var px = p.px > 0 ? p.px : null;
+          if (px == null) txt = "<b>SELL " + it.sh + " " + esc(it.sym) + "</b> — no live price yet.";
+          else {
+            var ca = commAdj("Sell", it.sh, px), eff = ca ? ca.eff : px, cm = ca ? ca.comm : 0;
+            val = it.sh * (eff - p.basis) * m; sellNow += val; comm9 += cm; sold$ += it.sh * px * m;
+            cls = val >= 0 ? "g-grn" : "g-red";
+            txt = "<b>SELL " + it.sh + " " + esc(it.sym) + "</b> @ ~" + px.toFixed(2) + " <span style='color:var(--dim)'>(avg " + p.basis.toFixed(2) + ")</span> → realized now <b class='num " + cls + "'>" + dP9(val) + "</b>";
+          }
+        } else {
+          var shLeft = Math.max(0, p.sh - ofSellSh(it.sym));
+          val = (it.stop - p.basis) * shLeft * m;
+          var atLive = p.px > 0 && it.stop >= p.px;
+          if (val > 0) { lockIf += val; cls = "g-grn"; }
+          txt = "<b>STOP " + esc(it.sym) + " → " + it.stop.toFixed(2) + "</b> on " + (Math.round(shLeft * 100) / 100) + " sh <span style='color:var(--dim)'>(avg " + p.basis.toFixed(2) + ")</span> → " +
+            (val > 0 ? "locks <b class='num g-grn'>" + dP9(val) + "</b> <span style='color:var(--dim)'>if it fills</span>" : "<span class='g-amb'>still a " + dP9(val) + " floor — a stop below your avg can't offset anything</span>") +
+            (atLive ? " <span class='g-red'>· at/above the live price — that would trigger immediately (that's just a sell)</span>" : "");
+        }
+        rows9.push('<div class="ofItem"><span class="what">' + txt + '</span><span class="rm" data-i="' + i + '" title="remove">×</span></div>');
+      });
+      if (rows9.length) H.push(rows9.join(""));
+      Ps.forEach(function (q) { var ps9 = ofSellSh(q.sym); if (ps9 > 0 && ps9 >= q.sh - 1e-9) fullCloses++; }); // full close = the SUM of planned lines empties the position, however it's split
+      // ---- progress ----
+      if (target > 0) {
+        var covered = sellNow + lockIf, pctC = Math.max(0, Math.min(100, 100 * covered / target));
+        H.push('<div class="wiHead">Covered</div>');
+        H.push('<div class="wiRow"><b class="num">' + dP9(covered) + "</b> of the $" + (target >= 1000 ? Math.round(target).toLocaleString() : target.toFixed(2)) + " target" +
+          (covered >= target ? " — <b class='g-grn'>✓ covered" + (covered - target > 0.5 ? ", " + dP9(covered - target) + " beyond" : "") + "</b>" : " — <b class='g-amb'>" + dP9(covered - target).replace("−$", "$") + " still short</b>") +
+          '<span class="meter" style="display:block;height:7px;margin-top:6px"><i style="background:' + (covered >= target ? "#2dd4a0" : "#fab219") + ";width:" + pctC.toFixed(0) + '%"></i></span>' +
+          (lockIf > 0 ? "<div style='font-size:11px;color:var(--dim);margin-top:5px'>of which " + dP9(sellNow) + " realized the moment you sell · " + dP9(lockIf) + " only if those stops fill — a gap can fill lower, so treat it as a floor, not cash.</div>" : "") + "</div>");
+      }
+      // ---- portfolio after the planned sells (stops change nothing until they fill) ----
+      var eqL9 = (typeof EQABS !== "undefined" && EQABS && typeof EQ !== "undefined" && EQ.length) ? EQ[EQ.length - 1] : null;
+      if (eqL9 && sold$ > 0) {
+        var inv9 = Ps.reduce(function (a, q) { return a + q.val; }, 0), invA9 = inv9 - sold$;
+        var eN9 = Math.round(100 * inv9 / eqL9), eA9 = Math.round(100 * invA9 / eqL9);
+        var d9 = function (v) { return (v < 0 ? "−$" : "$") + Math.round(Math.abs(v)).toLocaleString(); };
+        H.push('<div class="wiHead">Portfolio after the planned sells</div>');
+        var MT9 = window._mmTier, bandTx = "";
+        if (MT9 && MT9.b0 != null) {
+          var bn9 = (String(MT9.lab || "").split(" — ")[0] || "model") + " " + MT9.b0 + "–" + MT9.b1 + "% band";
+          bandTx = eA9 >= MT9.b0 && eA9 <= MT9.b1 ? " · <b class='g-grn'>inside the " + bn9 + " ✓</b>" : eA9 > MT9.b1 ? " · <b class='g-red'>above the " + bn9 + " ✗</b>" : " · <b class='g-amb'>below the " + bn9 + " — selling past what the model asks ✗</b>";
+        }
+        H.push('<div class="wiRow">exposure <span class="num">' + eN9 + "%</span> → <b class='num'>" + eA9 + "%</b>" + bandTx + "</div>");
+        H.push('<div class="wiRow">cash ' + d9(eqL9 - inv9) + " → <b class='num'>" + d9(eqL9 - invA9 - comm9) + "</b>" + (fullCloses ? " · <span style='color:var(--dim)'>" + fullCloses + " position" + (fullCloses > 1 ? "s" : "") + " fully closed</span>" : "") + "</div>");
+      }
+      el.innerHTML = H.join("");
+      // handlers
+      var sa = $("ofSAdd"); if (sa) sa.onclick = function () {
+        var sym = $("ofSSym").value, sh = parseFloat($("ofSSh").value), p = wiPos(sym);
+        if (!p) { ofNote = "pick a held position."; return ofPlanUI(); }
+        if (!(sh > 0)) { ofNote = "enter the shares to sell."; return ofPlanUI(); }
+        var avail = p.sh - ofSellSh(sym);
+        if (avail <= 1e-9) { ofNote = "already selling the whole " + esc(sym) + " position in this plan."; return ofPlanUI(); }
+        if (sh > avail + 1e-9) { ofNote = esc(sym) + ": clamped to the " + (Math.round(avail * 100) / 100) + " sh still unplanned."; sh = avail; }
+        ofItems.push({ k: "S", sym: sym, sh: Math.round(sh * 10000) / 10000 }); ofPlanUI();
+      };
+      var pa = $("ofPAdd"); if (pa) pa.onclick = function () {
+        var sym = $("ofPSym").value, st = parseFloat($("ofPStop").value), p = wiPos(sym);
+        if (!p) { ofNote = "pick a held position."; return ofPlanUI(); }
+        if (!(st > 0)) { ofNote = "enter the new stop price."; return ofPlanUI(); }
+        var ex = -1; ofItems.forEach(function (it, i) { if (it.k === "P" && it.sym === sym) ex = i; });
+        if (ex > -1) { ofItems[ex].stop = st; ofNote = esc(sym) + " stop updated."; } else ofItems.push({ k: "P", sym: sym, stop: st });
+        ofPlanUI();
+      };
+      el.querySelectorAll(".ofItem .rm").forEach(function (x) {
+        x.onclick = function () { ofItems.splice(parseInt(x.getAttribute("data-i"), 10), 1); ofPlanUI(); };
+      });
+    }
+    $("ofTg").onclick = function () {
+      var b = $("ofBody"), on = b.style.display === "none";
+      b.style.display = on ? "" : "none";
+      this.textContent = on ? "Offset planner ▾" : "Offset planner ▸";
+      this.classList.toggle("on", on);
+      if (on) ofRender();
     };
 
     /* ----- v5.9h: CASH + POSITIONS entry mode (persisted per device on S.dnMode) ----- */
