@@ -493,6 +493,20 @@ body.light .chiplet.wiq{background:rgba(14,116,144,.08);color:#0e7490;border-col
 @media(max-width:640px){.chiplet.wiq{min-height:32px;min-width:46px;justify-content:center;padding:0 11px;font-size:11px}}
 .mxt .mean{display:none}
 @media(min-width:1400px){.mxt td.mean,.mxt th.mean{display:table-cell;text-align:left;font-weight:400;color:var(--dim);white-space:normal;max-width:300px;font-size:10.5px}}
+/* ---- v8.0: OPTIONS tab ---- */
+.ocGrid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px 10px}
+.ocGrid label{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);display:block}
+.ocGrid input,.ocGrid select{width:100%;margin-top:3px;padding:8px 9px}
+@media(max-width:1100px){.ocGrid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:640px){.ocGrid{grid-template-columns:1fr 1fr}}
+#optOpen table td{vertical-align:top}
+#optOpen td small{display:block;font-size:10px;color:var(--dim);font-weight:500;line-height:1.35;margin-top:2px}
+#optOpen td.nw,#optClosed td.nw{white-space:nowrap}
+#optOpen .kv,#optClosed .kv{font-size:10px}
+#optOpen .chiplet{margin:0 4px 3px 0;padding:1px 8px;font-size:10px;cursor:pointer;line-height:1.6;text-transform:none}
+#optAlerts .chiplet{cursor:pointer;padding:1px 8px;font-size:10px;text-transform:none;line-height:1.6;white-space:nowrap}
+#optAlerts .evrow{align-items:start}
+body.light #optOpen .badge.sample{background:rgba(15,23,42,.06)}
 </style></head><body><script>
 /* v5.2 pre-paint: resolve the stored theme synchronously so a light-mode user never sees a dark flash.
    Key must match const LS ("talalTJ3") below; any failure leaves the dark default untouched. */
@@ -508,6 +522,7 @@ if(_t0==="light"||(_t0==="auto"&&window.matchMedia&&matchMedia("(prefers-color-s
   <button class="snI" data-pg="F" id="snF"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="20" x2="5" y2="12"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="19" y1="20" x2="19" y2="9"/></svg><span>Performance</span></button>
   <button class="snI" data-pg="M" id="snM"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg><span>Market Conditions</span></button>
   <button class="snI" data-pg="F2" id="snF2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V10M9.5 21V10M14.5 21V10M19 21V10"/><path d="M12 2 3 8h18l-9-6z"/></svg><span>Fed Forecast</span></button>
+  <button class="snI" data-pg="O" id="snO"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/><circle cx="5" cy="5" r="1.5"/></svg><span>Options</span></button>
   <div class="spacer"></div>
   <button class="snI" id="snCollapse" title="Collapse / expand the sidebar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span>Collapse</span></button>
 </aside>
@@ -577,6 +592,7 @@ if(_t0==="light"||(_t0==="auto"&&window.matchMedia&&matchMedia("(prefers-color-s
   <button class="chip" data-pg="F" id="tabF">Performance</button>
   <button class="chip" data-pg="M" id="tabM">Market Conditions</button>
   <button class="chip" data-pg="F2" id="tabF2">Forecast</button>
+  <button class="chip" data-pg="O" id="tabO">Options</button>
 </div>
 
 <div class="bar">
@@ -637,7 +653,7 @@ if(_t0==="light"||(_t0==="auto"&&window.matchMedia&&matchMedia("(prefers-color-s
       <!-- v4.7: row keeps only the curve switch + "view ▾"; the overlay/pane toggles moved (ids/handlers unchanged) into #viewPop below -->
       <div class="chips" id="eqChipRow" style="padding:2px"><button class="chip on" id="evEQ">Equity</button><button class="chip" id="evDD">Drawdown</button><button class="chip vchip" id="tgView" title="chart view options — overlays + highs/lows pane">view ▾<span class="vdot"></span></button></div>
       <h3 style="margin-left:4px">Equity curve — FOMO + net H/L attached</h3>
-      <span class="rt">vs <span id="benchName">…</span> · <span id="rsState"></span><span class="num" id="ddStats"></span> <span id="eqLegend"></span> <span id="autoNote" style="display:none;color:var(--dim);font-weight:600"></span></span>
+      <span class="rt">vs <span id="benchName">…</span> · <span id="rsState"></span><span class="num" id="ddStats"></span><span class="num" id="winPnl9"></span> <span id="eqLegend"></span> <span id="autoNote" style="display:none;color:var(--dim);font-weight:600"></span></span>
       <!-- v5.1: live mark-to-market readout — always visible while LIVE is on, any curve/view -->
       <span class="num" id="liveNow" style="display:none" title="mark-to-market now — quotes refresh every 1 min (source can lag a few min)"></span>
     </div>
@@ -655,7 +671,7 @@ if(_t0==="light"||(_t0==="auto"&&window.matchMedia&&matchMedia("(prefers-color-s
 
   <div class="card c4">
     <div class="head"><h3>Portfolio Status</h3><span class="rt" id="lotMode"></span></div>
-    <div class="rail"><span class="rv" id="psExpState"></span><span class="rn num g-cyn" id="pExp">–</span><span class="rlb">Portfolio exposure<small>vs the model band below</small></span><span class="chev">›</span></div>
+    <div class="rail"><span class="rv" id="psExpState"></span><span class="rn num g-cyn" id="pExp">–</span><span class="rlb">Portfolio exposure<small id="pExpSub">vs the model band below</small></span><span class="chev">›</span></div>
     <svg viewBox="0 0 100 8" style="height:8px;margin:2px 0 4px" preserveAspectRatio="none">
       <rect x="0" y="2" width="100" height="4" rx="2" fill="rgba(255,255,255,.07)"/>
       <rect id="pBand" x="30" y="2" width="40" height="4" fill="rgba(31,181,31,.22)"/>
@@ -665,7 +681,7 @@ if(_t0==="light"||(_t0==="auto"&&window.matchMedia&&matchMedia("(prefers-color-s
     <div class="rail click" style="margin-top:4px" onclick="openExpModal()"><span class="rv" id="rvTier">—</span><span class="rn num" id="pTier">—</span><span class="rlb">Ideal exposure — model<small>tap to open the full model</small></span><span class="chev" style="color:#8ff0cf">›</span></div>
     <div class="rail"><span class="rv vmut">—</span><span class="rn num"><span class="g-cyn" id="psInv">–</span></span><span class="rlb">Invested value</span><span class="chev">›</span></div>
     <div class="rail"><span class="rv" id="rvOpl">—</span><span class="rn num"><span id="pOpl">–</span></span><span class="rlb">Open P&amp;L (portfolio)</span><span class="chev">›</span></div>
-    <div class="rail"><span class="rv" id="rvRisk">—</span><span class="rn num"><span id="pRisk">–</span></span><span class="rlb">Open risk — if all stops hit</span><span class="chev">›</span></div>
+    <div class="rail"><span class="rv" id="rvRisk">—</span><span class="rn num"><span id="pRisk">–</span></span><span class="rlb">Open risk — if all stops hit<small id="pRiskSub" style="display:none"></small></span><span class="chev">›</span></div>
     <div class="rail"><span class="rv" id="rvCar">—</span><span class="rn num"><span class="g-amb" id="pCar">–</span></span><span class="rlb">Starting capital at risk</span><span class="chev">›</span></div>
     <svg id="scarBar" viewBox="0 0 310 34" style="height:34px;display:none;margin:-2px 0 2px"></svg>
     <div class="rail"><span class="rv"><span id="mkt1">–</span></span><span class="rn num"></span><span class="rlb" id="mkt1n">Market trend — QQQ</span><span class="chev">›</span></div>
@@ -962,6 +978,92 @@ if(_t0==="light"||(_t0==="auto"&&window.matchMedia&&matchMedia("(prefers-color-s
 </div>
 </div>
 
+<!-- ============================ OPTIONS (v8.0) ============================ -->
+<div id="pageOptions" style="display:none">
+
+<div class="grid">
+  <div class="card c12">
+    <div class="head"><h3>Options Playbook — what the contracts say to do now</h3><span class="chiplet m" id="optChip">—</span><span class="rt">covered calls · cash-secured puts · protective puts · collars — BCI trade management, checked against the CA|RS book</span></div>
+    <div class="pbSum" id="optSum">…</div>
+    <div class="evhead" style="grid-template-columns:12px 1fr auto;margin-top:8px"><span></span><span>Management signals — 20%/10% buy-back rule · expiry · assignment · earnings · coverage · system fit</span><span>act</span></div>
+    <div id="optAlerts"><div class="kv" style="padding:6px 0">…</div></div>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="card c12">
+    <div class="head"><h3>Open Contracts</h3><span class="rt" id="optOpenN"></span></div>
+    <div id="optOpen"></div>
+    <div class="kv" style="margin-top:7px"><b style="color:var(--mut)">Reading the row →</b> <b>Captured</b> = how much of the premium has already melted in your favour (short contracts); the <b>20% rule</b> says buy it back once the mark is ≤ 20% of what you collected in the first half of the contract, <b>10%</b> in the last two weeks. <b>ROO</b> = return on option (Ellman): premium ÷ share price (time value ÷ strike when in the money) — never an R-multiple, never mixed into the stock stats. <b>Δ / P(ITM)</b> from Black-Scholes at the entry-implied vol — estimates, labelled est.</div>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="card c12">
+    <div class="head"><h3>Campaigns — stock and options as one trade</h3><span class="rt">Ellman's final number: stock P&amp;L + every premium on that underlying · collars shown as floor / cap / net</span></div>
+    <div id="optCamp"></div>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="card c6">
+    <div class="head"><h3>Exposure Bridge — options-adjusted</h3><span class="rt">what the Journal's exposure number leaves out</span></div>
+    <div class="rail"><span class="rv vmut">STOCK</span><span class="rn num" id="obStock">—</span><span class="rlb">Stock exposure<small>Σ position value ÷ equity — the Journal number</small></span><span class="chev">›</span></div>
+    <div class="rail"><span class="rv vmut">+ CSP</span><span class="rn num" id="obCsp">—</span><span class="rlb">Cash-secured put obligations<small>strike × 100 × contracts — a limit buy you've already been paid for</small></span><span class="chev">›</span></div>
+    <div class="rail"><span class="rv" id="obAllState">—</span><span class="rn num g-cyn" id="obAll">—</span><span class="rlb">All-in exposure vs the model band<small>stock + put obligations — the number the band should be judged on</small></span><span class="chev">›</span></div>
+    <div class="rail"><span class="rv" id="obCashState">—</span><span class="rn num" id="obCash">—</span><span class="rlb">Cash vs obligations<small>equity − invested value; negative = margin already</small></span><span class="chev">›</span></div>
+    <div class="rail"><span class="rv vmut">FLOORS</span><span class="rn num" id="obRisk">—</span><span class="rlb">Open risk if all stops hit → with put floors<small>protective puts cap the loss on the shares they cover</small></span><span class="chev">›</span></div>
+    <div class="rail"><span class="rv vmut">CAPPED</span><span class="rn num" id="obCap">—</span><span class="rlb">Shares under a short call<small>upside sold — the tail this system lives on</small></span><span class="chev">›</span></div>
+    <div class="rail"><span class="rv vmut">MARK</span><span class="rn num" id="obVal">—</span><span class="rlb">Open contracts' value to the account<small>negative = what buying every short contract back would cost now</small></span><span class="chev">›</span></div>
+  </div>
+  <div class="card c6">
+    <div class="head"><h3>Where a contract belongs in this system</h3><span class="rt">the guard every row above is judged by</span></div>
+    <div class="facts">
+      <div class="f"><span class="dot g"></span><span><b>Covered call = a paid limit sell.</b> Fits when the playbook already says <i>sell into strength</i> — above the model band, harvest signal on, stop-to-entry zone, DEFENSE tier. Put the strike on a ladder rung (+2R/+3R): assigned means the tranche you planned to sell got sold, plus the premium.</span></div>
+      <div class="f"><span class="dot r"></span><span><b>Never on a leader in its hold or winner phase.</b> This system breaks even on ~2.8R average winners with a 30–40% win rate — the right tail is the whole edge. A call sells that tail for 2–3%.</span></div>
+      <div class="f"><span class="dot r"></span><span><b>Never on a position the playbook says to exit</b> (3-EMA fired, failed 4-week test, under the stop). "Income" on a laggard keeps you in a trade the system already closed, with the full downside.</span></div>
+      <div class="f"><span class="dot w"></span><span><b>Cash-secured put = a full-size limit buy.</b> Counts as exposure the moment it's written. Only where you'd buy the stock at that strike anyway, only inside the band, never on DEFENSE sizing (0–0.25R).</span></div>
+      <div class="f"><span class="dot g"></span><span><b>Protective put = hedge instead of sell.</b> For a pyramided or banked winner when the gauges downgrade: keeps the position and its tail, floors the loss. When the trend gauges are green, the stop is the cheaper hedge.</span></div>
+      <div class="f"><span class="dot m"></span><span><b>One contract = 100 shares.</b> The sell ladder works in 25% tranches; on a 125-share position one call caps 80%. Under 400 shares the contract and the ladder don't line up — the row says so.</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="card flat c12">
+    <div class="head"><h3>Income track — closed cycles</h3><span class="rt">return on the capital each cycle worked on · never mixed into the R-multiple stats</span></div>
+    <div class="stats5">
+      <div class="stat"><div class="l">Cycles</div><div class="v num" id="okN">0</div><div class="s" id="okNs"></div></div>
+      <div class="stat"><div class="l">Kept the premium</div><div class="v num" id="okWr">—</div><div class="s">cycles that ended positive</div></div>
+      <div class="stat"><div class="l">Avg ROC</div><div class="v num" id="okRoc">—</div><div class="s">per cycle · CC on stock value · CSP on cash required</div></div>
+      <div class="stat"><div class="l">Annualised</div><div class="v num" id="okAnn">—</div><div class="s">avg ROC × 365 ÷ days</div></div>
+      <div class="stat"><div class="l">Net premium</div><div class="v num" id="okNet">—</div><div class="s" id="okBy"></div></div>
+      <div class="stat"><div class="l">Avg cycle</div><div class="v num" id="okDays">—</div><div class="s">days from open to close</div></div>
+    </div>
+    <div id="optClosed" style="margin-top:10px"></div>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="card c12" id="optCalcCard">
+    <div class="head"><h3>New contract — sanity check before you write it</h3><span class="rt">Ellman's initial-trade block + the system-fit guard + exposure after · nothing is saved until you press Log and then Save</span></div>
+    <div id="optQuick" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
+    <div class="ocGrid">
+      <label>Underlying<input type="text" id="ocUnd" list="optUndList" placeholder="SPCX" autocapitalize="characters"><datalist id="optUndList"></datalist></label>
+      <label>Leg<select id="ocSide"><option value="SC">Sell call (covered call)</option><option value="SP">Sell put (cash-secured)</option><option value="BP">Buy put (protective)</option><option value="BC">Buy call</option></select></label>
+      <label>Strike<input type="number" id="ocK" step="0.5" placeholder="160"></label>
+      <label>Expiry<input type="date" id="ocExp"></label>
+      <label>Contracts<input type="number" id="ocCt" min="1" step="1" value="1"></label>
+      <label>Premium / share<input type="number" id="ocP" step="0.01" placeholder="blank = model"></label>
+    </div>
+    <div id="ocOut" style="margin-top:10px"></div>
+    <div class="btnrow" style="margin-top:10px"><button class="btn pri" id="ocLog" style="display:none;flex:0 0 auto;min-width:180px">Log this leg → trade form</button></div>
+    <div class="kv" style="margin-top:9px"><b style="color:var(--mut)">How to log →</b> an option leg is an ordinary Transactions row whose Ticker is the OCC symbol (<b>SPCX 261016C00160000</b> = SPCX · 2026-10-16 · Call · 160), Shares = contracts, Price = premium per share. <b>Sell</b> opens a short (or closes a long), <b>Buy</b> closes it (or opens a long). Expired worthless → a Buy at <b>0.00</b>. Assigned → a Buy at 0.00 with "assigned" in Notes <b>plus</b> the stock row at the strike — exactly what IBKR's statement shows. Optional: Setup = CC / CSP / PP / COLLAR (else inferred from the stock book), Lot = a roll-chain id, a Live-tab row for the OCC symbol to replace the model mark with a real quote.</div>
+  </div>
+</div>
+
+</div>
+
 <!-- ============================ EXPOSURE MODAL ============================ -->
 <div class="modalwrap" id="expModal">
   <div class="xmodal">
@@ -1048,9 +1150,9 @@ function loadSheetData(tx,dy,pr,lv,sn,ld,yl,mc,er){
  const T=parseCSV(tx),D=parseCSV(dy),Pr=parseCSV(pr),Lv=parseCSV(lv);
  TX=T.slice(1).filter(r=>dt(r[0])&&r[1]&&num(r[3])&&num(r[4])!=null).map(r=>{
   const q=num(r[3]),sym=String(r[1]).trim().toUpperCase().replace(/\s+/g," ");
-  const om=/^([A-Z.]+) (\d{2})(\d{2})(\d{2})([CP])(\d{8})$/.exec(sym); // OCC option: GLW 260618C00130000
-  const disp=om?om[1]+" "+(+om[6]/1000)+om[5]+" "+om[4]+"/"+om[3]+"/"+om[2]:sym;
-  return{d:dt(r[0]),sym,disp,mult:om?100:1,opt:!!om,
+  const om=window.occParse?occParse(sym):null; // v8.0: OCC option leg (GLW 260618C00130000) — underlying / strike / expiry parsed once, here
+  const disp=om?om.disp:sym;
+  return{d:dt(r[0]),sym,disp,mult:om?100:1,opt:!!om,und:om?om.und:null,k:om?om.k:null,cp:om?om.cp:null,exp:om?om.exp:null,
   act:(/^s/i.test(r[2])||q<0)?"S":"B", // SELL / SLD / S — or negative share count (IBKR style)
   sh:Math.abs(q),px:num(r[4]),stop:num(r[5]),pivot:num(r[6]),set:(r[7]||"").trim(),lot:(r[8]||"").trim(),
   sgv:num(r[9]),eps:yes(r[10]),mist:(r[11]||"").trim(),note:(r[12]||"").trim()};}).sort((a,b)=>a.d-b.d);
@@ -1114,12 +1216,14 @@ function extendDaily(){
  if(!DAILY.length)return;
  var anchor=DAILY[DAILY.length-1],t0=anchor.d.getTime();
  var net={},mult={},lastPx={};
+ var occ9={};function oc9(s){if(occ9[s]===undefined)occ9[s]=window.occParse?occParse(s):null;return occ9[s];} // v8.0: option legs keep a SIGNED ledger — a sold contract is a liability, not a dropped row
  TX.forEach(function(t){if(t.d.getTime()>t0)return;mult[t.sym]=t.mult||1;lastPx[t.sym]=t.px;
+  if(t.opt){net[t.sym]=(net[t.sym]||0)+(t.act==="B"?t.sh:-t.sh);return;}
   net[t.sym]=t.act==="B"?(net[t.sym]||0)+t.sh:Math.max(0,(net[t.sym]||0)-t.sh);}); // sells clamp at 0 — same oversell guard the campaign builder applies
- var held=Object.keys(net).filter(function(s){return net[s]>1e-9;});
- if(held.length&&!held.some(function(s){return PRICES[s]&&PRICES[s].length;}))return; // no marks for ANY holding → pure guesswork, append nothing
+ var held=Object.keys(net).filter(function(s){return Math.abs(net[s])>1e-9;});
+ if(held.length&&!held.some(function(s){var o=oc9(s);return (PRICES[s]&&PRICES[s].length)||(o&&PRICES[o.und]&&PRICES[o.und].length);}))return; // no marks for ANY holding → pure guesswork, append nothing
  var gap=TX.filter(function(t){return t.d.getTime()>t0;}); // TX is date-sorted upstream
- var calS={},walk={SPY:1,QQQ:1};held.forEach(function(s){walk[s]=1;});gap.forEach(function(t){walk[t.sym]=1;});
+ var calS={},walk={SPY:1,QQQ:1};held.forEach(function(s){walk[s]=1;var o=oc9(s);if(o)walk[o.und]=1;});gap.forEach(function(t){walk[t.sym]=1;var o=oc9(t.sym);if(o)walk[o.und]=1;});
  for(var ws in walk){var wa=PRICES[ws];if(!wa)continue;
   for(var wi=wa.length-1;wi>=0&&wa[wi][0].getTime()>t0;wi--)calS[wa[wi][0].getTime()]=1;}
  var cal=Object.keys(calS).map(Number).sort(function(a,b){return a-b;});
@@ -1127,21 +1231,27 @@ function extendDaily(){
  var idx={};function closeAt(sym,tm){var a=PRICES[sym];if(!a||!a.length)return null; // latest close ≤ tm; per-symbol cursor — the walk is chronological
   var j=idx[sym]||0;while(j<a.length-1&&a[j+1][0].getTime()<=tm)j++;idx[sym]=j;
   return a[j][0].getTime()<=tm?a[j][1]:null;}
- function mark(tm){var v=0;for(var s in net){if(net[s]<=1e-9)continue;
+ function mark(tm){var v=0;for(var s in net){if(Math.abs(net[s])<=1e-9)continue;
+  var o=oc9(s);
+  if(o){var u9=closeAt(o.und,tm),lq=closeAt(s,tm),mp=lq!=null?lq:(u9!=null&&window.optModelPx?optModelPx(s,u9,tm):null); // v8.0: contract mark that day — a logged quote, else intrinsic + model time value off the underlying's close; short = negative
+   v+=net[s]*(mp!=null?mp:lastPx[s])*100;continue;}
   var c=closeAt(s,tm);v+=net[s]*(c!=null?c:lastPx[s])*(mult[s]||1);}return v;}
  var cash=anchor.eq-mark(t0),k=0;
  cal.forEach(function(tm){
   while(k<gap.length&&gap[k].d.getTime()<=tm){var t=gap[k++],m=t.mult||1;mult[t.sym]=m;lastPx[t.sym]=t.px;
-   if(t.act==="B"){cash-=t.sh*t.px*m;net[t.sym]=(net[t.sym]||0)+t.sh;}
+   if(t.opt){cash+=(t.act==="B"?-1:1)*t.sh*t.px*m;net[t.sym]=(net[t.sym]||0)+(t.act==="B"?t.sh:-t.sh);} // v8.0: premium paid/received, signed contracts (a 0.00 close = expiry)
+   else if(t.act==="B"){cash-=t.sh*t.px*m;net[t.sym]=(net[t.sym]||0)+t.sh;}
    else{var s5=Math.min(t.sh,net[t.sym]||0);cash+=s5*t.px*m;net[t.sym]=(net[t.sym]||0)-s5;}}
   DAILY.push({d:new Date(tm),eq:cash+mark(tm),fl:0,auto:true});});
 }
 // ---------- ledger -> campaigns & positions ----------
 function deriveAll(){
+ window._optSnap={}; // v8.0: per-load option entry cache (implied vol etc.) — rebuilt from the fresh ledger
  extendDaily(); // v5.4: synthetic tail first — every consumer below sees the extended series (a display that must show only user-logged rows filters on !x.auto)
  TRADES=[];POS=[];
  const by={};TX.forEach(t=>(by[t.sym]=by[t.sym]||[]).push(t));
  for(const sym in by){
+  if(by[sym][0].opt)continue; // v8.0: option legs belong to the options engine (deriveOptions) — this long-only builder dropped every sell-to-open and left phantom longs behind the buy-to-close
   let c=null,pos=0;
   for(const t of by[sym]){
    if(t.act==="B"){
@@ -1185,15 +1295,17 @@ function deriveAll(){
    const live=LIVE[c.sym]??c.buys[c.buys.length-1].px;
    /* ---- v6.1: banked profit + whole-trade breakeven after partial sells (initial avg cost above is never touched) ----
       banked = proceeds − cost of the sold shares (mode-consistent: FIFO-consumed cost, or the all-buys average in AVG mode) − sell commissions paid.
-      tradeBE = the price the REMAINING shares must fetch for the ENTIRE trade to net $0, commissions included
-      (total buy cost + buy comms − net proceeds so far) ÷ remaining, + the exit commission on the remainder.
+      tradeBE = the price the REMAINING shares must fetch for the ENTIRE trade to net $0.
+      v7.4: pure ledger math on the SAVED prices — v4.5 already folds executed commissions into
+      every saved price, so the old +buyC/+sellC/+exit-cps adders double-counted (~10¢/sh on
+      PANW: showed 307.22 where the broker's true whole-trade b/e is 307.12).
       ≤0 ⇒ the banked profit already covers the whole remaining cost — shown as "paid off". Options rows skip (stock commission model). */
    let bk61=null,be61=null;
    if(shS>1e-9&&rem>1e-9&&!c.opt){const cps=window.commPerShare||function(){return 0;};
     const sellC=c.sells.reduce((a,s)=>a+cps(s.sh,s.px)*s.sh,0),buyC=c.buys.reduce((a,b)=>a+cps(b.sh,b.px)*b.sh,0);
     const sc=S.lots==="AVG"?shS*cost/shB:soldCost;
     bk61=(proc-sc)*c.m-sellC;
-    const raw61=(cost+buyC-(proc-sellC))/rem;be61=raw61>0?raw61+cps(rem,raw61):raw61;}
+    const raw61=(cost-proc)/rem;be61=Math.round(raw61*100)/100;}
    POS.push({sym:c.sym,disp:c.disp,opt:c.opt,mlt:c.m,set:c.set,din:c.din,sh:rem,basis,px:live,est:LIVE[c.sym]==null,stop,lots:openLots,
     px0:b0.px, // v5.5: the FIRST buy's price — the 3-4wk leader test measures from the initial entry, never the average
     risk0:c.riskp, // v5.6: the FIRST buy's entry-stop distance % ((px0−stop0)/px0×100) — the initial risk the breakeven/harvest rules multiply; null when the first lot carried no stop at entry
@@ -1210,9 +1322,282 @@ function deriveAll(){
  TRADES.forEach(c=>{const b0=c.buys[0],ea=EQABS?eqAt(b0.d):null;c.size0=ea?100*b0.sh*b0.px*c.m/ea:null;});
  const YK=window._yieldKeys||[];const bl=Object.keys(PRICES).filter(b=>!["JNK","JNKADJ","QQQVOL","NFCI","XLP","VIX","IEI","SPYO","SPYC","SPYH","SPYL","SPYVOL"].includes(b)&&!YK.includes(b)&&!(/LOW$/.test(b)&&b.length>3&&PRICES[b.slice(0,-3)])); /* v5.6: "<SYM>LOW" daily-low columns feed the 3-EMA exit, not the bench list (only a low-series when the base symbol also has closes) */ if(bl.length&&!bl.includes(S.bench))S.bench=bl.includes("QQQ")?"QQQ":bl.includes("SPY")?"SPY":bl[0];
  $("bench").innerHTML=bl.map(b=>`<option ${b===S.bench?"selected":""}>${b}</option>`).join("");
- if(EQD.length){$("d1").value=EQD[0].toISOString().slice(0,10);$("d2").value=EQD[EQD.length-1].toISOString().slice(0,10);}}
+ if(EQD.length){$("d1").value=EQD[0].toISOString().slice(0,10);$("d2").value=EQD[EQD.length-1].toISOString().slice(0,10);}
+ if(window.deriveOptions)try{deriveOptions();}catch(e9){console.warn("options engine",e9);} // v8.0: cycles, pairing with the stock book, exposure bridge
+}
 function benchAt(tk){const arr=PRICES[tk]||[];let j=0;return EQD.map(d=>{
  while(j<arr.length-1&&arr[j+1][0]<=d)j++;return arr.length?arr[Math.min(j,arr.length-1)][1]:1;});}
+</script>
+
+<script>
+"use strict";
+/* ============================ v8.0: OPTIONS ENGINE ============================
+   Covered calls · cash-secured puts · protective puts · collars — BCI-style trade management
+   (Ellman's Trade Management Calculator) wired to the CA|RS stock book instead of fighting it.
+   ONE ledger: an option leg is a Transactions row whose Ticker is the OCC symbol
+   (SPCX 261016C00160000 = SPCX · 16 Oct 2026 · Call · 160). Shares = contracts, Price = premium
+   per share. Sell = sell-to-open or sell-to-close, Buy = buy-to-open or buy-to-close — the sign of
+   the running contract count decides which, so no new vocabulary. Expired → a closing row at 0.00.
+   Assigned → a closing row at 0.00 with "assigned" in Notes PLUS the ordinary stock row at the
+   strike (exactly how IBKR books it). Setup may carry a strategy tag (CC · CSP · PP · COLLAR · LC ·
+   LP) — otherwise the engine infers it from the stock book; Lot may carry a roll-chain id.
+   Marks: a Live-tab quote for the OCC symbol wins; otherwise Black-Scholes at the volatility the
+   entry premium implied (falls back to 21-day realized vol), intrinsic once expired. Every such
+   number is labelled "est". Option P&L never enters the R-multiple stats — it has its own
+   income track (ROC%, annualised) and flows into the equity curve in dollars only. */
+let OPTC=[],OPTOPEN=[],OPTCLOSED=[],OPTBRIDGE=null;
+const OPT_TAGS={CC:"Covered call",CSP:"Cash-secured put",PP:"Protective put",COLLAR:"Collar",LC:"Long call",LP:"Long put",NAKED:"Uncovered call",PARTIAL:"Partly covered call"};
+function occParse(sym){ // "GLW 260618C00130000" → {und,yy,mm,dd,cp,k,exp,disp}
+ const om=/^([A-Z.]+) (\d{2})(\d{2})(\d{2})([CP])(\d{8})$/.exec(String(sym||"").trim().toUpperCase().replace(/\s+/g," "));
+ if(!om)return null;
+ const k=+om[6]/1000,exp=new Date(2000+ +om[2],+om[3]-1,+om[4]);
+ return{und:om[1],cp:om[5],k,exp,disp:om[1]+" "+k+om[5]+" "+om[4]+"/"+om[3]+"/"+om[2]};}
+function occBuild(und,cp,k,exp){ // inverse — the calculator's "Log this leg" needs the sheet spelling
+ const p2=n=>String(n).padStart(2,"0");
+ return String(und).toUpperCase().trim()+" "+String(exp.getFullYear()).slice(2)+p2(exp.getMonth()+1)+p2(exp.getDate())+cp+String(Math.round(k*1000)).padStart(8,"0");}
+window.occParse=occParse;window.occBuild=occBuild;
+/* ---- Black-Scholes (marks, delta, probability of finishing in the money) ---- */
+function nCDF(x){const t=1/(1+0.2316419*Math.abs(x)),d=0.3989423*Math.exp(-x*x/2);
+ const p=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return x>0?1-p:p;}
+function bsPrice(cp,S,K,T,r,v){if(!(S>0)||!(K>0))return null;if(T<=0||!(v>0))return Math.max(0,cp==="C"?S-K:K-S);
+ const sq=v*Math.sqrt(T),d1=(Math.log(S/K)+(r+v*v/2)*T)/sq,d2=d1-sq;
+ return cp==="C"?S*nCDF(d1)-K*Math.exp(-r*T)*nCDF(d2):K*Math.exp(-r*T)*nCDF(-d2)-S*nCDF(-d1);}
+function bsGreeks(cp,S,K,T,r,v){if(!(S>0)||!(K>0)||T<=0||!(v>0)){const itm=cp==="C"?S>K:S<K;return{delta:itm?(cp==="C"?1:-1):0,pITM:itm?1:0};}
+ const sq=v*Math.sqrt(T),d1=(Math.log(S/K)+(r+v*v/2)*T)/sq,d2=d1-sq;
+ return{delta:cp==="C"?nCDF(d1):nCDF(d1)-1,pITM:cp==="C"?nCDF(d2):nCDF(-d2)};}
+function impliedVol(cp,S,K,T,r,price){if(!(price>0)||!(S>0)||T<=0)return null;
+ let lo=0.02,hi=4;if(bsPrice(cp,S,K,T,r,hi)<price||bsPrice(cp,S,K,T,r,lo)>price)return null;
+ for(let i=0;i<60;i++){const m=(lo+hi)/2;if(bsPrice(cp,S,K,T,r,m)>price)hi=m;else lo=m;}return (lo+hi)/2;}
+function optRate(){ // risk-free proxy: a 3-month/2-year series from the Yields tab when present, else 4%
+ try{const yk=window._yieldKeys||[];const k=yk.find(x=>/3M|13W|IRX|2Y|DGS2|DGS3/i.test(x))||yk.find(x=>/1Y|10Y|DGS10|TNX/i.test(x));
+  if(k&&PRICES[k]&&PRICES[k].length){const v=PRICES[k][PRICES[k].length-1][1];if(v>0&&v<20)return v/100;}}catch(e){}
+ return 0.04;}
+function undPxAt(und,tm){const a=PRICES[und];if(!a||!a.length)return null;let v=null;for(let i=0;i<a.length;i++){if(a[i][0].getTime()<=tm)v=a[i][1];else break;}return v;}
+function rvol(und){const a=PRICES[und];if(!a||a.length<12)return null;const cl=a.slice(-22).map(x=>x[1]),rs=[];
+ for(let i=1;i<cl.length;i++)if(cl[i]>0&&cl[i-1]>0)rs.push(Math.log(cl[i]/cl[i-1]));
+ if(rs.length<8)return null;const mu=rs.reduce((x,y)=>x+y,0)/rs.length;const va=rs.reduce((x,y)=>x+(y-mu)*(y-mu),0)/(rs.length-1);return Math.sqrt(va*252);}
+/* per-symbol entry snapshot: first opening leg's date/premium, underlying then, DTE0, implied vol — cached per data load */
+window._optSnap={};
+function optSnap(sym){const c9=window._optSnap;if(c9[sym]!==undefined)return c9[sym];
+ const oc=occParse(sym);if(!oc){c9[sym]=null;return null;}
+ const legs=(TX||[]).filter(t=>t.sym===sym).sort((a,b)=>a.d-b.d);if(!legs.length){c9[sym]=null;return null;}
+ const t0=legs[0],din=t0.d.getTime();
+ let S0=undPxAt(oc.und,din);if(S0==null){const p=(POS||[]).find(x=>x.sym===oc.und);S0=p?p.basis:(LIVE[oc.und]||null);}
+ const T0=Math.max(1/365,(oc.exp.getTime()-din)/864e5/365),r=optRate();
+ let iv=S0?impliedVol(oc.cp,S0,oc.k,T0,r,t0.px):null,ivSrc="implied";
+ if(iv==null){iv=rvol(oc.und);ivSrc=iv!=null?"realized":"none";}
+ const out={und:oc.und,cp:oc.cp,k:oc.k,exp:oc.exp,S0,p0:t0.px,din,T0,iv,ivSrc,r};c9[sym]=out;return out;}
+/* mark of ONE contract (per share) at time tm given the underlying price then — the equity tail and the live views share this */
+function optModelPx(sym,undPx,tm){const s=optSnap(sym);if(!s)return null;
+ const T=(s.exp.getTime()-tm)/864e5/365,intr=Math.max(0,s.cp==="C"?undPx-s.k:s.k-undPx);
+ if(T<=0)return intr; // expired: worth exactly its intrinsic (settles at the close of expiry day)
+ if(!(undPx>0))return null;
+ if(s.iv!=null){const v=bsPrice(s.cp,undPx,s.k,T,s.r,s.iv);return v!=null?Math.max(v,intr):intr;}
+ const intr0=s.S0?Math.max(0,s.cp==="C"?s.S0-s.k:s.k-s.S0):0,ext0=Math.max(0,s.p0-intr0); // no vol at all: time value melts with √time
+ return intr+ext0*Math.sqrt(Math.max(0,T/s.T0));}
+window.optModelPx=optModelPx;
+function optMarkNow(sym){ // {px,src} — Live-tab quote for the OCC symbol wins; model otherwise; null when nothing to mark against
+ if(LIVE[sym]!=null)return{px:LIVE[sym],src:"live"};
+ const s=optSnap(sym);if(!s)return null;
+ const u=LIVE[s.und]!=null?LIVE[s.und]:undPxAt(s.und,Date.now());if(u==null)return null;
+ const px=optModelPx(sym,u,Date.now());return px==null?null:{px,src:(Date.now()>=s.exp.getTime()+864e5)?"intrinsic":"model",undPx:u};}
+/* ---- cycles: contiguous non-zero contract runs per OCC symbol, direction from the first leg ---- */
+function deriveOptions(){
+ window._optSnap={};OPTC=[];
+ const by={};(TX||[]).forEach(t=>{if(t.opt&&t.und)(by[t.sym]=by[t.sym]||[]).push(t);});
+ for(const sym in by){let c=null,net=0;
+  for(const t of by[sym]){let q=t.act==="B"?t.sh:-t.sh;
+   while(Math.abs(q)>1e-9){
+    if(!c){c={sym,und:t.und,k:t.k,cp:t.cp,exp:t.exp,disp:t.disp,dir:q>0?"long":"short",legs:[],din:t.d,dout:null,open:true,ct0:0,credit:0,debit:0,
+      tag:(t.set||"").trim().toUpperCase(),lot:(t.lot||"").trim(),net:0};OPTC.push(c);}
+    const same=(c.dir==="long")===(q>0);
+    const take=same?q:Math.sign(q)*Math.min(Math.abs(q),Math.abs(net)),ct=Math.abs(take);
+    c.legs.push({d:t.d,act:t.act,ct,px:t.px,note:t.note||"",opening:same});
+    if(t.act==="B")c.debit+=ct*t.px*100;else c.credit+=ct*t.px*100;
+    if(same)c.ct0+=ct;net+=take;q-=take;
+    if(Math.abs(net)<1e-9){c.dout=t.d;c.open=false;c.net=0;c=null;}else c.net=net;}}}
+ OPTC.sort((a,b)=>a.din-b.din);
+ OPTC.forEach(c=>{
+  c.ct=Math.abs(c.net);const opn=c.legs.filter(l=>l.opening);
+  c.p0=opn.reduce((a,l)=>a+l.ct*l.px,0)/(c.ct0||1); // entry premium per share (contract-weighted)
+  c.dte0=Math.max(1,Math.round((c.exp-c.din)/864e5));
+  const sn=optSnap(c.sym);c.S0=sn?sn.S0:null;c.iv=sn?sn.iv:null;c.ivSrc=sn?sn.ivSrc:"none";
+  c.realized=c.credit-c.debit; // cash so far (short: premium kept minus buybacks; long: −debit + sales)
+  if(!c.open){const last=c.legs[c.legs.length-1],nt=last.note||"";
+   c.reason=last.px<=0.0001?(/assign/i.test(nt)?"assigned":/exercis/i.test(nt)?"exercised":"expired"):"closed";
+   c.days=Math.max(1,Math.round((c.dout-c.din)/864e5));
+   c.base=c.dir==="short"?(c.cp==="C"?(c.S0||c.k)*100*c.ct0:(c.k-c.p0)*100*c.ct0):c.debit; // capital the cycle worked on (BCI: stock value for CC · cash required for CSP)
+   c.roc=c.base>0?100*c.realized/c.base:null;c.ann=c.roc!=null?c.roc*365/c.days:null;}
+  else{c.dte=Math.ceil((c.exp.getTime()-Date.now())/864e5);
+   const m=optMarkNow(c.sym);c.mark=m?m.px:null;c.markSrc=m?m.src:"none";c.undPx=m&&m.undPx!=null?m.undPx:(LIVE[c.und]!=null?LIVE[c.und]:undPxAt(c.und,Date.now()));
+   c.value=c.mark!=null?(c.dir==="long"?1:-1)*c.ct*c.mark*100:null; // what the open contracts are worth to the account now
+   c.unreal=c.value!=null?c.realized+c.value:null;
+   c.captured=(c.dir==="short"&&c.mark!=null&&c.p0>0)?100*(1-c.mark/c.p0):null;}});
+ // roll chains: a close followed by an open on the same underlying+type within a session, or an explicit shared Lot id
+ OPTC.forEach(c=>{if(c.open||c.reason!=="closed")return;
+  const nx=OPTC.find(o=>o!==c&&o.und===c.und&&o.cp===c.cp&&o.dir===c.dir&&Math.abs(o.din-c.dout)<=2*864e5&&(o.exp>c.exp||o.k!==c.k)&&(!c.lot||!o.lot||c.lot===o.lot));
+  if(nx){c.reason="rolled";c.rolledTo=nx;nx.rolledFrom=c;}});
+ OPTOPEN=OPTC.filter(c=>c.open);OPTCLOSED=OPTC.filter(c=>!c.open).sort((a,b)=>a.dout-b.dout);
+ optPair();optBridge();optCampaigns();}
+/* ---- v8.1: stock price that puts the contract at a target value (Black-Scholes inverted in S) ---- */
+function optPriceFor(cp,K,T,r,v,target){if(!(target>0)||!(K>0))return null;
+ if(T<=0)return cp==="C"?K+target:K-target; // intrinsic only
+ const f=S=>bsPrice(cp,S,K,T,r,v);let lo=0.01*K,hi=6*K;
+ if(cp==="C"){if(f(lo)>target||f(hi)<target)return null;for(let i=0;i<60;i++){const m=(lo+hi)/2;if(f(m)>target)hi=m;else lo=m;}}
+ else{if(f(hi)>target||f(lo)<target)return null;for(let i=0;i<60;i++){const m=(lo+hi)/2;if(f(m)>target)lo=m;else hi=m;}}
+ return (lo+hi)/2;}
+function optVol(o){return (o.iv!=null&&o.iv>0)?o.iv:(rvol(o.und)||0.45);}
+/* the 20%/10% buy-back map: for today and each following week, the underlying price at which the mark reaches the rule's level (20% of the premium
+   until the last two weeks, 10% inside them). A short call needs the stock AT OR BELOW the figure, a short put AT OR ABOVE it. */
+function optTriggerMap(o){ // o: open cycle or calculator draft {cp,k,exp,p0,iv,und,dte0}
+ if(!(o.p0>0)||!o.exp)return null;const v=optVol(o),r=optRate(),now=Date.now(),out=[];
+ for(let w=0;w<=8;w++){const tm=now+w*7*864e5,dte=Math.ceil((o.exp.getTime()-tm)/864e5);if(dte<=0)break;
+  const lvl=(dte<=14||(o.dte0!=null&&o.dte0<=14))?0.10:0.20,S=optPriceFor(o.cp,o.k,dte/365,r,v,lvl*o.p0);
+  out.push({w,d:new Date(tm),dte,lvl,S});if(out.length>=6)break;}
+ return{v,rows:out,l20:0.2*o.p0,l10:0.1*o.p0};}
+window.optTriggerMap=optTriggerMap;
+function optExpectedMove(o,S){ // 1-sigma move by expiry (BCI's expected-price-movement calculator): S × vol × √T
+ if(!(S>0)||!o.exp)return null;const dte=Math.max(0,(o.exp.getTime()-Date.now())/864e5),v=optVol(o),em=S*v*Math.sqrt(dte/365);
+ const sig=em>0?Math.abs(o.k-S)/em:null;return{em,lo:S-em,hi:S+em,sig,v,dte};}
+window.optExpectedMove=optExpectedMove;
+/* ---- v8.1: campaigns — stock + options on one underlying as ONE trade (Ellman's "final" number) ---- */
+let OPTCAMP={};
+function optCampaigns(){OPTCAMP={};window._optByUnd=OPTCAMP;
+ OPTC.forEach(c=>{const a=OPTCAMP[c.und]=OPTCAMP[c.und]||{und:c.und,cycles:[],open:[],closed:[],optNet:0,optReal:0,optOpenVal:0,since:null,collar:null};
+  a.cycles.push(c);(c.open?a.open:a.closed).push(c);
+  a.optReal+=c.realized;if(c.open)a.optOpenVal+=(c.value||0);
+  if(a.since==null||c.din<a.since)a.since=c.din;});
+ for(const u in OPTCAMP){const a=OPTCAMP[u];a.optNet=a.optReal+a.optOpenVal;
+  const cc=a.open.find(c=>c.strat==="CC"||c.strat==="COLLAR"),pp=a.open.find(c=>c.strat==="PP");
+  if(cc&&pp){const net=cc.p0-pp.p0;a.collar={call:cc,put:pp,net,floor:pp.k+net,cap:cc.k+net,ct:Math.min(cc.ct,pp.ct)};}
+  // stock side: the OPEN campaign on this underlying, else closed campaigns that overlap the option window (±3 days — assignment lands a day apart)
+  const camps=(TRADES||[]).filter(t=>t.sym===u&&!t.opt),openC=camps.find(t=>t.open);
+  const lastOut=a.cycles.reduce((m,c)=>Math.max(m,(c.dout||new Date()).getTime()),0),firstIn=a.since?a.since.getTime():0;
+  const closedC=camps.filter(t=>!t.open&&t.dout&&t.din&&t.dout.getTime()>=firstIn-3*864e5&&t.din.getTime()<=lastOut+3*864e5);
+  let cost=0,stock=0,rem=0,basis=null,live=null,shares=0,label="";
+  if(openC){const p=(POS||[]).find(x=>x.sym===u);cost=openC.buys.reduce((s,b)=>s+b.sh*b.px,0);const proc=openC.sells.reduce((s,x)=>s+x.sh*x.px,0);
+   rem=openC.buys.reduce((s,b)=>s+b.sh,0)-openC.sells.reduce((s,x)=>s+x.sh,0);live=p?p.px:(LIVE[u]!=null?LIVE[u]:null);basis=p?p.basis:null;shares=rem;
+   stock=(live!=null?live*rem:0)+proc-cost;label="open";if(a.since==null||openC.din<a.since)a.since=openC.din;}
+  else if(closedC.length){cost=closedC.reduce((s,t)=>s+t.buys.reduce((x,b)=>x+b.sh*b.px,0),0);stock=closedC.reduce((s,t)=>s+(t.dol||0),0);label="closed";
+   const d0=closedC.reduce((m,t)=>t.din<m?t.din:m,closedC[0].din);if(a.since==null||d0<a.since)a.since=d0;}
+  const csp=a.cycles.filter(c=>c.dir==="short"&&c.cp==="P");
+  const base=cost>0?cost:csp.reduce((s,c)=>s+(c.k-c.p0)*100*c.ct0,0); // no shares ever: the cash the puts were secured with
+  a.stock=stock;a.cost=cost;a.base=base;a.shares=shares;a.basis=basis;a.live=live;a.stockLabel=label;
+  a.combined=stock+a.optNet;a.pct=base>0?100*a.combined/base:null;
+  a.days=a.since?Math.max(1,Math.round((Date.now()-a.since.getTime())/864e5)):null;a.ann=(a.pct!=null&&a.days)?a.pct*365/a.days:null;
+  if(a.collar&&basis>0){a.collar.maxLoss=100*(a.collar.floor-basis)/basis;a.collar.maxGain=100*(a.collar.cap-basis)/basis;}}}
+window.optCampaigns=optCampaigns;
+window.deriveOptions=deriveOptions;
+/* ---- pairing with the stock book: strategy inference, coverage, obligations ---- */
+function optPair(){const posBy={};(POS||[]).forEach(p=>{posBy[p.sym]=p;});
+ OPTOPEN.forEach(c=>{const p=posBy[c.und]||null,sh=p?p.sh:0;c.pos=p;c.shares=sh;
+  c.ladderR=(p&&p.px0>0&&p.risk0>0)?(c.k-p.px0)/(p.px0*p.risk0/100):null; // where the strike sits on the sell ladder (+1R/+2R/+3R from the first buy's risk)
+  const tag=OPT_TAGS[c.tag]?c.tag:null;
+  if(c.dir==="short"&&c.cp==="C"){c.cover=Math.min(1,sh/(100*c.ct));c.strat=(tag&&tag!=="CC")?tag:(c.cover>=1?"CC":c.cover>0?"PARTIAL":"NAKED");c.cappedSh=Math.min(sh,100*c.ct);} // a CC tag never overrides missing shares
+  else if(c.dir==="short"&&c.cp==="P"){c.strat="CSP";c.obl=c.k*100*c.ct;}
+  else if(c.dir==="long"&&c.cp==="P"){c.strat=(tag==="PP"||tag==="LP")?tag:(sh>0?"PP":"LP");c.hedgedSh=Math.min(sh,100*c.ct);}
+  else{c.strat="LC";}}); // a tag can only pick between labels that are possible for the leg's own direction and type
+ OPTOPEN.forEach(c=>{if(c.strat==="CC"&&OPTOPEN.some(o=>o!==c&&o.und===c.und&&o.strat==="PP"))c.collar=OPTOPEN.find(o=>o!==c&&o.und===c.und&&o.strat==="PP");});
+ OPTOPEN.forEach(c=>{if(c.strat==="PP"&&OPTOPEN.some(o=>o!==c&&o.und===c.und&&o.strat==="CC"))c.collar=OPTOPEN.find(o=>o!==c&&o.und===c.und&&o.strat==="CC");});}
+function optBridge(){const eqL=(typeof EQABS!=="undefined"&&EQABS&&EQ.length)?EQ[EQ.length-1]:null;
+ const inv=(POS||[]).reduce((a,p)=>a+p.val,0),cash=eqL!=null?eqL-inv:null;
+ const csp=OPTOPEN.filter(c=>c.strat==="CSP"),obl=csp.reduce((a,c)=>a+c.obl,0);
+ const cc=OPTOPEN.filter(c=>c.strat==="CC"||c.strat==="NAKED"),capped=cc.reduce((a,c)=>a+(c.cappedSh||0),0),shTot=(POS||[]).reduce((a,p)=>a+p.sh,0);
+ // protective puts: the floor they put under the stop-based open risk — only the hedged shares, only where the put floor beats the stop
+ let ppSaved=0;OPTOPEN.filter(c=>c.strat==="PP"&&c.pos).forEach(c=>{const p=c.pos,fl=c.k-c.p0; // floor per share after the put's own cost
+  const stopLoss=p.stop!=null?Math.max(0,p.px-p.stop):null;const putLoss=Math.max(0,p.px-fl);
+  if(stopLoss!=null&&putLoss<stopLoss)ppSaved+=(stopLoss-putLoss)*c.hedgedSh;});
+ const optVal=OPTOPEN.reduce((a,c)=>a+(c.value||0),0);
+ OPTBRIDGE=window._optBridge={eqL,inv,cash,obl,oblPct:eqL?100*obl/eqL:null,expAll:eqL?100*(inv+obl)/eqL:null,secured:cash!=null?cash>=obl:null,
+  capped,cappedPct:shTot?100*capped/shTot:0,ppSaved,optVal,nOpen:OPTOPEN.length,premOpen:OPTOPEN.filter(c=>c.dir==="short").reduce((a,c)=>a+c.credit-c.debit,0)};}
+/* ---- BCI entry calculations — the Trade Management Calculator's "initial" block ---- */
+function optEntryCalc(o){ // o={dir,cp,k,p0,S0,dte0,basis,px0,risk0}
+ const r={};const{cp,k,p0,S0,dte0}=o;if(!(S0>0)||!(k>0)||!(p0>=0))return null;
+ if(o.dir==="short"&&cp==="C"){const itm=k<S0,intr=Math.max(0,S0-k),tv=p0-intr;
+  r.itm=itm;r.intr=intr;r.tv=tv;r.roo=itm?100*tv/(S0-intr):100*p0/S0;r.upside=itm?0:100*(k-S0)/S0;r.prot=itm?100*intr/S0:0;r.be=S0-p0;r.maxRet=r.roo+r.upside;
+  if(o.basis>0)r.ifAssigned=100*(k+p0-o.basis)/o.basis;}
+ else if(o.dir==="short"&&cp==="P"){r.cashReq=(k-p0)*100;r.roo=100*p0/(k-p0);r.be=k-p0;r.discount=100*(S0-r.be)/S0;r.otm=k<S0;r.dist=100*(S0-k)/S0;}
+ else if(o.dir==="long"&&cp==="P"){r.cost=100*p0/S0;r.floor=k-p0;r.floorPct=100*(r.floor-S0)/S0;r.dist=100*(S0-k)/S0;if(o.basis>0)r.maxLossVsBasis=100*(k-p0-o.basis)/o.basis;}
+ else{r.cost=100*p0/S0;r.be=k+p0;r.bePct=100*(r.be-S0)/S0;r.dist=100*(k-S0)/S0;}
+ r.ann=r.roo!=null?r.roo*365/Math.max(1,dte0):null;
+ if(o.px0>0&&o.risk0>0)r.ladderR=(k-o.px0)/(o.px0*o.risk0/100); // where the strike sits on the sell ladder (+1R/+2R/+3R)
+ return r;}
+window.optEntryCalc=optEntryCalc;
+/* ---- system-fit guard: does this contract serve the CA|RS book or fight it? ---- */
+function optFit(c){ // c: open cycle (paired) or a calculator draft with the same fields — returns {v:"FITS"|"NEUTRAL"|"CONFLICT"|"EXIT SIGNAL",cls,why[]}
+ const p=c.pos,tier=window._mmTier||null,thr=window._thrMode||null,ex=window._exp;const why=[];let v="NEUTRAL",cls="w";
+ if(c.strat==="CC"||c.strat==="NAKED"||c.strat==="PARTIAL"||c.strat==="COLLAR"){
+  if(!p||c.strat==="NAKED")return{v:"CONFLICT",cls:"r",why:["no "+c.und+" shares in the book — an uncovered call has unlimited risk and no place in this system"]};
+  if(c.strat==="PARTIAL")return{v:"CONFLICT",cls:"r",why:["only "+(c.shares||0)+" of the "+(100*c.ct)+" shares a "+c.ct+"-contract call needs — the uncovered part has unlimited risk"]};
+  const lt=window.leaderTest?leaderTest(p):null,e6=window.ema3Sig?ema3Sig(p):null,be=window.beNudge?beNudge(p):null,hv=window.harvestSig?harvestSig(p):null;
+  const dist=(p.stop!=null&&p.px>0)?100*(p.px-p.stop)/p.px:null;
+  if((e6&&e6.state==="fired")||(lt&&lt.st==="R")||(dist!=null&&dist<0)){v="EXIT SIGNAL";cls="r";
+   why.push((dist!=null&&dist<0)?"price is under the stop":(e6&&e6.state==="fired")?"the 3-EMA exit fired":"it failed the 4-week leader test");
+   why.push("the playbook says leave — a call keeps you in with the full downside for a "+(c.p0&&p.px?(100*c.p0/p.px).toFixed(1):"few")+"% premium");}
+  else if(lt&&(lt.st==="G"||lt.st==="W")){v="CONFLICT";cls="r";why.push(lt.st==="G"?"hold-rule leader (+20% inside 3 weeks) — the tail is what pays this system":"WINNER phase — exits into strength only, never a cap");
+   why.push("your break-even needs ~2.8R winners; a call sells that right tail for the premium");}
+  else{const trim=(ex!=null&&tier&&ex>tier.b1)||!!hv||!!be||thr==="DEFENSE";
+   if(trim){v="FITS";cls="g";why.push(ex!=null&&tier&&ex>tier.b1?"you're above the model band — trimming is the plan anyway":hv?"harvest signal is on — this sells the ⅓ into strength, paid":be?"stop-to-entry zone — a paid limit sell fits":"DEFENSE tier — selling into strength is the rule");
+    if(c.ladderR!=null)why.push("strike sits at "+(c.ladderR>=0?"+":"")+c.ladderR.toFixed(1)+"R on the sell ladder"+(c.ladderR<1?" — below +1R: it caps before the first tranche":""));}
+   else{why.push("no trim signal on "+c.und+" — the call caps upside without a reason to sell");if(c.ladderR!=null)why.push("strike = "+(c.ladderR>=0?"+":"")+c.ladderR.toFixed(1)+"R on the ladder");}}
+  if(c.cover!=null&&c.cover<1)why.push("only "+Math.round(c.cover*100)+"% covered — "+(c.shares||0)+" shares vs "+(100*c.ct)+" needed");
+  if(p&&c.ct){const capPct=100*Math.min(p.sh,100*c.ct)/p.sh;if(capPct>30)why.push("one contract caps "+capPct.toFixed(0)+"% of the position — the ladder sells 25% tranches");}}
+ else if(c.strat==="CSP"){const br=OPTBRIDGE||{};
+  const after=(ex!=null&&br.eqL)?ex+100*c.obl/br.eqL:null;
+  if(thr==="DEFENSE"){v="CONFLICT";cls="r";why.push("DEFENSE sizing (0–0.25R) — a CSP is a full-size limit buy of "+(100*c.ct)+" shares at "+c.k);}
+  else if(after!=null&&tier&&after>tier.b1){v="CONFLICT";cls="r";why.push("the obligation lifts exposure to "+after.toFixed(0)+"% vs the "+tier.b0+"–"+tier.b1+"% band");}
+  else{v="FITS";cls="g";why.push("write it only where you would buy "+c.und+" at "+c.k+" anyway — it's a paid limit order");if(after!=null)why.push("exposure after assignment "+after.toFixed(0)+"%"+(tier?" vs band "+tier.b0+"–"+tier.b1+"%":""));}
+  if(br.cash!=null&&br.cash<c.obl)why.push("cash "+fmtD(br.cash,false)+" < "+fmtD(c.obl,false)+" required — this one runs on margin, not cash-secured");}
+ else if(c.strat==="PP"){const p2=c.pos;
+  if(!p2){v="NEUTRAL";why.push("no "+c.und+" shares — a bare long put is a bearish bet, not a hedge");}
+  else{const dist=(p2.stop!=null&&p2.px>0)?100*(p2.px-p2.stop)/p2.px:null,cost=c.S0?100*c.p0/c.S0:null;
+   const pyr=p2.lots&&p2.lots.length>1,banked=p2.banked!=null&&p2.banked>0,down=thr!=="FULL"||(tier&&tier.lab==="DEFENSIVE");
+   const lt2=window.leaderTest?leaderTest(p2):null,e62=window.ema3Sig?ema3Sig(p2):null,exit2=(e62&&e62.state==="fired")||(lt2&&lt2.st==="R")||(dist!=null&&dist<0);
+   if(exit2){v="EXIT SIGNAL";cls="r";why.push("the playbook already says leave "+c.und+" ("+((dist!=null&&dist<0)?"under the stop":(e62&&e62.state==="fired")?"3-EMA exit fired":"failed the 4-week test")+") — selling costs nothing, the put costs "+(cost!=null?cost.toFixed(1)+"%":"money"));}
+   else if(down&&(pyr||banked||(p2.pnl!=null&&p2.pnl>10))){v="FITS";cls="g";why.push("hedge-instead-of-sell: "+(pyr?"pyramided ":"")+"winner during a gauge downgrade — the put keeps the position and its tail");}
+   else if(!down){why.push("trend gauges are green — the stop is the cheaper hedge here");}
+   else{why.push("small/young position — cutting it is simpler than paying for a floor");}
+   if(cost!=null&&dist!=null)why.push("put costs "+cost.toFixed(1)+"% of the stock vs a stop "+dist.toFixed(1)+"% away");
+   if(c.hedgedSh!=null&&p2.sh)why.push(c.hedgedSh<p2.sh?"covers "+c.hedgedSh+" of "+p2.sh+" shares":c.hedgedSh>p2.sh?"over-hedged: "+(100*c.ct)+" shares of protection vs "+p2.sh+" held":"covers the whole position");}}
+ else if(c.strat==="LP"){v="NEUTRAL";why.push(thr==="DEFENSE"||(tier&&tier.lab==="DEFENSIVE")?"DEFENSE tier — a defined-risk bearish expression is allowed; size it like a 0.25R trade":"gauges aren't defensive — a bare put fights the tape");}
+ else{v="NEUTRAL";why.push("directional long call — not part of the CC/CSP/PP scope; it's a leveraged stock trade and belongs in the R-stats if you keep doing it");}
+ return{v,cls,why};}
+window.optFit=optFit;
+/* ---- management alerts — the BCI 20%/10% buy-back guidelines, expiry, assignment, earnings ---- */
+function optAlerts(){const out=[],now=Date.now();
+ OPTOPEN.forEach(c=>{const nm=c.disp||c.sym,und=c.und;
+  if(c.dte!=null&&c.dte<0){out.push({c,lvl:"r",w:"PAST EXPIRY",t:nm+" expired "+(-c.dte)+"d ago and is still open in the ledger — log the closing row (Buy at 0.00, or Buy 0.00 + \"assigned\" and the stock row at "+c.k+")",act:"exp"});return;}
+  if(c.strat==="NAKED"||c.strat==="PARTIAL")out.push({c,lvl:"r",w:"UNCOVERED",t:nm+" is a short call with "+(c.strat==="NAKED"?"no":"only "+(c.shares||0)+" of "+(100*c.ct))+" "+und+" shares behind it — unlimited risk on the uncovered part; buy it back or buy the shares",act:"btc"});
+  if(c.strat==="CSP"&&OPTBRIDGE&&OPTBRIDGE.cash!=null&&OPTBRIDGE.cash<OPTBRIDGE.obl)out.push({c,lvl:"r",w:"NOT SECURED",t:nm+": cash "+fmtD(OPTBRIDGE.cash,false)+" is below the "+fmtD(OPTBRIDGE.obl,false)+" the puts oblige you to — assignment would run on margin",act:null});
+  if(c.dir==="short"&&c.mark!=null&&c.p0>0){const thr=(c.dte<=14||c.dte0<=14)?0.10:0.20,lim=c.p0*thr;
+   if(c.mark<=lim)out.push({c,lvl:"g",w:"BUY BACK — "+(thr*100)+"% rule",t:nm+" can be closed at ~$"+c.mark.toFixed(2)+" ≤ "+(thr*100)+"% of the $"+c.p0.toFixed(2)+" collected ("+c.captured.toFixed(0)+"% captured) — take it off"+(c.strat==="CC"?(c.dte>10?", then either re-sell on a bounce (hit a double) or leave the shares uncovered if the trend is on":" and let the shares run"):""),act:"btc"});
+   else if(c.captured!=null&&c.captured>=60&&c.dte>7)out.push({c,lvl:"m",w:"WATCH",t:nm+": "+c.captured.toFixed(0)+"% of the premium captured — the buy-back line is $"+lim.toFixed(2),act:null});}
+  if(c.dte!=null&&c.dte<=5&&c.dte>=0&&c.undPx!=null){const itm=c.cp==="C"?c.undPx>c.k:c.undPx<c.k;
+   if(c.dir==="short"&&itm){const p=c.pos;let net="";
+    if(c.strat==="CC"&&p&&p.basis>0)net=" · assignment nets "+((100*(c.k+c.p0-p.basis)/p.basis)>=0?"+":"")+(100*(c.k+c.p0-p.basis)/p.basis).toFixed(1)+"% on the shares vs your "+p.basis.toFixed(2)+" cost";
+    if(c.strat==="CSP")net=" · assignment puts "+(100*c.ct)+" "+und+" in the book at an effective "+(c.k-c.p0).toFixed(2);
+    out.push({c,lvl:"w",w:"EXPIRING ITM",t:nm+" expires in "+c.dte+"d "+(c.cp==="C"?"$"+(c.undPx-c.k).toFixed(2)+" in the money":"$"+(c.k-c.undPx).toFixed(2)+" in the money")+" — roll (buy back + sell a later expiry) or accept assignment"+net,act:"roll"});}
+   else if(c.dir==="short")out.push({c,lvl:"m",w:"EXPIRING OTM",t:nm+" expires in "+c.dte+"d out of the money — do nothing; log the Buy at 0.00 once it's gone (or the IBKR import will)",act:null});
+   else out.push({c,lvl:"w",w:"HEDGE EXPIRING",t:nm+" ("+OPT_TAGS[c.strat]+") expires in "+c.dte+"d — roll it forward or let it go and fall back to the stop",act:"roll"});}
+  if(ERN&&ERN[und]&&c.dte!=null){const ed=ERN[und].getTime();if(ed>=now-864e5&&ed<=c.exp.getTime()){const dd=Math.ceil((ed-now)/864e5);
+   out.push({c,lvl:c.dir==="short"?"w":"m",w:"EARNINGS INSIDE",t:und+" reports in "+dd+"d, inside the contract — "+(c.dir==="short"?"BCI rule: never write through earnings; buy the "+(c.cp==="C"?"call":"put")+" back before the report or let the stock plan govern":"the hedge covers the gap — that's its job"),act:c.dir==="short"?"btc":null});}}
+  if(c.dir==="short"&&c.cp==="C"&&c.mark!=null&&c.undPx!=null&&c.dte>=5){const intr=Math.max(0,c.undPx-c.k),tv=Math.max(0,c.mark-intr); // v8.1: mid-contract unwind — deep in the money, time value all but gone
+   if(intr>0&&c.undPx>0&&tv/c.undPx<=0.01){const freed=(c.k+c.p0-tv)*100*c.ct;
+    out.push({c,lvl:"g",w:"UNWIND — MCU",t:nm+": "+und+" at "+c.undPx.toFixed(2)+" is $"+intr.toFixed(2)+" through the strike and the cost to close is almost all intrinsic — time value only $"+tv.toFixed(2)+" ("+(100*tv/c.undPx).toFixed(2)+"% of the stock) with "+c.dte+"d left. Buy the call back and sell the "+(100*c.ct)+" shares at market: it costs "+fmtD(tv*100*c.ct,false)+" of time value, banks the same "+(c.k+c.p0).toFixed(2)+"/share you'd get at expiry, and frees "+fmtD(freed,false)+" now"+(c.pos&&c.pos.basis>0?" (+"+(100*(c.k+c.p0-tv-c.pos.basis)/c.pos.basis).toFixed(1)+"% on cost)":""),act:"btc"});}}
+  if((c.strat==="CC"||c.strat==="COLLAR")&&c.pos&&c.pos.stop!=null&&c.pos.px<c.pos.stop)out.push({c,lvl:"r",w:"STOP BROKEN",t:und+" is under its stop while the call is on — the stop governs: sell the shares AND buy the call back (never leave a naked call behind)",act:"btc"});
+  if(c.strat==="PP"&&c.undPx!=null&&c.undPx<c.k)out.push({c,lvl:"m",w:"FLOOR ACTIVE",t:und+" is below the "+c.k+" put strike — the hedge is paying; the position's floor is "+(c.k-c.p0).toFixed(2)+" after the put's cost",act:null});
+  const fit=optFit(c);if(fit.v==="EXIT SIGNAL")out.push({c,lvl:"r",w:"EXIT SIGNAL",t:nm+": "+fit.why.join(" · "),act:"btc"});
+  else if(fit.v==="CONFLICT"&&(c.strat==="CC"||c.strat==="COLLAR"||c.strat==="CSP"))out.push({c,lvl:"w",w:"CONFLICT",t:nm+": "+fit.why.join(" · "),act:null});});
+ const rank={r:0,w:1,g:2,m:3};out.sort((a,b)=>rank[a.lvl]-rank[b.lvl]);return out;}
+window.optAlerts=optAlerts;
+/* ---- income-track statistics (closed cycles) — kept OUT of the R-multiple engine on purpose ---- */
+function optStats(list){const L=list||OPTCLOSED,n=L.length;if(!n)return null;
+ const w=L.filter(c=>c.realized>0).length,net=L.reduce((a,c)=>a+c.realized,0);
+ const rocs=L.filter(c=>c.roc!=null),avgRoc=rocs.length?rocs.reduce((a,c)=>a+c.roc,0)/rocs.length:null,avgAnn=rocs.length?rocs.reduce((a,c)=>a+c.ann,0)/rocs.length:null;
+ const byS={};L.forEach(c=>{const k=c.tag&&OPT_TAGS[c.tag]?c.tag:(c.dir==="short"?(c.cp==="C"?"CC":"CSP"):(c.cp==="P"?"PP":"LC"));(byS[k]=byS[k]||{n:0,net:0,w:0});byS[k].n++;byS[k].net+=c.realized;if(c.realized>0)byS[k].w++;});
+ const reasons={};L.forEach(c=>{reasons[c.reason]=(reasons[c.reason]||0)+1;});
+ return{n,w,wr:100*w/n,net,avgRoc,avgAnn,byS,reasons,avgDays:L.reduce((a,c)=>a+c.days,0)/n};}
+window.optStats=optStats;
 </script>
 
 <script>
@@ -1439,7 +1824,85 @@ function eqPanes(pl,pr,w,X,i0,i1,to){
   if(one)s+=`<text x="${x0+(x1-x0)*.42}" y="${mid+4}" font-size="10" fill="#a9b2bc">one-day net H/L: ${one.toUpperCase()}</text>`;}
  return s;
 }
+/* ---------- v7.0: equity-update requirement ----------
+   A trade (buy, add, sell, stop-out) changes the account, so a Daily equity log must follow.
+   Rule: the newest TRANSACTION day is newer than the newest REAL Daily row — auto gap-fill
+   rows (extendDaily) don't count, only what was actually logged. Both sides re-derive from
+   the synced sheet, so the nag appears AND clears on every device, no local flags. */
+window.eqDue9=function(){
+ try{
+  if(typeof TX==="undefined"||!TX.length)return null;
+  const dk=d=>d.getFullYear()*1e4+(d.getMonth()+1)*100+d.getDate();
+  let lt=0;TX.forEach(t=>{if(t.d&&isFinite(+t.d)){const k=dk(t.d);if(k>lt)lt=k;}});
+  if(!lt)return null;
+  let ld=0;(DAILY||[]).forEach(r=>{if(!r.auto&&r.d&&isFinite(+r.d)){const k=dk(r.d);if(k>ld)ld=k;}});
+  return lt>ld?{t:lt,ld:ld}:null;
+ }catch(e){return null;}
+};
+window.cashNow9=function(){ /* v7.1: the cash that CANNOT have changed without a trade — last real
+   log minus holdings' value AT that date, then walked through every trade since (eff prices already
+   include commission). Null when there's no anchor or no usable mark. Interest/fees/dividends do
+   land without trades — the entry box stays editable for those days. */
+ try{
+  const real=(DAILY||[]).filter(x=>!x.auto&&x.d&&isFinite(+x.d)&&x.eq!=null);
+  if(!real.length)return null;
+  const a=real[real.length-1],t0=a.d.getTime();
+  const net={},mult={},lastPx={};
+  TX.forEach(t=>{if(t.d.getTime()>t0)return;mult[t.sym]=t.mult||1;lastPx[t.sym]=t.px;
+   net[t.sym]=t.act==="B"?(net[t.sym]||0)+t.sh:Math.max(0,(net[t.sym]||0)-t.sh);});
+  let mv=0;
+  for(const s in net){if(net[s]<=1e-9)continue;
+   const arr=PRICES[s];let c=null;
+   if(arr&&arr.length)for(let i=arr.length-1;i>=0;i--){if(arr[i][0].getTime()<=t0){c=arr[i][1];break;}}
+   if(c==null)c=lastPx[s];if(c==null)return null;
+   mv+=net[s]*c*(mult[s]||1);}
+  let cash=a.eq-mv;
+  TX.forEach(t=>{if(t.d.getTime()<=t0)return;const m=t.mult||1;
+   if(t.act==="B"){cash-=t.sh*t.px*m;net[t.sym]=(net[t.sym]||0)+t.sh;}
+   else{const s5=Math.min(t.sh,net[t.sym]||0);cash+=s5*t.px*m;net[t.sym]=(net[t.sym]||0)-s5;}});
+  return Math.round(cash*100)/100;
+ }catch(e){return null;}
+};
+window.realizedWin9=function(){ /* v7.3: realized $ inside the journal-selected window (win()/S.tf) —
+   per-sell attribution via a chronological lot walk per symbol (FIFO; one blended lot on AVG).
+   Eff prices already carry commission; sells clamp at held (the excess realizes nothing);
+   recon rows sell at cost so they contribute ~$0. Day-granular window like eqDue9. */
+ try{
+  const[i0w,i1w,fromW,toW]=win();
+  const dk=d=>d.getFullYear()*1e4+(d.getMonth()+1)*100+d.getDate();
+  const k0=dk(fromW),k1=dk(toW);
+  let sum=0,n=0;
+  const by={};TX.forEach(t=>{(by[t.sym]=by[t.sym]||[]).push(t);});
+  for(const s in by){const lots=[];
+   by[s].forEach(t=>{const m=t.mult||1;
+    if(t.act==="B"){lots.push({sh:t.sh,px:t.px});return;}
+    if(S.lots==="AVG"&&lots.length>1){const ts=lots.reduce((a,l)=>a+l.sh,0),tc=lots.reduce((a,l)=>a+l.sh*l.px,0);lots.length=0;if(ts>1e-9)lots.push({sh:ts,px:tc/ts});}
+    let rem=Math.min(t.sh,lots.reduce((a,l)=>a+l.sh,0));
+    const inW=dk(t.d)>=k0&&dk(t.d)<=k1;
+    if(inW&&rem>1e-9)n++;
+    while(rem>1e-9&&lots.length){const L0=lots[0],u=Math.min(rem,L0.sh);
+     if(inW)sum+=u*(t.px-L0.px)*m;
+     L0.sh-=u;rem-=u;if(L0.sh<=1e-9)lots.shift();}});}
+  return {sum:Math.round(sum*100)/100,n:n,tf:S.tf};
+ }catch(e){return null;}
+};
+function eqNag9(){
+ try{
+  const due=window.eqDue9();let el=document.getElementById("eqNag9");
+  if(!due){if(el)el.remove();return;}
+  const s=String(due.t),dd=new Date(+s.slice(0,4),+s.slice(4,6)-1,+s.slice(6));
+  const when=dd.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"});
+  if(!el){el=document.createElement("div");el.id="eqNag9";
+   el.style.cssText="position:sticky;top:0;z-index:9998;background:#2a1a06;border-bottom:1px solid #7a4a10;color:#ffcf7d;font:600 12px/1.5 system-ui,-apple-system,sans-serif;padding:9px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap";
+   document.body.prepend(el);}
+  el.innerHTML="<span style='flex:1;min-width:190px'>⚠ You traded <b>"+when+"</b> — the account equity hasn’t been updated since. Log it now (cash or NAV) so every stat stays true.</span>"+
+   "<button id='eqNagGo9' style='background:#f0a93a;color:#1a1206;border:0;border-radius:8px;font:700 12px system-ui;padding:6px 12px;cursor:pointer;white-space:nowrap'>Update equity now</button>";
+  const b=document.getElementById("eqNagGo9");if(b)b.onclick=function(){if(window.openEquityEntry)openEquityEntry();};
+ }catch(e){}
+}
+window.eqNag9=eqNag9;
 function render(){
+ eqNag9(); // v7.0: the equity nag re-evaluates on every repaint — BEFORE the sparse-data early return so it shows even on a thin journal
  /* v5.9b: while the FIRST sync of this open is still in flight, an early render (tap, page restore)
     has no equity yet — say "syncing", not "log some trades" (wrong advice for a full journal). */
  if(EQX.length<3){$("errBox").textContent=(S.id&&!window._lastSync)?"Syncing your journal — the first load can take up to a minute…":"Not enough data yet — log a few days of equity (Daily tab) or a few closed trades.";$("errBox").classList.add("show");return;}
@@ -1447,6 +1910,23 @@ function render(){
     before this it lingered over good data until the next 60-s refresh wiped it. */
  {const _e=$("errBox");if(_e&&_e.classList.contains("show")&&/Not enough data yet|Syncing your journal/.test(_e.textContent))err();}
  const[i0,i1,from,to]=win(),n=i1-i0+1;
+ /* v7.2: Σ period P&L — every win and loss over the chosen window, realized + unrealized, in $.
+    Measured from the close BEFORE the window through its end (so day one's move counts), minus
+    logged flows, plus the live mark-to-market tail when the window reaches now. Shows in BOTH
+    the Equity and Drawdown views (it lives in the shared header, written before the branch). */
+ {const el9=$("winPnl9");
+  if(el9){ if(!EQABS){el9.textContent="";}else{
+   const b9=i0>0?EQ[i0-1]:EQ[i0];
+   let fl9=0;for(let k9=(i0>0?i0:i0+1);k9<=i1;k9++)fl9+=DAILY[k9].fl||0;
+   let end9=EQ[i1],lv9=false;
+   if(S.liveTail!=="OFF"&&i1===EQ.length-1&&typeof POS!=="undefined"&&POS.length){
+    let ld9=0,got9=0;POS.forEach(p=>{const lp=LIVE[p.sym],ph=PRICES[p.sym];
+     if(lp!=null&&ph&&ph.length){ld9+=p.sh*(lp-ph[ph.length-1][1])*(p.mlt||1);got9++;}});
+    if(got9){end9+=ld9;lv9=true;}}
+   const d9=end9-b9-fl9,p9=b9>0?100*d9/b9:null;
+   el9.innerHTML=` · <b style="color:${d9>=0?"var(--grn,#2dd4a0)":"var(--red,#ff6a6a)"}">Σ ${d9>=0?"+":"−"}$${Math.abs(d9).toLocaleString(undefined,{maximumFractionDigits:0})}${p9!=null?" ("+(d9>=0?"+":"−")+Math.abs(p9).toFixed(1)+"%)":""}</b>`;
+   el9.title="all wins & losses over the chosen period — realized + unrealized, after commissions"+(fl9?", excluding $"+Math.round(fl9).toLocaleString()+" flows":"")+(lv9?", incl. live open-position marks":", to the last logged close");
+  }}}
  const AUT=EQABS?DAILY.slice(i0,i1+1).map(x=>x.auto?1:0):null; // v5.4: per-point synthetic markers for the crosshair (EQD ≡ DAILY dates when EQABS)
  const effCurve=(S.curve==="REAL"&&S.gmode==="$")?"REALD":S.curve; // one Realized chip — its unit follows the global $/% toggle
  const E=EQX.slice(i0,i1+1),E0=E.map(v=>100*v/E[0]);
@@ -1642,7 +2122,8 @@ function render(){
  marketModel();
  if(window.mktStory)try{mktStory();}catch(e){}
  if(S.page==="F"&&window.performancePage)try{performancePage();}catch(e){}
- if(S.page==="F2"&&window.fedPage)try{fedPage();}catch(e){}}
+ if(S.page==="F2"&&window.fedPage)try{fedPage();}catch(e){}
+ if(S.page==="O"&&window.optionsPage)try{optionsPage();}catch(e){}}
 </script>
 
 <script>
@@ -1735,8 +2216,28 @@ function marketModel(){
    for(let i=Math.max(1,nD-25);i<nD;i++)if((qc2[i-1]-qc2[i])/qc2[i-1]>=0.002-1e-9&&vv2[i]>vv2[i-1]){c7++;dts.push(qd2[i][0]);}
    dd={n:c7,dates:dts};}
   window._distDays=dd;}
- let hl=null; // three rising 15-session swing lows on QQQ
- if(q.length>50){const w=15,L1=Math.min(...q.slice(-w)),L2=Math.min(...q.slice(-2*w,-w)),L3=Math.min(...q.slice(-3*w,-2*w));hl=L1>L2&&L2>L3;}
+ let hl=null; // v7.7: POWER TREND on QQQ (replaces the higher-lows block heuristic) — state machine replayed over the loaded window
+ if(q.length>70){
+  const qP7=PRICES.QQQ||[],qlP7=PRICES.QQQLOW||[];window._ptExactLows=qlP7.length>30;
+  const lowBy7={};qlP7.forEach(x=>{lowBy7[+x[0]]=x[1];});
+  const lo7=qP7.map(x=>lowBy7[+x[0]]!=null?lowBy7[+x[0]]:x[1]); // exact daily lows when QQQLOW exists; close = conservative fallback
+  const e21=ema(q,21),s50=sma(q,50),n7=q.length;
+  let on7=false,hi7=0;
+  for(let i7=59;i7<n7;i7++){
+   if(!on7){
+    if(s50[i7]>s50[i7-1]&&q[i7]>=q[i7-1]){ // 50-SMA rising + blue bar (flat-or-up close — WRO #18 wording)
+     let a7=true;for(let j7=i7-9;j7<=i7;j7++)if(!(lo7[j7]>e21[j7])){a7=false;break;}   // daily lows above 21-EMA for 10+ sessions
+     let b7=true;for(let j7=i7-4;j7<=i7;j7++)if(!(e21[j7]>s50[j7])){b7=false;break;}   // 21-EMA above 50-SMA for 5+ sessions
+     if(a7&&b7){on7=true;hi7=q[i7];}
+    }
+   }else{
+    hi7=Math.max(hi7,q[i7]);
+    if(e21[i7]<s50[i7])on7=false;                      // natural end — 21-EMA crosses under the 50-SMA
+    else if(q[i7]<hi7*0.90&&q[i7]<s50[i7])on7=false;   // circuit breaker — close 10% off the trend high AND under the 50-SMA
+   }
+  }
+  hl=on7;
+ }
  // v6.3 raw JNK · v6.7 prefers dividend-ADJUSTED Prices!JNKADJ · v6.8 SELF-MONITORING: the adjusted series
  // is only trusted while FRESH (its last date within ~8 days of raw JNK's). If the nightly puller ever dies
  // on both sources, the app falls back to raw automatically and SAYS so — stale data can never drive the signal.
@@ -1791,7 +2292,7 @@ function marketModel(){
   +mk("Net new highs vs lows — one day","±10% — one day where net new highs clearly beat net new lows (+10) or the reverse (−10). Auto from the latest daily counts in the Signals side table; manual High/Low fallback.",oneD2,one?(one+(EF.aO?aDim("auto"):"")):null)
   +mk("Net highs/lows trend — 3+ days","±20% — three or more consecutive days of net new highs (+20) or net new lows (−20). Auto from the daily counts in the Signals side table when ≥3 rows exist; manual Up/Down fallback.",trD,hasT?((upT?"HIGHS":nlTrend?"LOWS":"none")+(EF.aT?aDim("auto from daily counts"):"")):null)
   +mk("Up/Down Volume Ratio (20d)","±20% — QQQ volume on up-days ÷ volume on down-days over the last 20 sessions (20d reads general-market trend faster than the classic 50d). Above 1.0 = accumulation (+20), below = distribution (−20). Auto from the Prices tab.",udD,ud==null?null:ud.toFixed(2))
-  +mk("Higher lows formation","+20% — three rising 15-session swing lows on QQQ. Auto.",hlD,hl==null?null:hl?"YES":"no")
+  +mk("Power trend","+20% — QQQ in a power trend: daily lows above the 21-EMA for 10+ sessions, 21-EMA above the 50-SMA for 5+ sessions, 50-SMA rising, and a flat-or-up close (blue bar) to switch ON. Ends when the 21-EMA crosses under the 50-SMA — or instantly on the circuit breaker: a close 10% off the trend high AND under the 50-SMA. Auto"+(window._ptExactLows?".":" — using closes for now; add a QQQLOW column in Prices for exact daily lows."),hlD,hl==null?null:hl?"ON":"off")
   +mk("Credit — NFCI/JNK proxy","±10% — "+(window._jnAdj?"dividend-ADJUSTED JNK (JNKADJ column)":window._jnAdjStale?"JNK (RAW — the adjusted feed went stale, auto-fallback; check the nightly updateJnkAdj trigger)":"JNK")+" vs its own 21-EMA. Above = improving (+10); below = tightening (−10). Auto from the Prices tab (the JNK÷IEI ratio chart is context only).",jnD,jn==null?null:jn>0?"IMPROVING":jn<0?"TIGHTENING":"FLAT")
   +mk("Net-lows trend without FOMO under 20","−20% — a net-lows trend while the FOMO gauge is still at or above 20 (no fear washout yet). Auto from the FOMO value in Signals.",fomoD,fomoShow)
   +mk("FOMO late-stage penalty","−10% — only while the FOMO gauge sits at 85 or above: late-stage froth subtracts from the score (added per method — froth subtracts). 0% otherwise; arms at 85. Auto from the FOMO value in Signals.",lateD,lateShow)
@@ -1917,6 +2418,198 @@ function marketModel(){
  if(window.renderFomoGauge)try{renderFomoGauge(fomo);}catch(_g){}
  if(window.mDaily)try{mDaily();}catch(_d){}
 }
+</script>
+
+<script>
+"use strict";
+/* ============================ v8.0: OPTIONS PAGE ============================ */
+const OPT_DOT={r:"r",w:"w",g:"g",m:"m"};
+function optFmtD(d){if(!d)return "—";const mo=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];return mo[d.getMonth()]+" "+d.getDate()+" '"+String(d.getFullYear()).slice(2);}
+function optPct(v,dp){return v==null||!isFinite(v)?"—":(v>=0?"+":"−")+Math.abs(v).toFixed(dp==null?1:dp)+"%";}
+function optEsc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function optPrefill(sym,side,ct,px,setup,note){ // hands a leg to the pwa.js entry form, prefilled — user reviews, then Save (nothing auto-submits)
+ if(!window.openTradePrefill){alert("The entry form needs the app shell (pwa.js) — log this row in the sheet: "+sym+" · "+side+" · "+ct+" @ "+px);return;}
+ openTradePrefill({ticker:sym,side:side,shares:ct,price:px});
+ setTimeout(function(){try{if(setup&&$("enSetup"))$("enSetup").value=setup;if(note&&$("enNote"))$("enNote").value=note;if(window.updPrev)updPrev();}catch(e){}},80);}
+window.optAct=function(sym,what){const c=OPTOPEN.find(x=>x.sym===sym);if(!c)return;
+ if(what==="btc")optPrefill(c.sym,c.dir==="short"?"Buy":"Sell",c.ct,c.mark!=null?Math.max(0.01,Math.round(c.mark*100)/100):0.01,c.strat,c.dir==="short"?"buy to close":"sell to close");
+ else if(what==="exp")optPrefill(c.sym,c.dir==="short"?"Buy":"Sell",c.ct,0,c.strat,"expired");
+ else if(what==="asg")optPrefill(c.sym,c.dir==="short"?"Buy":"Sell",c.ct,0,c.strat,"assigned — log the "+(c.cp==="C"?"Sell":"Buy")+" of "+(100*c.ct)+" "+c.und+" at "+c.k+" too");
+ else if(what==="roll"){optPrefill(c.sym,c.dir==="short"?"Buy":"Sell",c.ct,c.mark!=null?Math.max(0.01,Math.round(c.mark*100)/100):0.01,c.strat,"roll — leg 1 of 2: close this, then sell the next expiry with the same Lot id");}
+ else if(what==="calc"){optCalcLoad({und:c.und,cp:c.cp,dir:c.dir,k:c.k,exp:c.exp,ct:c.ct,p0:c.p0});const el=$("optCalcCard");if(el)el.scrollIntoView({behavior:"smooth",block:"start"});}};
+function optMarkCell(c){if(c.mark==null)return '<span class="badge sample" title="no quote and no underlying price to model from — add the contract (or the underlying) to the Live tab">no mark</span>';
+ const tip=c.markSrc==="live"?"Live-tab quote for the contract":c.markSrc==="intrinsic"?"expired — intrinsic value at the underlying's price":"Black-Scholes estimate at "+(c.iv!=null?(100*c.iv).toFixed(0)+"% "+(c.ivSrc==="implied"?"(the vol your entry premium implied)":"(21-day realized vol — the entry premium couldn't be inverted)"):"no vol")+" · add the OCC symbol to the Live tab for a real quote";
+ let tvL="";if(c.undPx!=null&&c.dir==="short"){const intr=Math.max(0,c.cp==="C"?c.undPx-c.k:c.k-c.undPx),tv=Math.max(0,c.mark-intr); // v8.1: what the buy-back is made of
+  tvL='<div class="kv" title="cost to close = intrinsic (what the option is worth if exercised now) + time value (what melts away)">intr '+intr.toFixed(2)+' + TV '+tv.toFixed(2)+'</div>';}
+ return '<b class="num">'+c.mark.toFixed(2)+'</b> '+(c.markSrc==="live"?'<span class="livep">↻1m</span>':'<span class="badge sample" title="'+optEsc(tip)+'">est</span>')+tvL;}
+function optMapRows(o,S){ // v8.1: the week-by-week stock price that reaches the 20%/10% level, and what that price MEANS for the shares
+ const m=optTriggerMap(o);if(!m)return null;const p=o.pos||null,stop=p&&p.stop!=null?p.stop:null,sh=o.cappedSh!=null?o.cappedSh:Math.min(o.shares||0,100*o.ct),mark=o.mark!=null?o.mark:o.p0;
+ m.rows.forEach(t=>{t.decl=(t.S!=null&&S>0)?100*(t.S/S-1):null; // move from here
+  t.shares$=(t.S!=null&&S>0&&sh>0)?(t.S-S)*sh:null; // what the covered shares do on the way there
+  t.opt$=(t.S!=null)?(mark-t.lvl*o.p0)*100*o.ct:null; // what buying the contract back at the level earns from here
+  t.net$=(t.shares$!=null&&t.opt$!=null)?t.shares$+t.opt$:null;
+  t.belowStop=(o.cp==="C"&&stop!=null&&t.S!=null&&t.S<stop);});
+ m.stop=stop;m.sh=sh;return m;}
+function optMapCell(o,S){ // buy-back levels + the map, with the decline each row needs and the stop check — the "more than I can chew" test
+ if(o.dir!=="short")return '—';const m=optMapRows(o,S);if(!m)return '—';
+ const sgn=o.cp==="C"?"≤":"≥",fmt=x=>x==null?"—":"$"+(x>=100?x.toFixed(0):x.toFixed(1));
+ const rows=m.rows.map(t=>'<div'+(t.belowStop?' style="color:var(--critT)"':'')+'>'+(t.lvl===0.10?'<span style="color:var(--warn)">10%</span> ':'')+sgn+' <b>'+fmt(t.S)+'</b> '+(t.w===0?'today':'by '+optFmtD(t.d))
+   +(t.decl!=null?' <span style="color:'+(t.decl<0?'var(--critT)':'var(--goodT)')+'">'+optPct(t.decl)+'</span>':'')
+   +(t.belowStop?' ⛔ under stop':(t.net$!=null&&o.cp==="C"?' <span title="covered shares '+fmtD(t.shares$,true)+' + buy-back gain '+fmtD(t.opt$,true)+' = net from here">net '+fmtD(t.net$,true)+'</span>':''))+'</div>').join("");
+ const note=o.cp==="C"?'<div style="margin-top:2px;white-space:normal;max-width:230px">the rule fires by time decay OR a drop — each line is the drop it takes that week'+(m.stop!=null?'; red = the stop at '+m.stop.toFixed(2)+' fires first':'')+'</div>':'';
+ return '<div class="kv" style="white-space:nowrap;line-height:1.5"><div>buy back ≤ <b>$'+m.l20.toFixed(2)+'</b> (20%) · <b>$'+m.l10.toFixed(2)+'</b> (10%, last 2 wks)</div>'+rows+note+'</div>';}
+function optRow(c){const calc=optEntryCalc({dir:c.dir,cp:c.cp,k:c.k,p0:c.p0,S0:c.S0,dte0:c.dte0,basis:c.pos?c.pos.basis:null,px0:c.pos?c.pos.px0:null,risk0:c.pos?c.pos.risk0:null});
+ if(calc&&calc.ladderR!=null)c.ladderR=calc.ladderR;
+ const fit=optFit(c),g=(c.undPx!=null&&c.iv!=null&&c.dte>0)?bsGreeks(c.cp,c.undPx,c.k,c.dte/365,optRate(),c.iv):null;
+ const money=c.undPx!=null?(c.cp==="C"?100*(c.k-c.undPx)/c.undPx:100*(c.undPx-c.k)/c.undPx):null; // + = out of the money by this much
+ const cap=c.captured!=null?Math.max(0,Math.min(100,c.captured)):null;
+ const stratLbl=c.collar?"COLLAR":c.strat,stratCls=c.strat==="NAKED"||c.strat==="PARTIAL"?"r":c.strat==="CC"||c.strat==="CSP"?"g":"m";
+ const acts=(c.dir==="short"?'<span class="chiplet sellq" role="button" onclick="optAct(\''+c.sym+'\',\'btc\')" title="buy to close at the current mark — opens the trade form prefilled">Buy back</span>':'<span class="chiplet sellq" role="button" onclick="optAct(\''+c.sym+'\',\'btc\')" title="sell to close at the current mark — opens the trade form prefilled">Close</span>')
+  +'<span class="chiplet wiq" role="button" onclick="optAct(\''+c.sym+'\',\'roll\')" title="roll: close this leg now, then sell the next expiry — tag both with the same Lot id so the chain links">Roll</span>'
+  +(c.dte<=1?'<span class="chiplet stopq" role="button" onclick="optAct(\''+c.sym+'\',\'exp\')" title="expired worthless — logs the closing row at 0.00">Expired</span><span class="chiplet stopq" role="button" onclick="optAct(\''+c.sym+'\',\'asg\')" title="assigned — logs the option close at 0.00; add the stock row at the strike yourself">Assigned</span>':'');
+ let entry="";
+ if(c.strat==="CC"||c.strat==="NAKED"||c.strat==="PARTIAL"||c.collar&&c.cp==="C"){entry=calc?'ROO <b>'+optPct(calc.roo,2)+'</b> · ann. <b>'+optPct(calc.ann,0)+'</b><small>'+(calc.itm?'ITM: time value $'+calc.tv.toFixed(2)+' · protection '+calc.prot.toFixed(1)+'%':'upside to strike '+optPct(calc.upside))+' · b/e '+calc.be.toFixed(2)+(calc.ifAssigned!=null?' · assigned = '+optPct(calc.ifAssigned)+' on shares':'')+'</small>':'—';}
+ else if(c.strat==="CSP"){entry=calc?'ROO <b>'+optPct(calc.roo,2)+'</b> · ann. <b>'+optPct(calc.ann,0)+'</b><small>cash req. '+fmtD(calc.cashReq*c.ct,false)+' · b/e '+calc.be.toFixed(2)+' · discount '+optPct(calc.discount)+'</small>':'—';}
+ else if(c.strat==="PP"||c.strat==="LP"){entry=calc?'cost <b>'+calc.cost.toFixed(1)+'%</b><small>floor '+calc.floor.toFixed(2)+' ('+optPct(calc.floorPct)+' from here)'+(calc.maxLossVsBasis!=null?' · worst case '+optPct(calc.maxLossVsBasis)+' vs cost':'')+'</small>':'—';}
+ else{entry=calc?'cost <b>'+calc.cost.toFixed(1)+'%</b><small>b/e '+calc.be.toFixed(2)+' ('+optPct(calc.bePct)+')</small>':'—';}
+ return '<tr>'
+  +'<td><b>'+optEsc(c.disp)+'</b><div class="kv" style="white-space:nowrap">'+(c.dir==="short"?"short":"long")+' '+c.ct+' ct · '+optEsc(c.und)+(c.rolledFrom?' · rolled':'')+'</div></td>'
+  +'<td style="text-align:left"><span class="chiplet '+stratCls+'" title="'+optEsc(OPT_TAGS[c.strat]||c.strat)+(c.tag&&OPT_TAGS[c.tag]?' (tagged)':' (inferred from the stock book)')+'">'+stratLbl+'</span>'+(c.cover!=null&&c.cover<1?'<div class="kv">'+Math.round(c.cover*100)+'% covered</div>':'')+(c.hedgedSh!=null&&c.pos?'<div class="kv">'+c.hedgedSh+'/'+c.pos.sh+' sh hedged</div>':'')+'</td>'
+  +'<td style="text-align:left" class="num nw">'+optFmtD(c.din)+'<div class="kv">exp '+optFmtD(c.exp)+'</div></td>'
+  +'<td class="num" style="color:'+(c.dte<0?'var(--critT)':c.dte<=5?'var(--warn)':'var(--mut)')+'"><b>'+c.dte+'</b><div class="kv">of '+c.dte0+'</div></td>'
+  +'<td class="num"><b>'+c.p0.toFixed(2)+'</b><div class="kv">'+fmtD(c.p0*100*c.ct0,false)+(c.dir==="short"?' in':' out')+'</div></td>'
+  +'<td class="num nw">'+optMarkCell(c)+(c.undPx!=null?'<div class="kv">'+optEsc(c.und)+' '+c.undPx.toFixed(2)+'</div>':'')+'</td>'
+  +'<td class="num">'+(cap==null?'—':'<b style="color:'+(cap>=60?'var(--goodT)':cap>=0?'var(--mut)':'var(--critT)')+'">'+optPct(c.captured,0)+'</b><span class="meter" style="display:block;width:70px;margin-left:auto"><i style="background:'+(cap>=60?'var(--goodT)':'var(--mint)')+';width:'+cap+'%"></i></span>')+'</td>'
+  +'<td style="text-align:left">'+optMapCell(c,c.undPx)+'</td>'
+  +'<td class="num" style="text-align:left;line-height:1.35">'+entry+'</td>'
+  +'<td class="num">'+(money==null?'—':'<b style="color:'+(money>=0?'var(--mut)':'var(--warn)')+'">'+(money>=0?'OTM ':'ITM ')+Math.abs(money).toFixed(1)+'%</b>')+(g?'<div class="kv">Δ '+g.delta.toFixed(2)+' · P(ITM) '+(100*g.pITM).toFixed(0)+'%</div>':'')+(function(){const e=c.undPx!=null?optExpectedMove(c,c.undPx):null;return e&&e.dte>0?'<div class="kv" title="1-sigma expected move by expiry = price × vol × √time (vol '+(100*e.v).toFixed(0)+'%)">1σ '+e.lo.toFixed(0)+'–'+e.hi.toFixed(0)+(e.sig!=null?' · strike '+e.sig.toFixed(1)+'σ':'')+'</div>':'';})()+'</td>'
+  +'<td class="num" style="font-weight:700;color:'+(c.unreal==null?'var(--dim)':c.unreal>=0?'var(--goodT)':'var(--critT)')+'">'+(c.unreal==null?'—':fmtD(c.unreal,true))+'</td>'
+  +'<td style="text-align:left"><span class="rv '+(fit.cls==="g"?"vgood":fit.cls==="r"?"vcrit":"vwarn")+'" title="'+optEsc(fit.why.join(" · "))+'">'+fit.v+'</span><div class="kv" style="max-width:250px;white-space:normal">'+optEsc(fit.why[0]||"")+'</div></td>'
+  +'<td style="white-space:nowrap">'+acts+'</td></tr>';}
+function optionsPage(){const pg=$("pageOptions");if(!pg)return;
+ const eqL=(typeof EQABS!=="undefined"&&EQABS&&EQ.length)?EQ[EQ.length-1]:null,br=OPTBRIDGE||window._optBridge||{};
+ // ---- 1. playbook / alerts ----
+ const al=optAlerts(),sum=$("optSum"),list=$("optAlerts"),chip=$("optChip");
+ if(chip){chip.textContent=OPTOPEN.length?OPTOPEN.length+" open · "+OPTCLOSED.length+" closed":"no contracts yet";chip.className="chiplet "+(OPTOPEN.length?"m":"m");}
+ if(sum){const red=al.filter(a=>a.lvl==="r").length,amb=al.filter(a=>a.lvl==="w").length,grn=al.filter(a=>a.lvl==="g").length;
+  const tier=window._mmTier,thr=window._thrMode;
+  let s="";
+  if(!OPTOPEN.length){const cc=(POS||[]).filter(p=>p.sh>=100),thin=(POS||[]).filter(p=>p.sh<100);
+   s="<b>No contracts open.</b> Where the book stands today: "+(cc.length?"<b>"+cc.map(p=>p.sym+" ("+Math.floor(p.sh/100)+" ct)").join(", ")+"</b> can carry a covered call — the others ("+thin.map(p=>p.sym+" "+p.sh).join(", ")+") are under the 100 shares a contract needs.":"no position has the 100 shares a covered call needs.")
+    +(br.cash!=null?" Cash <b>"+fmtD(br.cash,false)+"</b>"+(eqL?" ("+(100*br.cash/eqL).toFixed(0)+"%)":"")+" is what a cash-secured put would have to be sized against":"")
+    +(thr==="DEFENSE"?" — and the throttle is on <b class='g-red'>DEFENSE</b>: no new CSPs, calls only as paid sells into strength, puts only as hedges on winners.":".")
+    +" Use the sanity check below before writing anything.";}
+  else{s="<b>"+OPTOPEN.length+" open contract"+(OPTOPEN.length>1?"s":"")+"</b>"+(br.premOpen?" carrying "+fmtD(br.premOpen,true)+" of net premium":"")+". "
+   +(red?"<b class='g-red'>"+red+" need action now</b> · ":"")+(amb?"<b class='g-amb'>"+amb+" to watch</b> · ":"")+(grn?"<b class='g-grn'>"+grn+" buy-back"+(grn>1?"s":"")+" available</b> · ":"")
+   +(!red&&!amb&&!grn?"nothing to do — let the time value melt. ":"")
+   +(br.obl>0?"CSP obligations add <b>"+br.oblPct.toFixed(0)+"%</b> to exposure → <b>"+br.expAll.toFixed(0)+"%</b> all-in"+(tier?" vs the "+tier.b0+"–"+tier.b1+"% band":"")+". ":"")
+   +(br.capped>0?"<b>"+br.cappedPct.toFixed(0)+"%</b> of the shares sit under a short call. ":"")
+   +(br.ppSaved>0?"Protective puts trim the stop-out risk by <b>"+fmtD(br.ppSaved,false)+"</b>.":"");}
+  sum.innerHTML=s;}
+ if(list){list.innerHTML=al.length?al.map(a=>'<div class="evrow" style="grid-template-columns:12px 1fr auto"><span class="dot '+OPT_DOT[a.lvl]+'" style="margin-top:6px"></span><span><b class="'+(a.lvl==="r"?"g-red":a.lvl==="w"?"g-amb":a.lvl==="g"?"g-grn":"g-mut")+'">'+a.w+'</b> — '+optEsc(a.t)+'</span>'+(a.act?'<span class="chiplet sellq" role="button" onclick="optAct(\''+a.c.sym+'\',\''+a.act+'\')">'+(a.act==="btc"?(a.c.dir==="short"?"Buy back":"Close"):a.act==="exp"?"Log close":"Roll")+'</span>':'<span></span>')+'</div>').join("")
+  :'<div class="kv" style="padding:6px 0">'+(OPTOPEN.length?"no management signals — nothing to do today.":"alerts appear here once a contract is open: the 20%/10% buy-back rule, expiry in the money, earnings inside the contract, uncovered calls, obligations outrunning cash.")+'</div>';}
+ // ---- 2. open contracts table ----
+ const tb=$("optOpen"),nEl=$("optOpenN");
+ if(nEl)nEl.innerHTML=OPTOPEN.length+" open · marks: Live-tab quote or Black-Scholes <span class='badge sample'>est</span> · captured = share of the premium already earned";
+ if(tb){tb.innerHTML=OPTOPEN.length?'<div class="holdwrap" style="max-height:none;overflow-x:auto"><table style="min-width:1500px"><tr><th style="text-align:left">Contract</th><th style="text-align:left">Strategy</th><th style="text-align:left">Opened</th><th>DTE</th><th>Premium</th><th>Mark</th><th>Captured</th><th style="text-align:left;min-width:190px">Buy-back map</th><th style="text-align:left;min-width:230px">Entry calcs (BCI)</th><th>Moneyness</th><th>Open P&amp;L</th><th style="text-align:left;min-width:200px">System fit</th><th></th></tr>'+OPTOPEN.map(optRow).join("")+'</table></div>'
+  :'<div style="font-size:12px;color:var(--dim);padding:6px 0">No open option contracts. Log a leg in the sheet (or via the sanity check below → <b>Log this leg</b>) and it appears here on the next sync.</div>';}
+ // ---- 2b. campaigns: stock + options per underlying (v8.1) ----
+ {const el=$("optCamp");if(el){const L=Object.keys(OPTCAMP).map(u=>OPTCAMP[u]).sort((a,b)=>(b.open.length-a.open.length)||(b.combined-a.combined));
+  el.innerHTML=L.length?'<div style="overflow-x:auto"><table style="min-width:900px"><tr><th style="text-align:left">Underlying</th><th style="text-align:left">Structure</th><th>Shares · cost</th><th>Stock P&amp;L</th><th>Options net</th><th>Combined</th><th>On cost</th><th>Ann.</th><th>Since</th></tr>'
+   +L.map(a=>{const st=a.open.map(c=>'<span class="chiplet '+(c.strat==="NAKED"||c.strat==="PARTIAL"?"r":c.strat==="CC"||c.strat==="CSP"?"g":"m")+'" style="margin-right:4px">'+(a.collar&&(c===a.collar.call||c===a.collar.put)?"COLLAR":c.strat)+'</span>').join("")+(a.closed.length?'<span class="kv">'+a.closed.length+' closed cycle'+(a.closed.length>1?'s':'')+'</span>':'');
+    const col=a.collar?'<div class="kv" style="margin-top:3px;white-space:normal">collar: '+(a.collar.net>=0?'net credit':'net debit')+' $'+Math.abs(a.collar.net).toFixed(2)+' · floor <b>'+a.collar.floor.toFixed(2)+'</b>'+(a.collar.maxLoss!=null?' ('+optPct(a.collar.maxLoss)+' vs cost)':'')+' · cap <b>'+a.collar.cap.toFixed(2)+'</b>'+(a.collar.maxGain!=null?' ('+optPct(a.collar.maxGain)+')':'')+' · '+(100*a.collar.ct)+' sh locked in that range until '+optFmtD(a.collar.call.exp<a.collar.put.exp?a.collar.call.exp:a.collar.put.exp)+'</div>':'';
+    const sc=a.shares>0?a.shares+' @ '+(a.basis!=null?a.basis.toFixed(2):'—'):(a.stockLabel==="closed"?'<span class="kv">sold</span>':'<span class="kv">none — '+(a.cycles.some(c=>c.cp==="P"&&c.dir==="short")?'cash-secured':'no shares')+'</span>');
+    const cl=v=>v==null?'var(--dim)':v>=0?'var(--goodT)':'var(--critT)';
+    return '<tr><td><b>'+optEsc(a.und)+'</b></td><td style="text-align:left">'+st+col+'</td><td class="num">'+sc+'</td>'
+     +'<td class="num" style="color:'+cl(a.stock)+'">'+(a.cost>0?fmtD(a.stock,true):'—')+(a.cost>0&&a.stockLabel==="open"?'<div class="kv">unrealised + banked</div>':'')+'</td>'
+     +'<td class="num" style="color:'+cl(a.optNet)+'">'+fmtD(a.optNet,true)+'<div class="kv">'+fmtD(a.optReal,true)+' realised'+(a.open.length?' · '+fmtD(a.optOpenVal,true)+' open mark':'')+'</div></td>'
+     +'<td class="num" style="font-weight:800;color:'+cl(a.combined)+'">'+fmtD(a.combined,true)+'</td>'
+     +'<td class="num" style="font-weight:700;color:'+cl(a.pct)+'">'+optPct(a.pct)+'<div class="kv">'+(a.cost>0?'stock cost '+fmtD(a.cost,false):'cash secured '+fmtD(a.base,false))+'</div></td>'
+     +'<td class="num">'+optPct(a.ann,0)+'</td><td class="num">'+optFmtD(a.since)+(a.days?'<div class="kv">'+a.days+'d</div>':'')+'</td></tr>';}).join("")+'</table></div>'
+   +'<div class="kv" style="margin-top:7px"><b style="color:var(--mut)">Combined</b> = the stock\'s whole-campaign P&amp;L (remaining shares at the live price + what partial sells banked − total cost) + every option premium collected or paid on that name, open contracts at their mark. <b>On cost</b> divides by the stock cost (or the cash the puts were secured with when no shares were ever held). This is the number BCI\'s calculator calls the final return — the Journal\'s stock stats stay pure on purpose.</div>'
+   :'<div class="kv" style="padding:6px 0">once a contract is logged on a name you hold, that name appears here with the stock and the options added up as one trade.</div>';}}
+ // ---- 3. exposure bridge ----
+ const setR=(id,txt,cls)=>{const e=$(id);if(e){e.innerHTML=txt;if(cls!=null)e.className=cls;}};
+ const tier=window._mmTier,ex=window._exp;
+ setR("obStock",ex!=null?ex.toFixed(0)+"%":"—");
+ setR("obCsp",br.obl>0?"+"+br.oblPct.toFixed(0)+"% <span class='kv'>("+fmtD(br.obl,false)+")</span>":"0%");
+ {const all=br.expAll!=null?br.expAll:ex;const st=$("obAllState");
+  setR("obAll",all!=null?all.toFixed(0)+"%"+(tier?" <span class='kv'>vs "+tier.b0+"–"+tier.b1+"%</span>":""):"—");
+  if(st){if(all==null||!tier){st.textContent="—";st.className="rv vmut";}else if(all>tier.b1){st.textContent="ABOVE BAND";st.className="rv vcrit";}else if(all<tier.b0){st.textContent="BELOW BAND";st.className="rv vwarn";}else{st.textContent="IN BAND";st.className="rv vgood";}}}
+ {const st=$("obCashState");setR("obCash",br.cash!=null?fmtD(br.cash,false)+(br.obl>0?" <span class='kv'>vs "+fmtD(br.obl,false)+" required</span>":""):"—");
+  if(st){if(br.cash==null){st.textContent="—";st.className="rv vmut";}else if(br.obl>0&&br.cash<br.obl){st.textContent="ON MARGIN";st.className="rv vcrit";}else if(br.cash<0){st.textContent="MARGIN";st.className="rv vwarn";}else{st.textContent=br.obl>0?"SECURED":"CASH";st.className="rv "+(br.obl>0?"vgood":"vmut");}}}
+ {const rsk=(POS||[]).reduce((a,p)=>a+(p.stop!=null?p.sh*(p.stop-p.px)*(p.mlt||1):0),0);const after=rsk+(br.ppSaved||0);
+  setR("obRisk",POS.length?fmtD(Math.min(0,rsk),true)+(br.ppSaved>0?" → <b>"+fmtD(Math.min(0,after),true)+"</b> <span class='kv'>puts absorb "+fmtD(br.ppSaved,false)+"</span>":" <span class='kv'>no put floors</span>"):"—");}
+ setR("obCap",br.capped>0?br.capped+" sh <span class='kv'>("+br.cappedPct.toFixed(0)+"% of "+(POS||[]).reduce((a,p)=>a+p.sh,0)+")</span>":"0 sh");
+ setR("obVal",br.optVal!=null&&OPTOPEN.length?fmtD(br.optVal,true)+" <span class='kv'>mark-to-model</span>":"—");
+ // ---- 4. income track ----
+ const st=optStats(),k=(id,v,cls)=>{const e=$(id);if(e){e.textContent=v;if(cls)e.className="v num "+cls;}};
+ k("okN",st?String(st.n):"0");k("okWr",st?st.wr.toFixed(0)+"%":"—",st?(st.wr>=70?"g-grn":st.wr>=50?"g-amb":"g-red"):"");
+ k("okRoc",st&&st.avgRoc!=null?optPct(st.avgRoc,2):"—",st&&st.avgRoc!=null?(st.avgRoc>=0?"g-grn":"g-red"):"");
+ k("okAnn",st&&st.avgAnn!=null?optPct(st.avgAnn,0):"—",st&&st.avgAnn!=null?(st.avgAnn>=0?"g-grn":"g-red"):"");
+ k("okNet",st?fmtD(st.net,true):"—",st?(st.net>=0?"g-grn":"g-red"):"");
+ k("okDays",st?st.avgDays.toFixed(0)+"d":"—");
+ {const e=$("okNs");if(e)e.textContent=st?st.w+"W · "+(st.n-st.w)+"L · "+Object.keys(st.reasons).map(r=>st.reasons[r]+" "+r).join(", "):"no closed cycles yet";}
+ {const e=$("okBy");if(e)e.textContent=st?Object.keys(st.byS).map(s=>s+" "+st.byS[s].n+" ("+fmtD(st.byS[s].net,true)+")").join(" · "):"";}
+ const cl=$("optClosed");
+ if(cl){const L=OPTCLOSED.slice(-12).reverse();
+  cl.innerHTML=L.length?'<div style="overflow-x:auto"><table style="min-width:640px"><tr><th style="text-align:left">Contract</th><th style="text-align:left">How it ended</th><th>Opened → closed</th><th>Days</th><th>Premium</th><th>Net $</th><th>ROC</th><th>Ann.</th></tr>'+L.map(c=>'<tr><td><b>'+optEsc(c.disp)+'</b> <span class="kv">'+(c.dir==="short"?"short":"long")+' '+c.ct0+' ct</span></td><td style="text-align:left"><span class="chiplet '+(c.reason==="expired"?"g":c.reason==="assigned"||c.reason==="exercised"?"w":c.reason==="rolled"?"m":"m")+'">'+c.reason+'</span>'+(c.rolledTo?' <span class="kv">→ '+optEsc(c.rolledTo.disp)+'</span>':'')+'</td><td class="num">'+optFmtD(c.din)+' → '+optFmtD(c.dout)+'</td><td class="num">'+c.days+'</td><td class="num">'+c.p0.toFixed(2)+'</td><td class="num" style="font-weight:700;color:'+(c.realized>=0?'var(--goodT)':'var(--critT)')+'">'+fmtD(c.realized,true)+'</td><td class="num">'+optPct(c.roc,2)+'</td><td class="num">'+optPct(c.ann,0)+'</td></tr>').join("")+'</table></div>'
+  :'<div class="kv" style="padding:6px 0">closed cycles land here — expired, assigned, bought back or rolled — with their return on the capital they worked on.</div>';}
+ // ---- 5. calculator: refresh the underlying datalist + quick-write chips, then recompute ----
+ {const dl=$("optUndList");if(dl)dl.innerHTML=(POS||[]).map(p=>'<option value="'+optEsc(p.sym)+'">').join("");
+  const q=$("optQuick");if(q){const cc=(POS||[]).filter(p=>p.sh>=100);
+   q.innerHTML=(cc.length?cc.map(p=>'<span class="chiplet wiq" role="button" title="prefill a covered call on '+optEsc(p.sym)+': strike near the +3R ladder rung, ~30 days out" onclick="optQuickCC(\''+optEsc(p.sym)+'\')">CC on '+optEsc(p.sym)+' ('+Math.floor(p.sh/100)+' ct)</span>').join(""):'<span class="kv">no position holds 100+ shares — a covered call needs a round lot</span>')
+    +(POS||[]).filter(p=>p.sh>0).map(p=>'<span class="chiplet wiq" role="button" title="prefill a protective put on '+optEsc(p.sym)+': strike at the current stop, ~45 days out" onclick="optQuickPP(\''+optEsc(p.sym)+'\')">PP on '+optEsc(p.sym)+'</span>').join("");}}
+ optCalc();}
+window.optionsPage=optionsPage;
+/* ---- new-contract sanity check: BCI entry block + fit verdict + exposure after, before a single leg is logged ---- */
+window.optQuickCC=function(sym){const p=(POS||[]).find(x=>x.sym===sym);if(!p)return;
+ let k=null;if(p.px0>0&&p.risk0>0)k=p.px0*(1+3*p.risk0/100);if(k==null||k<=p.px)k=p.px*1.06; // +3R rung, else ~6% above
+ const e=new Date();e.setDate(e.getDate()+30);while(e.getDay()!==5)e.setDate(e.getDate()+1); // next Friday ≥ 30 days out
+ optCalcLoad({und:sym,cp:"C",dir:"short",k:Math.round(k),exp:e,ct:Math.floor(p.sh/100),p0:null});};
+window.optQuickPP=function(sym){const p=(POS||[]).find(x=>x.sym===sym);if(!p)return;
+ const k=p.stop!=null?p.stop:p.px*0.93;const e=new Date();e.setDate(e.getDate()+45);while(e.getDay()!==5)e.setDate(e.getDate()+1);
+ optCalcLoad({und:sym,cp:"P",dir:"long",k:Math.round(k),exp:e,ct:Math.max(1,Math.round(p.sh/100)),p0:null});};
+function optCalcLoad(o){const v=(id,val)=>{const e=$(id);if(e&&val!=null&&val!=="")e.value=val;};
+ v("ocUnd",o.und);v("ocSide",(o.dir==="short"?"S":"B")+o.cp);v("ocK",o.k);if(o.exp)v("ocExp",o.exp.toISOString().slice(0,10));v("ocCt",o.ct);if(o.p0!=null)v("ocP",o.p0);
+ const el=$("optCalcCard");if(el)el.scrollIntoView({behavior:"smooth",block:"start"});optCalc();}
+window.optCalcLoad=optCalcLoad;
+function optCalc(){const out=$("ocOut");if(!out)return;
+ const und=String(($("ocUnd")||{}).value||"").trim().toUpperCase(),side=($("ocSide")||{}).value||"SC",k=parseFloat(($("ocK")||{}).value),exp=($("ocExp")||{}).value?new Date(($("ocExp")||{}).value+"T00:00:00"):null,ct=parseInt(($("ocCt")||{}).value)||1,pIn=parseFloat(($("ocP")||{}).value);
+ const dir=side[0]==="S"?"short":"long",cp=side[1];
+ if(!und||!(k>0)||!exp||isNaN(exp)){out.innerHTML='<div class="kv">enter an underlying, strike and expiry — the premium can be left blank for a model estimate.</div>';const lb=$("ocLog");if(lb)lb.style.display="none";return;}
+ const p=(POS||[]).find(x=>x.sym===und)||null,S0=LIVE[und]!=null?LIVE[und]:(p?p.px:undPxAt(und,Date.now()));
+ const dte0=Math.max(1,Math.ceil((exp.getTime()-Date.now())/864e5)),T=dte0/365,r=optRate();
+ let p0=pIn>0?pIn:null,pSrc="entered";
+ if(p0==null&&S0>0){const v=rvol(und)||0.45;p0=Math.round((bsPrice(cp,S0,k,T,r,v)||0)*100)/100;pSrc="model @ "+(100*v).toFixed(0)+"% vol";}
+ if(!(S0>0)||p0==null){out.innerHTML='<div class="kv">no price for '+optEsc(und)+' — it needs a Live-tab quote or Prices history (or hold it).</div>';return;}
+ const strat=dir==="short"&&cp==="C"?(p&&p.sh>=100*ct?"CC":p&&p.sh>0?"PARTIAL":"NAKED"):dir==="short"?"CSP":cp==="P"?(p?"PP":"LP"):"LC";
+ const draft={und,cp,dir,k,exp,ct,p0,S0,dte0,strat,pos:p,shares:p?p.sh:0,cover:strat==="CC"||strat==="NAKED"?Math.min(1,(p?p.sh:0)/(100*ct)):null,cappedSh:p?Math.min(p.sh,100*ct):0,obl:k*100*ct,hedgedSh:p?Math.min(p.sh,100*ct):null};
+ const calc=optEntryCalc({dir,cp,k,p0,S0,dte0,basis:p?p.basis:null,px0:p?p.px0:null,risk0:p?p.risk0:null});if(calc&&calc.ladderR!=null)draft.ladderR=calc.ladderR;
+ const fit=optFit(draft),g=bsGreeks(cp,S0,k,T,r,rvol(und)||0.45),occ=occBuild(und,cp,k,exp);
+ const rows=[];const R=(l,v2)=>rows.push('<div class="rowline"><span>'+l+'</span><span class="rt num">'+v2+'</span></div>');
+ R("Contract",'<b>'+optEsc(occ)+'</b> <span class="kv">'+OPT_TAGS[strat]+'</span>');
+ R("Underlying now / strike",S0.toFixed(2)+' / '+k+' <span class="kv">'+(cp==="C"?(k>=S0?"OTM ":"ITM "):(k<=S0?"OTM ":"ITM "))+Math.abs(100*(k-S0)/S0).toFixed(1)+'%</span>');
+ R("Premium",'$'+p0.toFixed(2)+' × '+ct+' ct = <b>'+fmtD(p0*100*ct,false)+'</b> <span class="kv">'+pSrc+'</span>');
+ R("Days to expiry",dte0+' <span class="kv">Δ '+g.delta.toFixed(2)+' · P(ITM) '+(100*g.pITM).toFixed(0)+'%</span>');
+ {const em=optExpectedMove({exp,k,iv:null,und},S0);if(em&&em.dte>0)R("Expected move by expiry (1σ)",'±$'+em.em.toFixed(2)+' → <b>'+em.lo.toFixed(2)+' – '+em.hi.toFixed(2)+'</b> <span class="kv">strike '+(em.sig!=null?em.sig.toFixed(1)+'σ away':'')+' · vol '+(100*em.v).toFixed(0)+'%</span>');}
+ {const intr0=Math.max(0,cp==="C"?S0-k:k-S0);if(intr0>0)R("Premium make-up",'$'+intr0.toFixed(2)+' intrinsic + $'+Math.max(0,p0-intr0).toFixed(2)+' time value');}
+ if(dir==="short"){const m=optMapRows({cp,k,exp,p0,iv:null,und,dte0,ct,pos:p,cappedSh:draft.cappedSh,shares:draft.shares,mark:p0},S0);if(m&&m.rows.length){const sgn=cp==="C"?"≤":"≥";
+  R("Buy-back levels (BCI 20% / 10%)",'<b>$'+m.l20.toFixed(2)+'</b> until the last two weeks, then <b>$'+m.l10.toFixed(2)+'</b>');
+  R("Stock price that triggers it",'<span class="kv" style="white-space:normal">'+m.rows.map(t=>'<span'+(t.belowStop?' style="color:var(--critT)"':'')+'>'+(t.lvl===0.10?'<span style="color:var(--warn)">10%</span> ':'')+sgn+' <b>'+(t.S==null?'—':t.S.toFixed(2))+'</b> ('+optPct(t.decl)+') '+(t.w===0?'today':'by '+optFmtD(t.d))+(t.belowStop?' ⛔ under your stop':'')+'</span>').join(' · ')+'</span>');
+  if(cp==="C"){const t0=m.rows[0];if(t0&&t0.S!=null&&t0.net$!=null)R("If it fires today — can you chew it?",'shares '+fmtD(t0.shares$,true)+' on '+m.sh+' sh · buy-back gain '+fmtD(t0.opt$,true)+' → <b style="color:'+(t0.net$>=0?'var(--goodT)':'var(--critT)')+'">net '+fmtD(t0.net$,true)+'</b>'+(m.stop!=null?' <span class="kv">stop '+m.stop.toFixed(2)+' ('+optPct(100*(m.stop/S0-1))+')'+(t0.belowStop?' — the stop fires before the rule does':' — the rule fires before the stop')+'</span>':' <span class="kv">no stop on the shares — set one first</span>'));}}}
+ if(strat==="CC"||strat==="NAKED"||strat==="PARTIAL"){R("ROO / annualised",'<b>'+optPct(calc.roo,2)+'</b> / '+optPct(calc.ann,0));R(calc.itm?"Downside protection (ITM)":"Upside to strike",calc.itm?calc.prot.toFixed(1)+'% <span class="kv">time value $'+calc.tv.toFixed(2)+'</span>':optPct(calc.upside));R("Break-even",calc.be.toFixed(2));
+  if(calc.ifAssigned!=null)R("If assigned vs your cost",'<b>'+optPct(calc.ifAssigned)+'</b> <span class="kv">'+(p.basis).toFixed(2)+' → '+k+' + premium</span>');
+  if(calc.ladderR!=null)R("Strike on the sell ladder",'<b>'+(calc.ladderR>=0?"+":"")+calc.ladderR.toFixed(1)+'R</b>');
+  if(p)R("Shares capped",Math.min(p.sh,100*ct)+' of '+p.sh+' <span class="kv">('+(100*Math.min(p.sh,100*ct)/p.sh).toFixed(0)+'%)</span>');}
+ else if(strat==="CSP"){R("Cash required",'<b>'+fmtD(calc.cashReq*ct,false)+'</b>'+(OPTBRIDGE&&OPTBRIDGE.cash!=null?' <span class="kv">cash now '+fmtD(OPTBRIDGE.cash,false)+'</span>':''));R("ROO / annualised",'<b>'+optPct(calc.roo,2)+'</b> / '+optPct(calc.ann,0));R("Break-even / discount",calc.be.toFixed(2)+' / '+optPct(calc.discount));
+  if(window._exp!=null&&OPTBRIDGE&&OPTBRIDGE.eqL)R("Exposure if assigned",'<b>'+(window._exp+100*k*100*ct/OPTBRIDGE.eqL).toFixed(0)+'%</b>'+(window._mmTier?' <span class="kv">band '+window._mmTier.b0+'–'+window._mmTier.b1+'%</span>':''));}
+ else if(strat==="PP"||strat==="LP"){R("Cost of the hedge",'<b>'+calc.cost.toFixed(1)+'%</b> of the stock');R("Floor after cost",calc.floor.toFixed(2)+' <span class="kv">'+optPct(calc.floorPct)+' from here</span>');if(calc.maxLossVsBasis!=null)R("Worst case vs your cost",optPct(calc.maxLossVsBasis));if(p&&p.stop!=null)R("Your stop",p.stop.toFixed(2)+' <span class="kv">'+(100*(p.px-p.stop)/p.px).toFixed(1)+'% away</span>');}
+ else{R("Cost",calc.cost.toFixed(1)+'% of the stock');R("Break-even",calc.be.toFixed(2)+' <span class="kv">'+optPct(calc.bePct)+'</span>');}
+ out.innerHTML='<div class="rowline" style="border-bottom:1px solid var(--grid)"><span><b>System fit</b></span><span class="rt"><span class="rv '+(fit.cls==="g"?"vgood":fit.cls==="r"?"vcrit":"vwarn")+'">'+fit.v+'</span></span></div><div class="kv" style="margin:4px 0 8px;line-height:1.5">'+fit.why.map(optEsc).join(" · ")+'</div>'+rows.join("");
+ const lb=$("ocLog");if(lb){lb.style.display="";lb.onclick=function(){optPrefill(occ,dir==="short"?"Sell":"Buy",ct,p0,strat,(dir==="short"?"sell to open":"buy to open")+" · "+OPT_TAGS[strat]);};}}
+window.optCalc=optCalc;
+["ocUnd","ocSide","ocK","ocExp","ocCt","ocP"].forEach(id=>{const e=$(id);if(e){e.addEventListener("input",optCalc);e.addEventListener("change",optCalc);}});
 </script>
 
 <script>
@@ -2104,6 +2797,7 @@ function drawSmall(T,Wn,L,wr,aw,al){
  window._hvRoll=seq.length?{bar:1,pl:16,bw:15,n:seq.length,y0:16,y1:84,
   label:i=>(seq[i].disp||seq[i].sym)+" · closed "+hvDate(seq[i].dout),
   rows:i=>[["Result",sg(seq[i].pct)+"%",seq[i].w?"#1fb51f":"#f06a6a"],
+   ["Result $",seq[i].dol!=null?fmtD(seq[i].dol,true):"—",seq[i].dol!=null&&seq[i].dol<0?"#f06a6a":"#1fb51f"], // v7.9: exact dollars per trade — pairs with the Offset planner's pick-list
    ["R multiple",seq[i].R!=null&&isFinite(seq[i].R)?(seq[i].R>0?"+":"")+seq[i].R.toFixed(2)+"R":"— no stop","#a9b2bc"],
    ["Held",(seq[i].hold||0)+"d","#a9b2bc"]]}:null;
  $("rollEdge").innerHTML=`
@@ -2245,8 +2939,13 @@ function drawSmall(T,Wn,L,wr,aw,al){
      const act6=[];
      (POS||[]).forEach(p6=>{
       const e6=window.ema3Sig?ema3Sig(p6):null;
-      if(e6&&e6.state==="fired")act6.push([0,`<div style="font-size:11.5px;margin-top:3px" data-ema3="${p6.sym}"><span class="vcrit">${p6.sym}: 3-EMA exit fired ($${e6.low.toFixed(2)} broke) → sell into any strength</span></div>`,1]);
-      else if(e6&&e6.state==="armed"&&e6.ctx==="shake")act6.push([1,`<div style="font-size:11.5px;margin-top:3px" data-ema3="${p6.sym}"><span class="vwarn">${p6.sym}: 3-EMA exit — armed at $${e6.low.toFixed(2)}, exit if it breaks</span></div>`,0]);
+      /* v7.6: stop-aware — a stop at/just under the armed low (within 0.5%, his "10¢ below the candle"
+         convention) IS the exit order, so the to-do is done: armed+covered leaves the list entirely,
+         fired+covered softens to "your stop executes it". */
+      const sc6=e6&&e6.low!=null?stopTop6(p6):null,cv6=sc6!=null&&sc6>=e6.low*0.995;
+      if(e6&&e6.state==="fired"&&!cv6)act6.push([0,`<div style="font-size:11.5px;margin-top:3px" data-ema3="${p6.sym}"><span class="vcrit">${p6.sym}: 3-EMA exit fired ($${e6.low.toFixed(2)} broke) → sell into any strength</span></div>`,1]);
+      else if(e6&&e6.state==="fired"&&cv6)act6.push([2,`<div style="font-size:11.5px;margin-top:3px" data-ema3="${p6.sym}"><span style="color:var(--dim)">${p6.sym}: 3-EMA fired ($${e6.low.toFixed(2)}) — your stop $${sc6.toFixed(2)} is the exit order and executes it ✓</span></div>`,0]);
+      else if(e6&&e6.state==="armed"&&e6.ctx==="shake"&&!cv6)act6.push([1,`<div style="font-size:11.5px;margin-top:3px" data-ema3="${p6.sym}"><span class="vwarn">${p6.sym}: 3-EMA exit — armed at $${e6.low.toFixed(2)}, exit if it breaks</span></div>`,0]);
       const b6=window.beNudge?beNudge(p6):null;
       if(b6){const beC=(window.commPerShare&&p6.sh>0)?commPerShare(p6.sh,b6.bas):0; /* v5.9g: true breakeven = basis + exit commission, so a stop-out nets ~$0 */
        const lk6=(p6.banked!=null&&p6.banked>0)?` — locks the banked +$${Math.abs(p6.banked).toFixed(0)}`:""; /* v6.4: after a partial sell, say WHY */
@@ -2408,6 +3107,11 @@ window._ldrTip="hit +20% within 3 weeks of the first buy (or +15% by week 4 with
    applies. Fires only while the HIGHEST stop on the position (best open-lot stop or the
    position stop) still sits under the average cost — a stop already at/above basis means the
    rule is satisfied and nothing renders. Trigger: (risk0!=null && gain ≥ 4×risk0) || gain ≥ 12. */
+function stopTop6(p){ /* v7.6: the position's protective level = highest stop across lots (or the row stop) */
+ var st=null,ls=(p&&p.lots||[]).filter(function(L){return L.stop!=null;});
+ if(ls.length)st=Math.max.apply(null,ls.map(function(L){return L.stop;}));
+ if(p&&p.stop!=null&&(st==null||p.stop>st))st=p.stop;return st;}
+window.stopTop6=stopTop6;
 function beNudge(p){
  if(!p||!(p.basis>0)||!(p.px>0))return null;
  var st=null,ls=(p.lots||[]).filter(function(L){return L.stop!=null;});
@@ -2494,7 +3198,7 @@ function renderHold(){var hEl=document.getElementById("holdList");if(!hEl)return
  window._ema3={}; // v5.6: rebuilt per render — every open row recomputes its 3-EMA state below
  var eqL=(typeof DAILY!=="undefined"&&DAILY&&DAILY.length)?DAILY[DAILY.length-1].eq:null;
  var nEl=document.getElementById("holdN");
- if(nEl)nEl.innerHTML=POS.length+" open · price updates <span class='livep'>every 1 min ↻</span> · "+(S.lots==="AVG"?"avg cost":"FIFO")+(POS.length>6?" · 6 rows visible — more scrolls":"")+(S.gmode==="$"?" · $ mode":" · % mode");
+ if(nEl)nEl.innerHTML=POS.length+" open · price updates <span class='livep'>every 1 min ↻</span> · "+(S.lots==="AVG"?"avg cost":"FIFO")+(POS.length>6?" · 6 rows visible — more scrolls":"")+(S.gmode==="$"?" · $ mode":" · % mode")+((typeof OPTOPEN!=="undefined"&&OPTOPEN.length)?" · <span class='linkish' onclick=\"document.getElementById('tabO').click()\">"+OPTOPEN.length+" option contract"+(OPTOPEN.length>1?"s":"")+" → Options</span>":""); // v8.0
  if(!POS.length){hEl.innerHTML="<div style='font-size:12px;color:var(--dim);padding:6px 0'>No open positions — all cash.</div>";return;}
  var now=Date.now();
  var rows=POS.map(function(p){var wt=eqL?100*p.val/eqL:null;var up=p.sh*(p.px-p.basis)*(p.mlt||1);var port=eqL?100*up/eqL:null;var pnl=isFinite(p.pnl)?p.pnl:null;
@@ -2535,8 +3239,11 @@ function renderHold(){var hEl=document.getElementById("holdList");if(!hEl)return
    c2+=' <span class="badge bev" title="up ~4-5× your risk — move the stop to your entry price'+(beC4>0?' (+ exit commission)':'')+': the remaining shares then cannot lose a cent'+(bk4?', so the +$'+bk4+' you already banked is locked in for good. The NET number in the Avg-cost cell is the whole-trade floor — where a stop-out would hand ALL of that banked profit back to the market. It is information, never a stop level.':'. If it comes back and takes you out at flat, it wasn\'t the leader anyway.')+'">RAISE STOP → entry ($'+(be6.bas+beC4).toFixed(2)+')'+(bk4?' — locks +$'+bk4:'')+'</span>';}
   // v5.6: 3-EMA exit — fired (crit) beats armed; the post-buy armed state is a muted hold note, not a sell nag
   var e6=r.pref&&window.ema3Sig?ema3Sig(r.pref):null;
-  if(e6&&e6.state==="fired")c2+=' <span class="badge ema3f" title="the armed low broke — the 3-EMA exit is live: sell into any strength">3-EMA EXIT — $'+e6.low.toFixed(2)+' broke</span>';
-  else if(e6&&e6.state==="armed"&&e6.ctx==="shake")c2+=' <span class="badge ema3a" title="fresh breakout closed back under its 3-day EMA — a shake-in warning: exit only if that bar\'s low actually breaks">3-EMA armed — exit if $'+e6.low.toFixed(2)+' breaks</span>';
+  var sc2=e6&&e6.low!=null?stopTop6(r.pref):null,cv2=sc2!=null&&sc2>=e6.low*0.995; /* v7.6: stop already at/just under the trigger */
+  if(e6&&e6.state==="fired")c2+=cv2?' <span class="badge ema3h" title="the low broke and your stop $'+sc2.toFixed(2)+' sits at the trigger — it executes the exit itself">3-EMA fired — stop covers ✓</span>'
+    :' <span class="badge ema3f" title="the armed low broke — the 3-EMA exit is live: sell into any strength">3-EMA EXIT — $'+e6.low.toFixed(2)+' broke</span>';
+  else if(e6&&e6.state==="armed"&&e6.ctx==="shake")c2+=cv2?' <span class="badge ema3h" title="your stop $'+sc2.toFixed(2)+' sits within half a percent of the armed low $'+e6.low.toFixed(2)+' — the exit rule is covered; nothing to do unless you want a different level">3-EMA armed $'+e6.low.toFixed(2)+' — stop covers ✓</span>'
+    :' <span class="badge ema3a" title="fresh breakout closed back under its 3-day EMA — a shake-in warning: exit only if that bar\'s low actually breaks">3-EMA armed — exit if $'+e6.low.toFixed(2)+' breaks</span>';
   else if(e6&&e6.state==="armed"&&e6.ctx==="post")c2+=' <span class="badge ema3h" title="normal first retest — only exit if $'+e6.low.toFixed(2)+' actually breaks (or your stop hits)">3-EMA line in sand: $'+e6.low.toFixed(2)+'</span>';
   if(typeof ERN!=="undefined"&&ERN&&ERN[r.tk]){var ed=ERN[r.tk],dd3=Math.ceil((ed-now)/864e5); // calendar days until the earnings date
    if(dd3>=0&&dd3<=7)c2+=' <span class="badge eflag" title="earnings '+fd(ed)+' — gap risk; hedge or trim per plan">E-'+dd3+'d</span>';}
@@ -2578,7 +3285,8 @@ function renderHold(){var hEl=document.getElementById("holdList");if(!hEl)return
    +'<td class="num"><b>'+r.px.toFixed(2)+'</b> '+(r.est?'<span class="badge sample" title="no live quote yet — showing last transaction price">est</span>':'<span class="livep">↻1m</span>')+'</td>'
    +'<td>'+stopCell+'</td>'
    +distCell(r.dist,r.nearStop)
-   +'<td class="num" style="font-weight:700;color:'+(r.pnl==null?'var(--dim)':r.pnl>=0?'var(--goodT)':'var(--critT)')+'">'+(r.pnl==null?'—':(r.pnl>=0?'+':'−')+Math.abs(r.pnl).toFixed(1)+'%')+'</td>'
+   +'<td class="num" style="font-weight:700;color:'+(r.pnl==null?'var(--dim)':r.pnl>=0?'var(--goodT)':'var(--critT)')+'">'+(r.pnl==null?'—':(r.pnl>=0?'+':'−')+Math.abs(r.pnl).toFixed(1)+'%')
+    +(function(){const a=window._optByUnd&&window._optByUnd[r.tk];if(!a||!a.cycles.length)return '';return '<div class="kv" style="font-weight:600;cursor:pointer" title="options on this name: '+fmtD(a.optReal,true)+' realised'+(a.open.length?', '+fmtD(a.optOpenVal,true)+' at the open mark':'')+' → combined with the stock '+fmtD(a.combined,true)+(a.pct!=null?' ('+optPct(a.pct)+' on cost)':'')+' — Options tab" onclick="document.getElementById(\'tabO\').click()">opt '+fmtD(a.optNet,true)+(a.open.length?' · '+a.open.map(c=>a.collar&&(c===a.collar.call||c===a.collar.put)?'COLLAR':c.strat).filter((x,i,s)=>s.indexOf(x)===i).join('+'):'')+'</div>';})()+'</td>' // v8.1
    +'<td class="num"><b>'+(r.wt==null?'—':r.wt.toFixed(1)+'%')+'</b></td>'
    +'<td class="num" style="font-weight:700;color:'+((S.gmode==="$"?r.up:r.port)==null?'var(--dim)':(S.gmode==="$"?r.up:r.port)>=0?'var(--goodT)':'var(--critT)')+'">'+fmtVal(r.up,r.port,2)+'</td>'
    +'<td style="padding:3px 8px 3px 0">'+hspark(r.tk)+'</td></tr>';
@@ -2625,6 +3333,8 @@ function portfolio(){
  const eqL=EQABS?EQ[EQ.length-1]:null;
  const exp=eqL?POS.reduce((a,p)=>a+p.val,0)/eqL*100:null;window._exp=exp;
  $("pExp").textContent=exp!=null?exp.toFixed(0)+"%":"—";
+ {const e9=$("pExpSub"),b9=window._optBridge;if(e9)e9.textContent=(b9&&b9.obl>0&&b9.expAll!=null)?"vs the model band · +"+b9.oblPct.toFixed(0)+"% CSP obligations → "+b9.expAll.toFixed(0)+"% all-in (Options tab)":"vs the model band below"; // v8.0
+  const r9=$("pRiskSub");if(r9){if(b9&&b9.ppSaved>0){r9.style.display="";r9.textContent="protective puts absorb "+fmtD(b9.ppSaved,false)+" of it (Options tab)";}else r9.style.display="none";}}
  $("pExpBar").setAttribute("width",Math.min(100,exp||0));
  const est=POS.some(p=>p.est)?"~":"";
  const invTot=POS.reduce((a,p)=>a+p.val,0);
@@ -2766,13 +3476,14 @@ window.viewDotUI=viewDotUI;
   document.addEventListener("pointerdown",e=>{if(p.classList.contains("show")&&!p.contains(e.target)&&!b.contains(e.target))p.classList.remove("show");});
   document.addEventListener("keydown",e=>{if(e.key==="Escape"&&p.classList.contains("show"))p.classList.remove("show");});}}
 viewDotUI(); // restore the marker from persisted S on load
-var PGS={J:"pageJournal",F:"pagePerformance",M:"pageMarket",F2:"pageForecast"};
+var PGS={J:"pageJournal",F:"pagePerformance",M:"pageMarket",F2:"pageForecast",O:"pageOptions"};
 Object.keys(PGS).forEach(function(pg){var b=$("tab"+pg);if(!b)return;b.onclick=function(){
  S.page=pg;save();
  Object.keys(PGS).forEach(function(x){var t=$("tab"+x);if(t)t.classList.toggle("on",x===pg);var p=$(PGS[x]);if(p)p.style.display=x===pg?"":"none";});
  if(pg==="M"){if(window.marketPage)try{marketPage();}catch(e){}if(window.bondsPage)try{bondsPage();}catch(e){}try{marketModel();}catch(e){}if(window.mktStory)try{mktStory();}catch(e){}}
  if(pg==="F"&&window.performancePage)try{performancePage();}catch(e){}
  if(pg==="F2"&&window.fedPage)try{fedPage();}catch(e){}
+ if(pg==="O"&&window.optionsPage)try{optionsPage();}catch(e){}
  window.scrollTo(0,0);};});
 /* ---- v5.2: ONE theme entry point — ⚙ settings select persists S.theme (dark|light|auto); applyTheme() resolves
    "auto" via prefers-color-scheme, flips body.light (pure CSS swap — charts never re-render), and keeps the
@@ -2814,7 +3525,7 @@ function updateTopbar(){
 window.updateTopbar=updateTopbar;
 /* ---------- v3 shell: sidebar nav + collapse + timeframe dropdown ---------- */
 (function(){
- var PG2={J:"snJ",F:"snF",M:"snM",F2:"snF2"};
+ var PG2={J:"snJ",F:"snF",M:"snM",F2:"snF2",O:"snO"};
  function sync(){Object.keys(PG2).forEach(function(k){var s2=$(PG2[k]),c=$("tab"+k);if(s2&&c)s2.classList.toggle("on",c.classList.contains("on"));});}
  Object.keys(PG2).forEach(function(k){
   var s2=$(PG2[k]);if(s2)s2.onclick=function(){var c=$("tab"+k);if(c)c.click();sync();};
@@ -3260,7 +3971,7 @@ window.performancePage=performancePage;
 (function boot(){$("maType").value=S.maT;$("maF").value=S.maF;$("maS").value=S.maS;$("lots").value=S.lots;
  if(S.curve==="REALD")S.curve="REAL"; // legacy stored value — one Realized chip now; unit follows the $/% toggle
  $("curve").value=S.curve||"EQ";
- if(!/^(J|M|F|F2)$/.test(S.page||""))S.page="J";
+ if(!/^(J|M|F|F2|O)$/.test(S.page||""))S.page="J";
  if(S.gmode!=="$"&&S.gmode!=="%")S.gmode="%";
  document.querySelectorAll("#tf .chip").forEach(x=>x.classList.toggle("on",x.dataset.tf===S.tf));
  $("customBox").classList.toggle("show",S.tf==="CUSTOM");
@@ -3844,8 +4555,14 @@ window.addEventListener("load",function(){setTimeout(function(){
    tb.querySelectorAll("button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");};
   var re=document.getElementById("tbRe");
   tb.insertBefore(b,re||null);
-  tb.querySelectorAll("[data-tb],#tbF2").forEach(function(x){x.addEventListener("click",function(){
-   if(x!==b)b.classList.remove("on");});});
+  // v8.0: Options button beside it — same pattern
+  var bo=document.createElement("button");bo.id="tbO";
+  bo.innerHTML='<span class="ic">⌥</span>Opts';
+  bo.onclick=function(){var c=$("tabO");if(c){c.click();window.scrollTo(0,0);}
+   tb.querySelectorAll("button").forEach(function(x){x.classList.remove("on");});bo.classList.add("on");};
+  tb.insertBefore(bo,re||null);
+  tb.querySelectorAll("[data-tb],#tbF2,#tbO").forEach(function(x){x.addEventListener("click",function(){
+   if(x!==b)b.classList.remove("on");if(x!==bo)bo.classList.remove("on");});});
  }catch(e){}
 },300);});
 </script>

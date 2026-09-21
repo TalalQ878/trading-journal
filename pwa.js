@@ -8,7 +8,7 @@
 "use strict";
 (function () {
   window.__pwa = 1;
-  var APP_VERSION = "v7.9"; /* shown in ⚙ settings — bump with every release (ties to sw.js VERSION) */
+  var APP_VERSION = "v8.1"; /* shown in ⚙ settings — bump with every release (ties to sw.js VERSION) */
   window.APP_VERSION = APP_VERSION;
 
   /* ---------- one-tap setup via URL hash: #api=<encoded exec url>&key=<key> ---------- */
@@ -70,9 +70,13 @@
      $0.005/share, $1.00 minimum, capped at 1% of trade value. CUSTOM keeps the 1% cap.
      Settings persist on S (commMode / commRate / commMin) via save() — same pattern as S.api. */
   function commMode() { var m = S.commMode; return m === "OFF" || m === "CUSTOM" ? m : "FIXED"; }
+  function isOccTicker() { /* v8.0: the entry form is on an option leg (OCC symbol) — commissions are per CONTRACT, not per share */
+    try { var t = document.getElementById("enTicker"); return !!(t && /^[A-Z.]+ \d{6}[CP]\d{8}$/i.test(String(t.value || "").trim().replace(/\s+/g, " "))); } catch (_) { return false; }
+  }
   function commFor(shares, price) {
     var m = commMode();
     if (m === "OFF" || !(shares > 0) || !(price > 0)) return null; // empty / invalid fields → no adjust
+    if (isOccTicker()) return Math.max(0.65 * shares, 1); // v8.0: IBKR Fixed US options — $0.65 per contract, $1 minimum (a 0.00 expiry row never gets here: price must be > 0)
     var rate = 0.005, min = 1;
     if (m === "CUSTOM") {
       rate = parseFloat(S.commRate); if (!(rate >= 0)) rate = 0.005;
@@ -88,7 +92,8 @@
   function commAdj(side, shares, price) { // → {comm, eff} or null (OFF / fields empty)
     var c = commFor(shares, price);
     if (c == null) return null;
-    var eff = r2c(side === "Sell" ? price - c / shares : price + c / shares);
+    var per = isOccTicker() ? shares * 100 : shares; // v8.0: an option premium is per share of the 100-share contract
+    var eff = r2c(side === "Sell" ? price - c / per : price + c / per);
     if (!(eff > 0)) eff = price; // never a zero/negative price — pure guard, unreachable under the 1% cap
     return { comm: c, eff: eff };
   }
@@ -615,7 +620,7 @@
     async function submitTrade(btn, keep) {
       msg();
       var p = {
-        date: $("enDate").value, ticker: ($("enTicker").value || "").trim().toUpperCase(),
+        date: $("enDate").value, ticker: ($("enTicker").value || "").trim().toUpperCase().replace(/\s+/g, " "),
         side: $("enAction").value, shares: parseFloat($("enShares").value), price: parseFloat($("enPrice").value),
         stop: $("enStop").value === "" ? "" : parseFloat($("enStop").value),
         pivot: $("enPivot").value === "" ? "" : parseFloat($("enPivot").value),
@@ -624,7 +629,8 @@
       if (!p.date) return msg("Pick a date.");
       if (!p.ticker) return msg("Ticker is required.");
       if (!(p.shares > 0)) return msg("Shares must be a positive number.");
-      if (!(p.price > 0)) return msg("Price must be a positive number.");
+      var occ8 = /^[A-Z.]+ \d{6}[CP]\d{8}$/.test(p.ticker); /* v8.0: option leg — a 0.00 close is how an expiry / assignment is booked */
+      if (!(p.price > 0) && !(occ8 && p.price === 0)) return msg("Price must be a positive number" + (occ8 ? " (0 only for an expired / assigned contract)." : "."));
       /* v5.5: oversell guard + basis snapshot — POS is read BEFORE the save, so the toast's
          realized math uses the position exactly as it stood at the moment of the sale. */
       var snap = null;
@@ -639,8 +645,9 @@
          empty box = the typed price IS the saved price. No formula ever touches a save again. */
       var cIn5 = $("enComm").value, cAmt5 = cIn5 === "" ? null : parseFloat(cIn5);
       if (cIn5 !== "" && !(cAmt5 >= 0)) return msg("Commission must be zero or a positive amount — or leave it empty.");
-      if (cAmt5 != null && cAmt5 > 0.05 * p.shares * p.price) return msg("That commission is over 5% of the trade value — check the amount.");
-      if (cAmt5 != null && cAmt5 > 0) p.price = r2c(p.side === "Sell" ? p.price - cAmt5 / p.shares : p.price + cAmt5 / p.shares);
+      var per8 = occ8 ? p.shares * 100 : p.shares; /* v8.0: an option premium is per share of the 100-share contract */
+      if (cAmt5 != null && p.price > 0 && cAmt5 > 0.05 * per8 * p.price) return msg("That commission is over 5% of the trade value — check the amount.");
+      if (cAmt5 != null && cAmt5 > 0 && p.price > 0) p.price = r2c(p.side === "Sell" ? Math.max(0, p.price - cAmt5 / per8) : p.price + cAmt5 / per8);
       var sig = [p.date, p.ticker, p.side, p.shares, p.price].join("|");
       if (sig === lastSig && Date.now() - lastSigT < 30000 && !dupOk) {
         dupOk = true;
@@ -689,7 +696,7 @@
       $("enAction").value = o.side === "Sell" ? "Sell" : "Buy";
       refreshTickerList(); // sell mode → datalist flips to open positions
       $("enShares").value = o.shares != null && isFinite(o.shares) ? o.shares : "";
-      $("enPrice").value = o.price != null && isFinite(o.price) && o.price > 0 ? Math.round(o.price * 100) / 100 : "";
+      $("enPrice").value = o.price != null && isFinite(o.price) && o.price > 0 ? Math.round(o.price * 100) / 100 : (o.price === 0 ? "0" : ""); /* v8.0: an explicit 0 = expired / assigned option close */
       $("enStop").value = ""; $("enPivot").value = ""; $("enSetup").value = ""; $("enNote").value = "";
       if (o.stopped) {
         var nv = $("enNote").value;
