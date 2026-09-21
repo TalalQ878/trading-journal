@@ -982,6 +982,24 @@ if(_t0==="light"||(_t0==="auto"&&window.matchMedia&&matchMedia("(prefers-color-s
 <div id="pageOptions" style="display:none">
 
 <div class="grid">
+  <div class="card c12" id="optCalcCard">
+    <div class="head"><h3>New contract — sanity check before you write it</h3><span class="rt">Ellman's initial-trade block + the system-fit guard + exposure after · nothing is saved until you press Log and then Save</span></div>
+    <div id="optQuick" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
+    <div class="ocGrid">
+      <label>Underlying<input type="text" id="ocUnd" list="optUndList" placeholder="SPCX" autocapitalize="characters"><datalist id="optUndList"></datalist></label>
+      <label>Leg<select id="ocSide"><option value="SC">Sell call (covered call)</option><option value="SP">Sell put (cash-secured)</option><option value="BP">Buy put (protective)</option><option value="BC">Buy call</option></select></label>
+      <label>Strike<input type="number" id="ocK" step="0.5" placeholder="160"></label>
+      <label>Expiry<input type="date" id="ocExp"></label>
+      <label>Contracts<input type="number" id="ocCt" min="1" step="1" value="1"></label>
+      <label>Premium / share<input type="number" id="ocP" step="0.01" placeholder="blank = model"></label>
+    </div>
+    <div id="ocOut" style="margin-top:10px"></div>
+    <div class="btnrow" style="margin-top:10px"><button class="btn pri" id="ocLog" style="display:none;flex:0 0 auto;min-width:180px">Log this leg → trade form</button></div>
+    <div class="kv" style="margin-top:9px"><b style="color:var(--mut)">How to log →</b> an option leg is an ordinary Transactions row whose Ticker is the OCC symbol (<b>SPCX 261016C00160000</b> = SPCX · 2026-10-16 · Call · 160), Shares = contracts, Price = premium per share. <b>Sell</b> opens a short (or closes a long), <b>Buy</b> closes it (or opens a long). Expired worthless → a Buy at <b>0.00</b>. Assigned → a Buy at 0.00 with "assigned" in Notes <b>plus</b> the stock row at the strike — exactly what IBKR's statement shows. Optional: Setup = CC / CSP / PP / COLLAR (else inferred from the stock book), Lot = a roll-chain id, a Live-tab row for the OCC symbol to replace the model mark with a real quote.</div>
+  </div>
+</div>
+
+<div class="grid">
   <div class="card c12">
     <div class="head"><h3>Options Playbook — what the contracts say to do now</h3><span class="chiplet m" id="optChip">—</span><span class="rt">covered calls · cash-secured puts · protective puts · collars — BCI trade management, checked against the CA|RS book</span></div>
     <div class="pbSum" id="optSum">…</div>
@@ -1041,24 +1059,6 @@ if(_t0==="light"||(_t0==="auto"&&window.matchMedia&&matchMedia("(prefers-color-s
       <div class="stat"><div class="l">Avg cycle</div><div class="v num" id="okDays">—</div><div class="s">days from open to close</div></div>
     </div>
     <div id="optClosed" style="margin-top:10px"></div>
-  </div>
-</div>
-
-<div class="grid">
-  <div class="card c12" id="optCalcCard">
-    <div class="head"><h3>New contract — sanity check before you write it</h3><span class="rt">Ellman's initial-trade block + the system-fit guard + exposure after · nothing is saved until you press Log and then Save</span></div>
-    <div id="optQuick" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
-    <div class="ocGrid">
-      <label>Underlying<input type="text" id="ocUnd" list="optUndList" placeholder="SPCX" autocapitalize="characters"><datalist id="optUndList"></datalist></label>
-      <label>Leg<select id="ocSide"><option value="SC">Sell call (covered call)</option><option value="SP">Sell put (cash-secured)</option><option value="BP">Buy put (protective)</option><option value="BC">Buy call</option></select></label>
-      <label>Strike<input type="number" id="ocK" step="0.5" placeholder="160"></label>
-      <label>Expiry<input type="date" id="ocExp"></label>
-      <label>Contracts<input type="number" id="ocCt" min="1" step="1" value="1"></label>
-      <label>Premium / share<input type="number" id="ocP" step="0.01" placeholder="blank = model"></label>
-    </div>
-    <div id="ocOut" style="margin-top:10px"></div>
-    <div class="btnrow" style="margin-top:10px"><button class="btn pri" id="ocLog" style="display:none;flex:0 0 auto;min-width:180px">Log this leg → trade form</button></div>
-    <div class="kv" style="margin-top:9px"><b style="color:var(--mut)">How to log →</b> an option leg is an ordinary Transactions row whose Ticker is the OCC symbol (<b>SPCX 261016C00160000</b> = SPCX · 2026-10-16 · Call · 160), Shares = contracts, Price = premium per share. <b>Sell</b> opens a short (or closes a long), <b>Buy</b> closes it (or opens a long). Expired worthless → a Buy at <b>0.00</b>. Assigned → a Buy at 0.00 with "assigned" in Notes <b>plus</b> the stock row at the strike — exactly what IBKR's statement shows. Optional: Setup = CC / CSP / PP / COLLAR (else inferred from the stock book), Lot = a roll-chain id, a Live-tab row for the OCC symbol to replace the model mark with a real quote.</div>
   </div>
 </div>
 

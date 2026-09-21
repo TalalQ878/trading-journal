@@ -4,7 +4,7 @@
    which keeps its own localStorage fallback for offline viewing).
    Google Fonts: cached after first use so typography works offline. */
 "use strict";
-const VERSION = "tj-v7b"; /* v7b: v8.1 Options — campaigns (stock + options as one trade, collar floor/cap), 20%/10% buy-back price map with the decline it takes and the stop check, expected move, time value + mid-contract unwind */
+const VERSION = "tj-v7c"; /* v7c: v8.1.1 — new-contract sanity check moved to the top of the Options tab */
 const SHELL = [
   "./",
   "./index.html",
